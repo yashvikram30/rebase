@@ -22,11 +22,18 @@ export function TodayView({ days, landing }: { days: PlanDay[]; landing: React.R
       <article>
         <h1>Plan complete</h1>
         <p className="lead">
-          You finished all {days.length} days. Pick the subject you enjoyed most and go deeper.
+          You finished all {days.length} days, with a streak of {bestStreak(guest.activity, plan.studyDays)}{" "}
+          at best. Now test it: Debug hands you broken code and a failing test, the way an AI-enabled
+          interview does.
         </p>
-        <Link className="btn" href="/schedule">
-          See the schedule
-        </Link>
+        <p>
+          <Link className="btn primary" href="/debug">
+            Try a Debug case
+          </Link>{" "}
+          <Link className="btn" href="/schedule">
+            See the schedule
+          </Link>
+        </p>
       </article>
     );
   }

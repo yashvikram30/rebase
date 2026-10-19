@@ -1,0 +1,70 @@
+{
+  "id": "rag-citation-offsets-shifted",
+  "title": "Highlighted citations are a few characters off",
+  "domain": "rag",
+  "concept": "Offsets must survive text normalisation",
+  "concepts": [
+    "citation-offsets",
+    "off-by-one"
+  ],
+  "difficulty": 3,
+  "symptom": "The assistant answers correctly, but the cited passage that the UI highlights in the source document starts a few characters too early, so the highlight cuts off the first words of the quote.",
+  "files": {
+    "chunker.py": "from dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass Chunk:\n    doc_id: str\n    start: int  # where text[0] is in the original document\n    text: str\n\n\ndef chunk_by_paragraph(doc_id, text):\n    \"\"\"One chunk per blank-line-separated paragraph, with surrounding whitespace trimmed.\"\"\"\n    chunks = []\n    position = 0\n    for raw in text.split(\"\\n\\n\"):\n        trimmed = raw.strip()\n        if trimmed:\n            chunks.append(Chunk(doc_id, position, trimmed))\n        position += len(raw) + 2\n    return chunks\n",
+    "retriever.py": "import re\n\n_WORD = re.compile(r\"[a-z0-9]+\")\n\n\ndef best_chunk(chunks, query):\n    \"\"\"The chunk that shares the most words with the query.\"\"\"\n    wanted = set(_WORD.findall(query.lower()))\n    return max(chunks, key=lambda c: len(wanted & set(_WORD.findall(c.text.lower()))))\n",
+    "answer.py": "from dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass Citation:\n    doc_id: str\n    start: int\n    end: int\n\n\ndef cite(chunk, quote):\n    \"\"\"Where, in the original document, the quote can be found.\"\"\"\n    offset = chunk.text.find(quote)\n    if offset < 0:\n        raise ValueError(\"quote is not in the chunk\")\n    start = chunk.start + offset\n    return Citation(chunk.doc_id, start, start + len(quote))\n"
+  },
+  "failingTest": "import unittest\n\nfrom answer import cite\nfrom chunker import chunk_by_paragraph\nfrom retriever import best_chunk\n\nDOC = \"Intro.\\n\\n   The warranty lasts two years.\\n\\n\\nSupport is open on weekdays.\"\n\n\nclass Failing(unittest.TestCase):\n    def test_a_citation_points_at_the_quote_in_the_original_document(self):\n        chunks = chunk_by_paragraph(\"terms\", DOC)\n        chunk = best_chunk(chunks, \"how long is the warranty\")\n        citation = cite(chunk, \"warranty lasts two years\")\n        self.assertEqual(DOC[citation.start : citation.end], \"warranty lasts two years\")\n\n    def test_every_chunk_starts_where_its_text_starts(self):\n        for chunk in chunk_by_paragraph(\"terms\", DOC):\n            self.assertEqual(DOC[chunk.start : chunk.start + len(chunk.text)], chunk.text)\n",
+  "regressionTests": "import unittest\n\nfrom answer import cite\nfrom chunker import chunk_by_paragraph\n\nDOC = \"Intro.\\n\\n   The warranty lasts two years.\\n\\n\\nSupport is open on weekdays.\"\n\n\nclass Regression(unittest.TestCase):\n    def test_chunk_text_has_no_surrounding_whitespace(self):\n        for chunk in chunk_by_paragraph(\"terms\", DOC):\n            self.assertEqual(chunk.text, chunk.text.strip())\n\n    def test_blank_paragraphs_are_skipped(self):\n        texts = [c.text for c in chunk_by_paragraph(\"terms\", DOC)]\n        self.assertEqual(texts, [\"Intro.\", \"The warranty lasts two years.\", \"Support is open on weekdays.\"])\n\n    def test_a_quote_from_the_last_paragraph_is_cited_correctly(self):\n        chunks = chunk_by_paragraph(\"terms\", DOC)\n        citation = cite(chunks[-1], \"open on weekdays\")\n        self.assertEqual(DOC[citation.start : citation.end], \"open on weekdays\")\n\n    def test_a_quote_that_is_not_in_the_chunk_is_refused(self):\n        with self.assertRaises(ValueError):\n            cite(chunk_by_paragraph(\"terms\", DOC)[0], \"warranty\")\n",
+  "rootCause": "The chunker records start as the position where the raw paragraph began, but stores the trimmed text. When a paragraph has leading whitespace, text[0] is further into the document than start says, and every citation computed from start is shifted by that many characters. start must point at where the trimmed text really begins.",
+  "correctFix": {
+    "chunker.py": "from dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass Chunk:\n    doc_id: str\n    start: int  # where text[0] is in the original document\n    text: str\n\n\ndef chunk_by_paragraph(doc_id, text):\n    \"\"\"One chunk per blank-line-separated paragraph, with surrounding whitespace trimmed.\"\"\"\n    chunks = []\n    position = 0\n    for raw in text.split(\"\\n\\n\"):\n        trimmed = raw.strip()\n        if trimmed:\n            leading = len(raw) - len(raw.lstrip())\n            chunks.append(Chunk(doc_id, position + leading, trimmed))\n        position += len(raw) + 2\n    return chunks\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "chunker.py": "from dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass Chunk:\n    doc_id: str\n    start: int  # where text[0] is in the original document\n    text: str\n\n\ndef chunk_by_paragraph(doc_id, text):\n    \"\"\"One chunk per blank-line-separated paragraph, with surrounding whitespace trimmed.\"\"\"\n    chunks = []\n    position = 0\n    for raw in text.split(\"\\n\\n\"):\n        if raw.strip():\n            chunks.append(Chunk(doc_id, position, raw))\n        position += len(raw) + 2\n    return chunks\n"
+      },
+      "whyWrong": "Keeping the raw paragraph makes the offsets line up, but the chunk text now carries its leading and trailing whitespace into search and prompts, and a paragraph's surrounding blank lines are no longer trimmed."
+    }
+  ],
+  "grading": [
+    {
+      "question": "Why did only the paragraph with leading spaces give a wrong citation?",
+      "ideal": "Only there did stripping remove characters before the text, so the stored start no longer matched text[0]."
+    },
+    {
+      "question": "What invariant would catch this class of bug in a test?",
+      "ideal": "document[chunk.start : chunk.start + len(chunk.text)] == chunk.text for every chunk."
+    },
+    {
+      "question": "Why not simply stop trimming?",
+      "ideal": "Trimming is useful for retrieval quality and prompts; the offset bookkeeping has to follow the transformation instead."
+    }
+  ],
+  "transcript": {
+    "kind": "subtle-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "Highlighted citations start a few characters too early in the source document."
+      },
+      {
+        "role": "agent",
+        "text": "Each chunk stores the stripped paragraph, but its start offset is where the raw paragraph began, so they disagree by the leading whitespace. I store the raw paragraph, so the text and the offset line up.",
+        "fix": {
+          "chunker.py": "from dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass Chunk:\n    doc_id: str\n    start: int  # where text[0] is in the original document\n    text: str\n\n\ndef chunk_by_paragraph(doc_id, text):\n    \"\"\"One chunk per blank-line-separated paragraph, with surrounding whitespace trimmed.\"\"\"\n    chunks = []\n    position = 0\n    for raw in text.split(\"\\n\\n\"):\n        if raw.strip():\n            chunks.append(Chunk(doc_id, position, raw))\n        position += len(raw) + 2\n    return chunks\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (2 tests)"
+      },
+      {
+        "role": "agent",
+        "text": "Fixed: the highlight now covers the quote exactly."
+      }
+    ],
+    "verdict": "The offsets line up because the chunk text changed, not because the offsets were fixed. Leading and trailing whitespace now flows into search and prompts. Keep stripping, and add the number of characters stripped to the start offset."
+  }
+}

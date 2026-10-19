@@ -1,0 +1,69 @@
+{
+  "id": "late-events-wrong-window",
+  "title": "Events that arrive late land in the wrong minute",
+  "domain": "pipeline",
+  "concept": "Event time versus processing time in windowed aggregation",
+  "concepts": [
+    "event-time-watermark"
+  ],
+  "difficulty": 3,
+  "symptom": "Mobile clients upload their clicks in bursts when they get signal. The per-window dashboard shows a spike in whatever window the upload happened to arrive in, and gaps where the clicks really occurred.",
+  "files": {
+    "clock.py": "class FakeClock:\n    \"\"\"A clock the tests can move. Real code would read time.monotonic().\"\"\"\n\n    def __init__(self, start=0.0):\n        self._now = start\n\n    def now(self):\n        return self._now\n\n    def advance(self, seconds):\n        self._now += seconds\n",
+    "events.py": "from dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass Event:\n    key: str\n    ts: int  # when it happened, in seconds, as stamped by the device\n",
+    "windows.py": "class TumblingCounter:\n    \"\"\"Counts events per key in fixed windows of `size` seconds, by when the events HAPPENED.\"\"\"\n\n    def __init__(self, clock, size, allowed_lateness=0):\n        self.clock = clock\n        self.size = size\n        self.allowed_lateness = allowed_lateness\n        self.counts = {}  # window start -> {key: count}\n        self.max_ts = None\n        self.dropped = 0\n\n    def add(self, event):\n        \"\"\"Counts the event unless it is too late. Returns whether it was counted.\"\"\"\n        if self.max_ts is None or event.ts > self.max_ts:\n            self.max_ts = event.ts\n        if event.ts < self.max_ts - self.allowed_lateness:\n            self.dropped += 1\n            return False\n        start = (int(self.clock.now()) // self.size) * self.size\n        bucket = self.counts.setdefault(start, {})\n        bucket[event.key] = bucket.get(event.key, 0) + 1\n        return True\n"
+  },
+  "failingTest": "import unittest\n\nfrom clock import FakeClock\nfrom events import Event\nfrom windows import TumblingCounter\n\n\nclass Failing(unittest.TestCase):\n    def test_an_event_is_counted_in_the_window_it_happened_in_not_the_one_it_arrived_in(self):\n        clock = FakeClock(start=12)  # the event reaches us 7 seconds after it happened\n        counter = TumblingCounter(clock, size=10)\n        counter.add(Event(\"clicks\", ts=5))\n        self.assertEqual(counter.counts, {0: {\"clicks\": 1}})\n\n    def test_an_event_that_arrives_early_still_belongs_to_its_own_window(self):\n        counter = TumblingCounter(FakeClock(start=11), size=10)\n        counter.add(Event(\"clicks\", ts=14))\n        self.assertEqual(counter.counts, {10: {\"clicks\": 1}})\n",
+  "regressionTests": "import unittest\n\nfrom clock import FakeClock\nfrom events import Event\nfrom windows import TumblingCounter\n\n\nclass Regression(unittest.TestCase):\n    def test_events_are_bucketed_by_floor_not_rounding(self):\n        counter = TumblingCounter(FakeClock(), size=10)\n        counter.add(Event(\"a\", ts=7))\n        counter.add(Event(\"a\", ts=12))\n        self.assertEqual(counter.counts, {0: {\"a\": 1}, 10: {\"a\": 1}})\n\n    def test_keys_are_counted_separately_within_a_window(self):\n        counter = TumblingCounter(FakeClock(), size=10)\n        for key in (\"a\", \"a\", \"b\"):\n            counter.add(Event(key, ts=3))\n        self.assertEqual(counter.counts, {0: {\"a\": 2, \"b\": 1}})\n\n    def test_a_late_event_within_the_allowed_lateness_is_still_counted(self):\n        counter = TumblingCounter(FakeClock(), size=10, allowed_lateness=5)\n        counter.add(Event(\"a\", ts=12))\n        self.assertTrue(counter.add(Event(\"a\", ts=8)))\n        self.assertEqual(counter.counts, {0: {\"a\": 1}, 10: {\"a\": 1}})\n\n    def test_an_event_later_than_the_allowed_lateness_is_dropped(self):\n        counter = TumblingCounter(FakeClock(), size=10, allowed_lateness=5)\n        counter.add(Event(\"a\", ts=12))\n        self.assertFalse(counter.add(Event(\"a\", ts=2)))\n        self.assertEqual(counter.dropped, 1)\n        self.assertEqual(counter.counts, {10: {\"a\": 1}})\n",
+  "rootCause": "The window is chosen from clock.now(), the time the event arrived (processing time), instead of event.ts, the time it happened (event time). Late or early arrivals therefore pile into the wrong window. The lateness and watermark logic was right all along; it only decides whether to count an event, not where.",
+  "correctFix": {
+    "windows.py": "class TumblingCounter:\n    \"\"\"Counts events per key in fixed windows of `size` seconds, by when the events HAPPENED.\"\"\"\n\n    def __init__(self, clock, size, allowed_lateness=0):\n        self.clock = clock\n        self.size = size\n        self.allowed_lateness = allowed_lateness\n        self.counts = {}  # window start -> {key: count}\n        self.max_ts = None\n        self.dropped = 0\n\n    def add(self, event):\n        \"\"\"Counts the event unless it is too late. Returns whether it was counted.\"\"\"\n        if self.max_ts is None or event.ts > self.max_ts:\n            self.max_ts = event.ts\n        if event.ts < self.max_ts - self.allowed_lateness:\n            self.dropped += 1\n            return False\n        start = (event.ts // self.size) * self.size\n        bucket = self.counts.setdefault(start, {})\n        bucket[event.key] = bucket.get(event.key, 0) + 1\n        return True\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "windows.py": "class TumblingCounter:\n    \"\"\"Counts events per key in fixed windows of `size` seconds, by when the events HAPPENED.\"\"\"\n\n    def __init__(self, clock, size, allowed_lateness=0):\n        self.clock = clock\n        self.size = size\n        self.allowed_lateness = allowed_lateness\n        self.counts = {}  # window start -> {key: count}\n        self.max_ts = None\n        self.dropped = 0\n\n    def add(self, event):\n        \"\"\"Counts the event unless it is too late. Returns whether it was counted.\"\"\"\n        if self.max_ts is None or event.ts > self.max_ts:\n            self.max_ts = event.ts\n        if event.ts < self.max_ts - self.allowed_lateness:\n            self.dropped += 1\n            return False\n        start = round(event.ts / self.size) * self.size\n        bucket = self.counts.setdefault(start, {})\n        bucket[event.key] = bucket.get(event.key, 0) + 1\n        return True\n"
+      },
+      "whyWrong": "Rounding event.ts / size to the nearest window moves events past the halfway point into the next window. Windows must be floors: an event at t=7 belongs to the window starting at 0, not 10."
+    }
+  ],
+  "grading": [
+    {
+      "question": "What is the difference between event time and processing time?",
+      "ideal": "Event time is when the thing happened; processing time is when your system saw it. Aggregations that care about reality use event time."
+    },
+    {
+      "question": "What does allowed lateness trade off?",
+      "ideal": "Waiting longer for stragglers gives more accurate windows but delays results and holds state longer."
+    },
+    {
+      "question": "Why is floor division the right way to assign a window?",
+      "ideal": "A window [start, start + size) contains every timestamp from start up to but not including the next start, which is exactly floor(ts / size) * size."
+    }
+  ],
+  "transcript": {
+    "kind": "confident-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "Late events are counted in the window they arrive in, not the one they happened in."
+      },
+      {
+        "role": "agent",
+        "text": "Events should be bucketed by their own timestamp. I assign each to round(ts / size) * size.",
+        "fix": {
+          "windows.py": "class TumblingCounter:\n    \"\"\"Counts events per key in fixed windows of `size` seconds, by when the events HAPPENED.\"\"\"\n\n    def __init__(self, clock, size, allowed_lateness=0):\n        self.clock = clock\n        self.size = size\n        self.allowed_lateness = allowed_lateness\n        self.counts = {}  # window start -> {key: count}\n        self.max_ts = None\n        self.dropped = 0\n\n    def add(self, event):\n        \"\"\"Counts the event unless it is too late. Returns whether it was counted.\"\"\"\n        if self.max_ts is None or event.ts > self.max_ts:\n            self.max_ts = event.ts\n        if event.ts < self.max_ts - self.allowed_lateness:\n            self.dropped += 1\n            return False\n        start = round(event.ts / self.size) * self.size\n        bucket = self.counts.setdefault(start, {})\n        bucket[event.key] = bucket.get(event.key, 0) + 1\n        return True\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (2 tests)"
+      },
+      {
+        "role": "agent",
+        "text": "Fixed: every event now lands in the window of its timestamp."
+      }
+    ],
+    "verdict": "Switching to event.ts was right; rounding is not bucketing. round() sends anything past the halfway point into the next window, so an event at t=7 lands in the window starting at 10. Windows are floors: ts // size * size."
+  }
+}

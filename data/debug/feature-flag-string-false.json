@@ -1,0 +1,64 @@
+{
+  "id": "feature-flag-string-false",
+  "title": "Turning the beta off turned it on for everyone",
+  "domain": "pipeline",
+  "concept": "Parsing booleans from configuration strings",
+  "concepts": [
+    "config-parsing",
+    "falsy-vs-missing"
+  ],
+  "difficulty": 1,
+  "symptom": "We set BETA_CHECKOUT=false in production to switch the beta checkout off, and every customer got the beta. Staging, where the variable is not set at all, behaves correctly.",
+  "files": {
+    "settings.py": "def load_settings(env):\n    \"\"\"Settings from environment variables. env maps names to strings, like os.environ.\n\n    Flags accept 1/0, true/false, yes/no and on/off in any case; anything else is a mistake and\n    must fail loudly. A flag that is not set at all uses its default.\n    \"\"\"\n    return {\n        \"beta_checkout\": bool(env.get(\"BETA_CHECKOUT\", False)),\n        \"send_emails\": bool(env.get(\"SEND_EMAILS\", True)),\n        \"max_upload_mb\": int(env.get(\"MAX_UPLOAD_MB\", 25)),\n    }\n"
+  },
+  "failingTest": "import unittest\n\nfrom settings import load_settings\n\n\nclass Failing(unittest.TestCase):\n    def test_false_means_off(self):\n        self.assertIs(load_settings({\"BETA_CHECKOUT\": \"false\"})[\"beta_checkout\"], False)\n",
+  "regressionTests": "import unittest\n\nfrom settings import load_settings\n\n\nclass Regression(unittest.TestCase):\n    def test_every_documented_spelling_works(self):\n        for raw in [\"1\", \"true\", \"TRUE\", \"Yes\", \"on\"]:\n            self.assertIs(load_settings({\"BETA_CHECKOUT\": raw})[\"beta_checkout\"], True, raw)\n        for raw in [\"0\", \"false\", \"False\", \"NO\", \"off\"]:\n            self.assertIs(load_settings({\"BETA_CHECKOUT\": raw})[\"beta_checkout\"], False, raw)\n\n    def test_unset_flags_use_their_defaults(self):\n        settings = load_settings({})\n        self.assertIs(settings[\"beta_checkout\"], False)\n        self.assertIs(settings[\"send_emails\"], True)\n        self.assertEqual(settings[\"max_upload_mb\"], 25)\n\n    def test_a_typo_fails_loudly(self):\n        with self.assertRaises(ValueError):\n            load_settings({\"SEND_EMAILS\": \"ture\"})\n",
+  "rootCause": "bool() of a string only asks whether it is empty, so bool('false') is True, and so is bool('0'). Unset worked only because the default was the real boolean False. Flags have to be parsed: compare against the accepted spellings and reject anything else.",
+  "correctFix": {
+    "settings.py": "TRUE = {\"1\", \"true\", \"yes\", \"on\"}\nFALSE = {\"0\", \"false\", \"no\", \"off\"}\n\n\ndef flag(env, name, default):\n    \"\"\"A boolean from an environment variable. bool() cannot do this: every non-empty string is True.\"\"\"\n    raw = env.get(name)\n    if raw is None:\n        return default\n    value = raw.strip().lower()\n    if value in TRUE:\n        return True\n    if value in FALSE:\n        return False\n    raise ValueError(\"%s must be one of 1/0, true/false, yes/no, on/off, not %r\" % (name, raw))\n\n\ndef load_settings(env):\n    \"\"\"Settings from environment variables. env maps names to strings, like os.environ.\n\n    Flags accept 1/0, true/false, yes/no and on/off in any case; anything else is a mistake and\n    must fail loudly. A flag that is not set at all uses its default.\n    \"\"\"\n    return {\n        \"beta_checkout\": flag(env, \"BETA_CHECKOUT\", False),\n        \"send_emails\": flag(env, \"SEND_EMAILS\", True),\n        \"max_upload_mb\": int(env.get(\"MAX_UPLOAD_MB\", 25)),\n    }\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "settings.py": "def load_settings(env):\n    \"\"\"Settings from environment variables. env maps names to strings, like os.environ.\n\n    Flags accept 1/0, true/false, yes/no and on/off in any case; anything else is a mistake and\n    must fail loudly. A flag that is not set at all uses its default.\n    \"\"\"\n    return {\n        \"beta_checkout\": env.get(\"BETA_CHECKOUT\", False) == \"true\",\n        \"send_emails\": env.get(\"SEND_EMAILS\", True) == \"true\",\n        \"max_upload_mb\": int(env.get(\"MAX_UPLOAD_MB\", 25)),\n    }\n"
+      },
+      "whyWrong": "Comparing with 'true' turns 'false' off, but 'TRUE', '1' and 'yes' now mean off as well, a typo silently means off, and an unset SEND_EMAILS becomes True == 'true', which is False: every email stops."
+    }
+  ],
+  "transcript": {
+    "kind": "confident-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "BETA_CHECKOUT=false still enables the beta. Fix the settings loader."
+      },
+      {
+        "role": "agent",
+        "text": "Environment variables are strings, and bool() of any non-empty string is True. Comparing with 'true' gives a real boolean. I applied the same fix to SEND_EMAILS for consistency.",
+        "fix": {
+          "settings.py": "def load_settings(env):\n    \"\"\"Settings from environment variables. env maps names to strings, like os.environ.\n\n    Flags accept 1/0, true/false, yes/no and on/off in any case; anything else is a mistake and\n    must fail loudly. A flag that is not set at all uses its default.\n    \"\"\"\n    return {\n        \"beta_checkout\": env.get(\"BETA_CHECKOUT\", False) == \"true\",\n        \"send_emails\": env.get(\"SEND_EMAILS\", True) == \"true\",\n        \"max_upload_mb\": int(env.get(\"MAX_UPLOAD_MB\", 25)),\n    }\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)"
+      },
+      {
+        "role": "agent",
+        "text": "Fixed, and both flags now parse the same way."
+      }
+    ],
+    "verdict": "The explanation is right and the change is a new outage. == 'true' rejects the documented spellings (TRUE, 1, yes, on), hides typos as False, and, worst, an unset SEND_EMAILS now compares the default True with 'true' and switches every email off."
+  },
+  "grading": [
+    {
+      "question": "Why is bool('false') True?",
+      "ideal": "bool() of a string is only False for the empty string; it never reads the words."
+    },
+    {
+      "question": "What should a flag parser do with a value it does not recognise?",
+      "ideal": "Raise an error, so a typo in production config fails at startup instead of quietly meaning off."
+    }
+  ]
+}

@@ -86,6 +86,7 @@ export function QuickCapture() {
         className={"qc-tab" + (open ? " open" : "")}
         type="button"
         aria-label={open ? "Close quick capture" : "Open quick capture"}
+        title="Quick note"
         aria-expanded={open}
         aria-controls="qc-panel"
         onClick={() => setOpen((v) => !v)}

@@ -1,0 +1,64 @@
+{
+  "id": "webhook-late-binding",
+  "title": "Every webhook goes to the last customer",
+  "domain": "oop",
+  "concept": "Closures capture variables, not values",
+  "concepts": [
+    "closures-late-binding",
+    "regression-testing"
+  ],
+  "difficulty": 2,
+  "symptom": "Acme says it stopped receiving order webhooks this morning, and Globex is asking why it gets Acme's orders. Both were registered in the same batch; Globex was the last customer in it.",
+  "files": {
+    "hooks.py": "class Dispatcher:\n    \"\"\"Sends each customer's events to that customer's webhook URL.\"\"\"\n\n    def __init__(self, send):\n        self.send = send  # send(url, event): makes the HTTP request\n        self.handlers = {}\n\n    def register(self, customers):\n        \"\"\"Add webhooks for (customer_id, url) pairs. Called again whenever customers sign up.\"\"\"\n        for customer_id, url in customers:\n            self.handlers[customer_id] = lambda event: self.send(url, event)\n\n    def dispatch(self, customer_id, event):\n        self.handlers[customer_id](event)\n"
+  },
+  "failingTest": "import unittest\n\nfrom hooks import Dispatcher\n\n\nclass Failing(unittest.TestCase):\n    def test_each_customer_gets_its_own_events(self):\n        sent = []\n        d = Dispatcher(lambda url, event: sent.append((url, event)))\n        d.register([(\"acme\", \"https://acme.test/hook\"), (\"globex\", \"https://globex.test/hook\")])\n        d.dispatch(\"acme\", {\"order\": 1})\n        self.assertEqual(sent, [(\"https://acme.test/hook\", {\"order\": 1})])\n",
+  "regressionTests": "import unittest\n\nfrom hooks import Dispatcher\n\n\nclass Regression(unittest.TestCase):\n    def setUp(self):\n        self.sent = []\n        self.d = Dispatcher(lambda url, event: self.sent.append((url, event)))\n\n    def test_customers_who_sign_up_later_are_added(self):\n        self.d.register([(\"acme\", \"https://acme.test/hook\")])\n        self.d.register([(\"initech\", \"https://initech.test/hook\")])\n        self.d.dispatch(\"acme\", {\"order\": 1})\n        self.d.dispatch(\"initech\", {\"order\": 2})\n        self.assertEqual(\n            self.sent,\n            [(\"https://acme.test/hook\", {\"order\": 1}), (\"https://initech.test/hook\", {\"order\": 2})],\n        )\n\n    def test_the_last_customer_in_a_batch_still_works(self):\n        self.d.register([(\"acme\", \"https://acme.test/hook\"), (\"globex\", \"https://globex.test/hook\")])\n        self.d.dispatch(\"globex\", {\"order\": 3})\n        self.assertEqual(self.sent, [(\"https://globex.test/hook\", {\"order\": 3})])\n",
+  "rootCause": "Each lambda refers to the loop variable url, and a closure reads its variables when it is called, not when it is created. By the time any webhook fires, the loop has finished and url holds the last customer's address, so every handler sends there.",
+  "correctFix": {
+    "hooks.py": "class Dispatcher:\n    \"\"\"Sends each customer's events to that customer's webhook URL.\"\"\"\n\n    def __init__(self, send):\n        self.send = send  # send(url, event): makes the HTTP request\n        self.handlers = {}\n\n    def register(self, customers):\n        \"\"\"Add webhooks for (customer_id, url) pairs. Called again whenever customers sign up.\"\"\"\n        for customer_id, url in customers:\n            # A closure looks url up when it runs, not when it is made, so by then every lambda in this\n            # loop would see the last url. A default argument is evaluated now, once per customer.\n            self.handlers[customer_id] = lambda event, url=url: self.send(url, event)\n\n    def dispatch(self, customer_id, event):\n        self.handlers[customer_id](event)\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "hooks.py": "from functools import partial\n\n\nclass Dispatcher:\n    \"\"\"Sends each customer's events to that customer's webhook URL.\"\"\"\n\n    def __init__(self, send):\n        self.send = send  # send(url, event): makes the HTTP request\n        self.handlers = {}\n\n    def register(self, customers):\n        \"\"\"Add webhooks for (customer_id, url) pairs. Called again whenever customers sign up.\"\"\"\n        self.handlers = {customer_id: partial(self.send, url) for customer_id, url in customers}\n\n    def dispatch(self, customer_id, event):\n        self.handlers[customer_id](event)\n"
+      },
+      "whyWrong": "partial binds the url correctly, but the rewrite replaces the whole handlers dict on every call. register runs again for each new signup, so registering Initech silently drops Acme."
+    }
+  ],
+  "transcript": {
+    "kind": "subtle-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "All webhooks are going to the last registered customer. Please fix it."
+      },
+      {
+        "role": "agent",
+        "text": "Classic late binding: the lambdas share the loop variable url. I replaced the loop with a dict comprehension using functools.partial, which binds each url when the handler is made. It is shorter too.",
+        "fix": {
+          "hooks.py": "from functools import partial\n\n\nclass Dispatcher:\n    \"\"\"Sends each customer's events to that customer's webhook URL.\"\"\"\n\n    def __init__(self, send):\n        self.send = send  # send(url, event): makes the HTTP request\n        self.handlers = {}\n\n    def register(self, customers):\n        \"\"\"Add webhooks for (customer_id, url) pairs. Called again whenever customers sign up.\"\"\"\n        self.handlers = {customer_id: partial(self.send, url) for customer_id, url in customers}\n\n    def dispatch(self, customer_id, event):\n        self.handlers[customer_id](event)\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)"
+      },
+      {
+        "role": "agent",
+        "text": "Each customer now gets its own events."
+      }
+    ],
+    "verdict": "The diagnosis is exactly right, and the tidy-up broke something else: the comprehension assigns a new dict, so each register() call wipes the customers registered before it. The docstring says register is called again on every signup. Bind the url, but keep adding to the existing dict."
+  },
+  "grading": [
+    {
+      "question": "When does a Python closure read the variables it uses?",
+      "ideal": "When it runs. A lambda made in a loop sees the loop variable's final value unless it is bound at creation."
+    },
+    {
+      "question": "Name two ways to bind the value at creation time.",
+      "ideal": "A default argument (url=url) or functools.partial, or a small factory function that returns the closure."
+    }
+  ]
+}

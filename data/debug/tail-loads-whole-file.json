@@ -1,0 +1,64 @@
+{
+  "id": "tail-loads-whole-file",
+  "title": "tail runs out of memory on big logs",
+  "domain": "build-optimize",
+  "concept": "Streaming with a bounded buffer",
+  "concepts": [
+    "bounded-memory-streaming"
+  ],
+  "difficulty": 2,
+  "symptom": "tail() returns the right lines, but on a 20 GB log the process is killed for memory. It only needs 10 lines.",
+  "files": {
+    "tail.py": "def tail(f, n):\n    \"\"\"Return the last n lines of the file object f as a list. Must not load the whole file.\"\"\"\n    return f.readlines()[-n:]\n",
+    "fakefile.py": "class FakeFile:\n    \"\"\"Iterable file stand-in that fails the test if anyone slurps it.\"\"\"\n\n    def __init__(self, lines):\n        self._lines = lines\n\n    def __iter__(self):\n        return iter(self._lines)\n\n    def readlines(self):\n        raise AssertionError(\"loaded the whole file with readlines()\")\n\n    def read(self):\n        raise AssertionError(\"loaded the whole file with read()\")\n"
+  },
+  "failingTest": "import unittest\nfrom tail import tail\nfrom fakefile import FakeFile\n\n\nclass Failing(unittest.TestCase):\n    def test_does_not_slurp(self):\n        f = FakeFile([\"a\\n\", \"b\\n\", \"c\\n\", \"d\\n\", \"e\\n\"])\n        self.assertEqual(tail(f, 3), [\"c\\n\", \"d\\n\", \"e\\n\"])\n",
+  "regressionTests": "import unittest\nfrom tail import tail\nfrom fakefile import FakeFile\n\n\nclass Regression(unittest.TestCase):\n    def test_fewer_lines_than_n(self):\n        self.assertEqual(tail(FakeFile([\"a\\n\", \"b\\n\"]), 5), [\"a\\n\", \"b\\n\"])\n\n    def test_zero_lines(self):\n        self.assertEqual(tail(FakeFile([\"a\\n\", \"b\\n\"]), 0), [])\n\n    def test_exact(self):\n        self.assertEqual(tail(FakeFile([\"a\\n\", \"b\\n\"]), 2), [\"a\\n\", \"b\\n\"])\n\n    def test_empty_file(self):\n        self.assertEqual(tail(FakeFile([]), 3), [])\n",
+  "rootCause": "readlines() materializes every line before slicing, so memory is O(file size). A bounded buffer of n lines (deque with maxlen) gives O(n) memory in one pass.",
+  "correctFix": {
+    "tail.py": "from collections import deque\n\n\ndef tail(f, n):\n    \"\"\"Return the last n lines of the file object f as a list. Must not load the whole file.\"\"\"\n    return list(deque(f, maxlen=n))\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "tail.py": "def tail(f, n):\n    \"\"\"Return the last n lines of the file object f as a list. Must not load the whole file.\"\"\"\n    buf = []\n    for line in f:\n        buf.append(line)\n        if len(buf) > n * 2:\n            buf = buf[-n:]\n    return buf[-n:]\n"
+      },
+      "whyWrong": "Trimming in batches looks bounded, but buf[-0:] is the whole list, so n == 0 never trims and returns every line."
+    }
+  ],
+  "grading": [
+    {
+      "question": "What is the memory complexity before and after?",
+      "ideal": "O(file size) before; O(n) after."
+    },
+    {
+      "question": "Why is buf[-n:] dangerous when n can be 0?",
+      "ideal": "-0 is 0, so the slice is the entire list."
+    }
+  ],
+  "transcript": {
+    "kind": "correct",
+    "turns": [
+      {
+        "role": "user",
+        "text": "tail() runs out of memory on a 20 GB log. It only needs the last few lines."
+      },
+      {
+        "role": "agent",
+        "text": "readlines() loads the whole file before slicing. A deque with maxlen=n keeps only the last n lines while reading the file once, so memory stays proportional to n.",
+        "fix": {
+          "tail.py": "from collections import deque\n\n\ndef tail(f, n):\n    \"\"\"Return the last n lines of the file object f as a list. Must not load the whole file.\"\"\"\n    return list(deque(f, maxlen=n))\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)\ntest_regression: OK (4 tests)"
+      },
+      {
+        "role": "agent",
+        "text": "Both suites pass, including n = 0 and a file shorter than n."
+      }
+    ],
+    "verdict": "Approve. One pass, memory bounded by n, and the edge cases a hand-rolled buffer usually gets wrong (n = 0, fewer lines than n) are covered by deque itself and by the tests it ran."
+  }
+}

@@ -134,7 +134,7 @@
 }
 .qc-panel h2 {
   margin: 0;
-  font: 600 16px var(--serif);
+  font: 600 16px var(--display);
 }
 .qc-panel > header p {
   margin: 2px 0 0;
@@ -276,7 +276,7 @@
   height: var(--av, 36px);
   border-radius: 50%;
   background: var(--plum);
-  color: #fbf8f1;
+  color: #ffffff;
   font-weight: 600;
   object-fit: cover;
   overflow: hidden;

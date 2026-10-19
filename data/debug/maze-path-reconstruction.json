@@ -1,0 +1,64 @@
+{
+  "id": "maze-path-reconstruction",
+  "title": "find_path returns the route backwards",
+  "domain": "graph",
+  "concept": "Parent-pointer path reconstruction",
+  "concepts": [
+    "shortest-path-bfs",
+    "path-reconstruction"
+  ],
+  "difficulty": 2,
+  "symptom": "The delivery robot is being sent routes that start at the destination, and the square it is standing on is missing from them. Unreachable destinations are handled correctly: the planner says there is no route.",
+  "files": {
+    "path.py": "from collections import deque\n\n\ndef find_path(grid, start, end):\n    \"\"\"Return the list of cells from start to end (inclusive) or None if unreachable.\"\"\"\n    rows, cols = len(grid), len(grid[0])\n    parent = {start: None}\n    queue = deque([start])\n    while queue:\n        cur = queue.popleft()\n        if cur == end:\n            break\n        r, c = cur\n        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):\n            nr, nc = r + dr, c + dc\n            if 0 <= nr < rows and 0 <= nc < cols and grid[nr][nc] != \"#\" and (nr, nc) not in parent:\n                parent[(nr, nc)] = cur\n                queue.append((nr, nc))\n    if end not in parent:\n        return None\n    path = []\n    cur = end\n    while cur != start:\n        path.append(cur)\n        cur = parent[cur]\n    return path\n"
+  },
+  "failingTest": "import unittest\nfrom path import find_path\n\n\nclass Failing(unittest.TestCase):\n    def test_corridor(self):\n        self.assertEqual(find_path([\"...\"], (0, 0), (0, 2)), [(0, 0), (0, 1), (0, 2)])\n",
+  "regressionTests": "import unittest\nfrom path import find_path\n\n\nclass Regression(unittest.TestCase):\n    def test_unreachable_is_none(self):\n        self.assertIsNone(find_path([\"..#.\"], (0, 0), (0, 3)))\n\n    def test_start_equals_end(self):\n        self.assertEqual(find_path([\".\"], (0, 0), (0, 0)), [(0, 0)])\n\n    def test_shortest_in_open_grid(self):\n        p = find_path([\"...\", \"...\", \"...\"], (0, 0), (2, 2))\n        self.assertEqual(len(p), 5)\n        self.assertEqual(p[0], (0, 0))\n        self.assertEqual(p[-1], (2, 2))\n\n    def test_path_avoids_walls(self):\n        grid = [\".#.\", \".#.\", \"...\"]\n        p = find_path(grid, (0, 0), (0, 2))\n        self.assertTrue(all(grid[r][c] != \"#\" for r, c in p))\n        self.assertEqual(len(p), 7)\n",
+  "rootCause": "The parent chain is walked from end back toward start, so the list is built in reverse, and the loop stops before appending start. The BFS itself is fine.",
+  "correctFix": {
+    "path.py": "from collections import deque\n\n\ndef find_path(grid, start, end):\n    \"\"\"Return the list of cells from start to end (inclusive) or None if unreachable.\"\"\"\n    rows, cols = len(grid), len(grid[0])\n    parent = {start: None}\n    queue = deque([start])\n    while queue:\n        cur = queue.popleft()\n        if cur == end:\n            break\n        r, c = cur\n        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):\n            nr, nc = r + dr, c + dc\n            if 0 <= nr < rows and 0 <= nc < cols and grid[nr][nc] != \"#\" and (nr, nc) not in parent:\n                parent[(nr, nc)] = cur\n                queue.append((nr, nc))\n    if end not in parent:\n        return None\n    path = []\n    cur = end\n    while cur != start:\n        path.append(cur)\n        cur = parent[cur]\n    path.append(start)\n    path.reverse()\n    return path\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "path.py": "from collections import deque\n\n\ndef find_path(grid, start, end):\n    \"\"\"Return the list of cells from start to end (inclusive) or None if unreachable.\"\"\"\n    rows, cols = len(grid), len(grid[0])\n    parent = {start: None}\n    queue = deque([start])\n    while queue:\n        cur = queue.popleft()\n        if cur == end:\n            break\n        r, c = cur\n        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):\n            nr, nc = r + dr, c + dc\n            if 0 <= nr < rows and 0 <= nc < cols and grid[nr][nc] != \"#\" and (nr, nc) not in parent:\n                parent[(nr, nc)] = cur\n                queue.append((nr, nc))\n    path = [end]\n    cur = end\n    while cur != start:\n        cur = parent.get(cur, start)\n        path.append(cur)\n    path.reverse()\n    return path\n"
+      },
+      "whyWrong": "Reconstructing with parent.get(cur, start) hides the missing-parent case. For an unreachable goal it fabricates [start, end] instead of returning None."
+    }
+  ],
+  "grading": [
+    {
+      "question": "What two things are wrong with the returned list?",
+      "ideal": "It is reversed and it omits the start cell."
+    },
+    {
+      "question": "How do you confirm the BFS part is correct before touching reconstruction?",
+      "ideal": "Check the unreachable and length cases pass, then print parent for a tiny grid."
+    }
+  ],
+  "transcript": {
+    "kind": "subtle-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "find_path returns the route backwards and without the start square."
+      },
+      {
+        "role": "agent",
+        "text": "The parent walk stops before adding start and is never reversed. I walk parents with parent.get(cur, start) so the loop always ends at start, then reverse the list.",
+        "fix": {
+          "path.py": "from collections import deque\n\n\ndef find_path(grid, start, end):\n    \"\"\"Return the list of cells from start to end (inclusive) or None if unreachable.\"\"\"\n    rows, cols = len(grid), len(grid[0])\n    parent = {start: None}\n    queue = deque([start])\n    while queue:\n        cur = queue.popleft()\n        if cur == end:\n            break\n        r, c = cur\n        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):\n            nr, nc = r + dr, c + dc\n            if 0 <= nr < rows and 0 <= nc < cols and grid[nr][nc] != \"#\" and (nr, nc) not in parent:\n                parent[(nr, nc)] = cur\n                queue.append((nr, nc))\n    path = [end]\n    cur = end\n    while cur != start:\n        cur = parent.get(cur, start)\n        path.append(cur)\n    path.reverse()\n    return path\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)"
+      },
+      {
+        "role": "agent",
+        "text": "Fixed: the corridor now gives [(0, 0), (0, 1), (0, 2)]."
+      }
+    ],
+    "verdict": "The order is fixed, but the unreachable check was dropped and the default in parent.get hides missing parents. For an unreachable goal the walk jumps straight to start and returns [start, goal], a route through a wall, instead of None."
+  }
+}

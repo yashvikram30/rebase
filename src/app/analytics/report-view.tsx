@@ -66,7 +66,7 @@ export function Header({ current }: { current: RangeKey }) {
   return (
     <>
       <Link className="an-back" href="/">
-        ← Back to Daybook
+        ← Back to Rebase
       </Link>
       <h1>Analytics</h1>
       <p className="lead">

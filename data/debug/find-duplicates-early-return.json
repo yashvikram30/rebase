@@ -1,0 +1,64 @@
+{
+  "id": "find-duplicates-early-return",
+  "title": "find_duplicates stops at the first one",
+  "domain": "snippet",
+  "concept": "Early return inside a loop",
+  "concepts": [
+    "early-return",
+    "hashing-dedupe"
+  ],
+  "difficulty": 1,
+  "symptom": "find_duplicates([1, 2, 1, 3, 2]) returns [1]. It should also report 2.",
+  "files": {
+    "dups.py": "def find_duplicates(xs):\n    \"\"\"Values that appear more than once, each listed once, in order of their second appearance.\"\"\"\n    seen, dups = set(), []\n    for x in xs:\n        if x in seen:\n            dups.append(x)\n            return dups\n        seen.add(x)\n    return dups\n"
+  },
+  "failingTest": "import unittest\nfrom dups import find_duplicates\n\n\nclass Failing(unittest.TestCase):\n    def test_two_duplicates(self):\n        self.assertEqual(find_duplicates([1, 2, 1, 3, 2]), [1, 2])\n",
+  "regressionTests": "import unittest\nfrom dups import find_duplicates\n\n\nclass Regression(unittest.TestCase):\n    def test_each_listed_once(self):\n        self.assertEqual(find_duplicates([1, 1, 1]), [1])\n\n    def test_no_duplicates(self):\n        self.assertEqual(find_duplicates([1, 2, 3]), [])\n\n    def test_empty(self):\n        self.assertEqual(find_duplicates([]), [])\n",
+  "rootCause": "return dups sits inside the loop body, so the function exits on the first repeat.",
+  "correctFix": {
+    "dups.py": "def find_duplicates(xs):\n    \"\"\"Values that appear more than once, each listed once, in order of their second appearance.\"\"\"\n    seen, dups = set(), []\n    for x in xs:\n        if x in seen and x not in dups:\n            dups.append(x)\n        seen.add(x)\n    return dups\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "dups.py": "def find_duplicates(xs):\n    \"\"\"Values that appear more than once, each listed once, in order of their second appearance.\"\"\"\n    seen, dups = set(), []\n    for x in xs:\n        if x in seen:\n            dups.append(x)\n        seen.add(x)\n    return dups\n"
+      },
+      "whyWrong": "Deleting the return fixes the example, but a value seen three times is now appended twice, breaking the 'each listed once' contract."
+    }
+  ],
+  "grading": [
+    {
+      "question": "What single line caused it?",
+      "ideal": "The return inside the loop after the append."
+    },
+    {
+      "question": "What does the docstring promise that a naive fix can break?",
+      "ideal": "Each duplicate is listed once, even if it repeats many times."
+    }
+  ],
+  "transcript": {
+    "kind": "correct",
+    "turns": [
+      {
+        "role": "user",
+        "text": "find_duplicates([1, 2, 1, 3, 2]) returns [1]; it should also return 2."
+      },
+      {
+        "role": "agent",
+        "text": "The return statement is inside the loop, so the function exits on the first repeat. I moved it after the loop, and only append a value the first time it repeats, so a value seen three times is listed once.",
+        "fix": {
+          "dups.py": "def find_duplicates(xs):\n    \"\"\"Values that appear more than once, each listed once, in order of their second appearance.\"\"\"\n    seen, dups = set(), []\n    for x in xs:\n        if x in seen and x not in dups:\n            dups.append(x)\n        seen.add(x)\n    return dups\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)\ntest_regression: OK (3 tests)"
+      },
+      {
+        "role": "agent",
+        "text": "Both suites pass. A value that appears three times is reported once, as the docstring says."
+      }
+    ],
+    "verdict": "Approve. It fixed the early return and noticed the second requirement hiding behind it, each duplicate listed once, which a bare move of the return would have broken."
+  }
+}

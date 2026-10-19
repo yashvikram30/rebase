@@ -1,0 +1,70 @@
+{
+  "id": "download-path-traversal",
+  "title": "The download endpoint serves our secrets file",
+  "domain": "os",
+  "concept": "Path traversal: check where a path resolves, not what it contains",
+  "concepts": [
+    "path-traversal",
+    "edge-case-testing"
+  ],
+  "difficulty": 2,
+  "symptom": "Security report from a researcher: GET /files/..%2Fconfig%2Fsecrets.env returns our database password. Uploads live in uploads/, and the config directory sits next to it. Patch it before the disclosure date.",
+  "files": {
+    "storage.py": "import os\n\n\nclass FileStore:\n    \"\"\"Files users uploaded. Everything served must come from inside root.\"\"\"\n\n    def __init__(self, root):\n        self.root = root\n\n    def path_for(self, name):\n        return os.path.join(self.root, name)\n\n    def read(self, name):\n        with open(self.path_for(name), \"rb\") as f:\n            return f.read()\n",
+    "server.py": "def download(store, name):\n    \"\"\"Handle GET /files/<name>: returns (status, body).\"\"\"\n    try:\n        return 200, store.read(name)\n    except PermissionError:\n        return 403, b\"forbidden\"\n    except (FileNotFoundError, IsADirectoryError):\n        return 404, b\"not found\"\n",
+    "site_fixture.py": "import os\nimport tempfile\n\n\ndef make_site():\n    \"\"\"A temp directory laid out like the server: uploads/ and, next to it, config/secrets.env.\"\"\"\n    base = tempfile.mkdtemp()\n    uploads = os.path.join(base, \"uploads\")\n    os.makedirs(uploads)\n    os.makedirs(os.path.join(base, \"config\"))\n    with open(os.path.join(base, \"config\", \"secrets.env\"), \"w\") as f:\n        f.write(\"DB_PASSWORD=hunter2\")\n    with open(os.path.join(uploads, \"cat.png\"), \"w\") as f:\n        f.write(\"meow\")\n    with open(os.path.join(uploads, \"q3..final.csv\"), \"w\") as f:\n        f.write(\"revenue\")\n    return base, uploads\n"
+  },
+  "failingTest": "import unittest\n\nfrom server import download\nfrom site_fixture import make_site\nfrom storage import FileStore\n\n\nclass Failing(unittest.TestCase):\n    def test_dot_dot_cannot_leave_the_upload_directory(self):\n        base, uploads = make_site()\n        status, _ = download(FileStore(uploads), \"../config/secrets.env\")\n        self.assertEqual(status, 403)\n",
+  "regressionTests": "import os\nimport unittest\n\nfrom server import download\nfrom site_fixture import make_site\nfrom storage import FileStore\n\n\nclass Regression(unittest.TestCase):\n    def setUp(self):\n        self.base, uploads = make_site()\n        self.store = FileStore(uploads)\n\n    def test_an_absolute_path_cannot_leave_either(self):\n        secret = os.path.join(self.base, \"config\", \"secrets.env\")\n        self.assertEqual(download(self.store, secret)[0], 403)\n\n    def test_normal_files_still_download(self):\n        self.assertEqual(download(self.store, \"cat.png\"), (200, b\"meow\"))\n\n    def test_a_name_with_two_dots_in_it_is_fine(self):\n        self.assertEqual(download(self.store, \"q3..final.csv\"), (200, b\"revenue\"))\n\n    def test_a_missing_file_is_404(self):\n        self.assertEqual(download(self.store, \"nope.txt\")[0], 404)\n",
+  "rootCause": "path_for joins the user's name onto root and never checks where the result points. '..' climbs out of the upload directory, and os.path.join throws root away completely when the name is absolute. The check has to be on the resolved path: realpath it, then require it to be inside root.",
+  "correctFix": {
+    "storage.py": "import os\n\n\nclass FileStore:\n    \"\"\"Files users uploaded. Everything served must come from inside root.\"\"\"\n\n    def __init__(self, root):\n        self.root = os.path.realpath(root)\n\n    def path_for(self, name):\n        # Resolve the final path first (\"..\", absolute names, symlinks), then check where it landed.\n        # os.path.join drops root entirely when name is absolute.\n        path = os.path.realpath(os.path.join(self.root, name))\n        if os.path.commonpath([path, self.root]) != self.root:\n            raise PermissionError(\"%r is outside the upload directory\" % name)\n        return path\n\n    def read(self, name):\n        with open(self.path_for(name), \"rb\") as f:\n            return f.read()\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "storage.py": "import os\n\n\nclass FileStore:\n    \"\"\"Files users uploaded. Everything served must come from inside root.\"\"\"\n\n    def __init__(self, root):\n        self.root = root\n\n    def path_for(self, name):\n        if \"..\" in name:\n            raise PermissionError(name)\n        return os.path.join(self.root, name)\n\n    def read(self, name):\n        with open(self.path_for(name), \"rb\") as f:\n            return f.read()\n"
+      },
+      "whyWrong": "Rejecting names that contain '..' blocks this exact request, but an absolute path still escapes (os.path.join discards root), and legitimate files like q3..final.csv are now refused. It checks the spelling of the path instead of where it leads."
+    }
+  ],
+  "transcript": {
+    "kind": "subtle-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "Requests with ../ in the file name can read files outside uploads/. Block them."
+      },
+      {
+        "role": "agent",
+        "text": "I added a check that rejects any name containing '..' with a PermissionError, which the server turns into a 403.",
+        "fix": {
+          "storage.py": "import os\n\n\nclass FileStore:\n    \"\"\"Files users uploaded. Everything served must come from inside root.\"\"\"\n\n    def __init__(self, root):\n        self.root = root\n\n    def path_for(self, name):\n        if \"..\" in name:\n            raise PermissionError(name)\n        return os.path.join(self.root, name)\n\n    def read(self, name):\n        with open(self.path_for(name), \"rb\") as f:\n            return f.read()\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)"
+      },
+      {
+        "role": "agent",
+        "text": "Traversal is blocked: the researcher's request now gets a 403."
+      }
+    ],
+    "verdict": "It blocks the reported string, not the attack. An absolute path skips root entirely, because os.path.join keeps only the absolute part, so the secrets file is still one request away. And q3..final.csv, a real upload, now gets a 403. Resolve the path and check it stays under root."
+  },
+  "grading": [
+    {
+      "question": "Why is checking for '..' in the name not enough?",
+      "ideal": "Other spellings escape too: absolute paths (join drops the root), symlinks, encodings. The only reliable check is on the resolved path."
+    },
+    {
+      "question": "How do you check that a resolved path is inside a directory?",
+      "ideal": "realpath both, then os.path.commonpath([path, root]) == root. A plain startswith is fooled by /uploads-old."
+    },
+    {
+      "question": "What would you check next, beyond this endpoint?",
+      "ideal": "Every other place a user-supplied name becomes a path: uploads, deletes, previews, archive extraction."
+    }
+  ]
+}

@@ -32,7 +32,7 @@ export function StartForm({ totalDays }: { totalDays: number }) {
         e.preventDefault();
         if (!plan) return;
         savePlan(plan);
-        router.push("/");
+        router.push("/learn");
       }}
     >
       <div className="field">

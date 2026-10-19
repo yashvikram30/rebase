@@ -1,0 +1,70 @@
+{
+  "id": "ttl-cache-falsy-values",
+  "title": "The unread badge hits the database on every page",
+  "domain": "build-optimize",
+  "concept": "A falsy value is not the same as a missing one",
+  "concepts": [
+    "falsy-vs-missing",
+    "cache-eviction"
+  ],
+  "difficulty": 2,
+  "symptom": "Users with unread messages are served from the cache, but users with zero unread cause a database query on every single page view, so most of your quiet accounts hammer the database.",
+  "files": {
+    "clock.py": "class FakeClock:\n    \"\"\"A clock the tests can move. Real code would read time.monotonic().\"\"\"\n\n    def __init__(self, start=0.0):\n        self._now = start\n\n    def now(self):\n        return self._now\n\n    def advance(self, seconds):\n        self._now += seconds\n",
+    "ttl_cache.py": "class TTLCache:\n    \"\"\"Remembers values for `ttl` seconds.\"\"\"\n\n    def __init__(self, clock, ttl):\n        self.clock = clock\n        self.ttl = ttl\n        self._data = {}  # key -> (value, expires_at)\n\n    def set(self, key, value):\n        self._data[key] = (value, self.clock.now() + self.ttl)\n\n    def get(self, key, default=None):\n        entry = self._data.get(key)\n        if entry is None:\n            return default\n        value, expires_at = entry\n        if self.clock.now() >= expires_at:\n            del self._data[key]\n            return default\n        return value\n\n    def get_or_load(self, key, loader):\n        \"\"\"The cached value, or loader(key) if there is none (or it expired); the result is cached.\"\"\"\n        value = self.get(key)\n        if value:\n            return value\n        value = loader(key)\n        self.set(key, value)\n        return value\n",
+    "profiles.py": "class FakeDB:\n    def __init__(self, unread):\n        self.unread = dict(unread)\n        self.calls = 0\n\n    def count_unread(self, user_id):\n        self.calls += 1\n        return self.unread.get(user_id, 0)\n\n\nclass ProfileService:\n    \"\"\"The unread-message badge, cached because every page asks for it.\"\"\"\n\n    def __init__(self, cache, db):\n        self.cache = cache\n        self.db = db\n\n    def unread_count(self, user_id):\n        return self.cache.get_or_load(user_id, self.db.count_unread)\n"
+  },
+  "failingTest": "import unittest\n\nfrom clock import FakeClock\nfrom profiles import FakeDB, ProfileService\nfrom ttl_cache import TTLCache\n\n\nclass Failing(unittest.TestCase):\n    def test_a_count_of_zero_is_cached_like_any_other_count(self):\n        db = FakeDB({\"ada\": 0})\n        service = ProfileService(TTLCache(FakeClock(), ttl=60), db)\n        for _ in range(5):\n            self.assertEqual(service.unread_count(\"ada\"), 0)\n        self.assertEqual(db.calls, 1)\n",
+  "regressionTests": "import unittest\n\nfrom clock import FakeClock\nfrom profiles import FakeDB, ProfileService\nfrom ttl_cache import TTLCache\n\n\nclass Regression(unittest.TestCase):\n    def setUp(self):\n        self.clock = FakeClock()\n        self.db = FakeDB({\"ada\": 3, \"bob\": 7})\n        self.service = ProfileService(TTLCache(self.clock, ttl=60), self.db)\n\n    def test_a_count_is_cached(self):\n        self.assertEqual(self.service.unread_count(\"ada\"), 3)\n        self.assertEqual(self.service.unread_count(\"ada\"), 3)\n        self.assertEqual(self.db.calls, 1)\n\n    def test_a_cached_count_is_reloaded_after_it_expires(self):\n        self.service.unread_count(\"ada\")\n        self.clock.advance(60)\n        self.db.unread[\"ada\"] = 4\n        self.assertEqual(self.service.unread_count(\"ada\"), 4)\n        self.assertEqual(self.db.calls, 2)\n\n    def test_users_are_cached_separately(self):\n        self.assertEqual(self.service.unread_count(\"ada\"), 3)\n        self.assertEqual(self.service.unread_count(\"bob\"), 7)\n        self.assertEqual(self.db.calls, 2)\n\n    def test_an_expired_zero_is_reloaded_too(self):\n        self.db.unread[\"ada\"] = 0\n        self.service.unread_count(\"ada\")\n        self.clock.advance(61)\n        self.db.unread[\"ada\"] = 2\n        self.assertEqual(self.service.unread_count(\"ada\"), 2)\n",
+  "rootCause": "get_or_load asks 'if value:', so a cached 0 (or '', [], False) looks exactly like a cache miss, and the loader runs again every time. The cache has to tell 'nothing stored' from 'a falsy value stored', with a sentinel or by testing the key, while still honouring expiry.",
+  "correctFix": {
+    "ttl_cache.py": "_MISSING = object()\n\n\nclass TTLCache:\n    \"\"\"Remembers values for `ttl` seconds.\"\"\"\n\n    def __init__(self, clock, ttl):\n        self.clock = clock\n        self.ttl = ttl\n        self._data = {}  # key -> (value, expires_at)\n\n    def set(self, key, value):\n        self._data[key] = (value, self.clock.now() + self.ttl)\n\n    def get(self, key, default=None):\n        entry = self._data.get(key)\n        if entry is None:\n            return default\n        value, expires_at = entry\n        if self.clock.now() >= expires_at:\n            del self._data[key]\n            return default\n        return value\n\n    def get_or_load(self, key, loader):\n        \"\"\"The cached value, or loader(key) if there is none (or it expired); the result is cached.\"\"\"\n        value = self.get(key, _MISSING)\n        if value is not _MISSING:\n            return value\n        value = loader(key)\n        self.set(key, value)\n        return value\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "ttl_cache.py": "class TTLCache:\n    \"\"\"Remembers values for `ttl` seconds.\"\"\"\n\n    def __init__(self, clock, ttl):\n        self.clock = clock\n        self.ttl = ttl\n        self._data = {}  # key -> (value, expires_at)\n\n    def set(self, key, value):\n        self._data[key] = (value, self.clock.now() + self.ttl)\n\n    def get(self, key, default=None):\n        entry = self._data.get(key)\n        if entry is None:\n            return default\n        value, expires_at = entry\n        if self.clock.now() >= expires_at:\n            del self._data[key]\n            return default\n        return value\n\n    def get_or_load(self, key, loader):\n        \"\"\"The cached value, or loader(key) if there is none (or it expired); the result is cached.\"\"\"\n        if key in self._data:\n            return self._data[key][0]\n        value = loader(key)\n        self.set(key, value)\n        return value\n"
+      },
+      "whyWrong": "Testing 'key in self._data' stops the reloads, but it skips the expiry check that get() performs, so an expired entry is served forever and never refreshed."
+    }
+  ],
+  "grading": [
+    {
+      "question": "Why is `if value:` the wrong test for a cache hit?",
+      "ideal": "It is false for 0, empty strings and empty collections, so valid cached results are treated as misses."
+    },
+    {
+      "question": "What is a sentinel, and why use object() for it?",
+      "ideal": "A unique marker that no real value can equal, so 'missing' is distinguishable from every legitimate value including None."
+    },
+    {
+      "question": "What other behaviour must a fix preserve?",
+      "ideal": "Expiry: entries must still be reloaded once their ttl has passed."
+    }
+  ],
+  "transcript": {
+    "kind": "subtle-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "Users with zero unread messages hit the database on every page view."
+      },
+      {
+        "role": "agent",
+        "text": "get_or_load checks 'if value:', so a cached 0 looks exactly like a miss. I check whether the key is stored instead of whether the value is truthy.",
+        "fix": {
+          "ttl_cache.py": "class TTLCache:\n    \"\"\"Remembers values for `ttl` seconds.\"\"\"\n\n    def __init__(self, clock, ttl):\n        self.clock = clock\n        self.ttl = ttl\n        self._data = {}  # key -> (value, expires_at)\n\n    def set(self, key, value):\n        self._data[key] = (value, self.clock.now() + self.ttl)\n\n    def get(self, key, default=None):\n        entry = self._data.get(key)\n        if entry is None:\n            return default\n        value, expires_at = entry\n        if self.clock.now() >= expires_at:\n            del self._data[key]\n            return default\n        return value\n\n    def get_or_load(self, key, loader):\n        \"\"\"The cached value, or loader(key) if there is none (or it expired); the result is cached.\"\"\"\n        if key in self._data:\n            return self._data[key][0]\n        value = loader(key)\n        self.set(key, value)\n        return value\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)"
+      },
+      {
+        "role": "agent",
+        "text": "Fixed: zero counts are served from the cache."
+      }
+    ],
+    "verdict": "The membership test bypasses get(), and with it the expiry check, so an expired entry is served forever. The cache needs a miss signal that is not a falsy value, such as a sentinel object."
+  }
+}

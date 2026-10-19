@@ -1,0 +1,70 @@
+{
+  "id": "order-repository-aliasing",
+  "title": "A failed order update changes the saved order anyway",
+  "domain": "oop",
+  "concept": "Repositories must not hand out their own mutable state",
+  "concepts": [
+    "aliasing-mutable-state",
+    "defensive-copying"
+  ],
+  "difficulty": 3,
+  "symptom": "OrderService.add_item rejects an item that pushes the order over the limit and raises InvalidOrder. But when you read the order back, the rejected item is in it, as if the update had half happened.",
+  "files": {
+    "models.py": "from dataclasses import dataclass, field\nfrom typing import List\n\n\n@dataclass\nclass LineItem:\n    sku: str\n    unit_price_cents: int\n    quantity: int = 1\n\n    @property\n    def total_cents(self):\n        return self.unit_price_cents * self.quantity\n\n\n@dataclass\nclass Order:\n    order_id: str\n    items: List[LineItem] = field(default_factory=list)\n    discount_cents: int = 0\n    status: str = \"open\"\n\n    @property\n    def subtotal_cents(self):\n        return sum(item.total_cents for item in self.items)\n\n    @property\n    def total_cents(self):\n        return self.subtotal_cents - self.discount_cents\n",
+    "repository.py": "class OrderNotFound(KeyError):\n    pass\n\n\nclass InMemoryOrderRepository:\n    \"\"\"Stands in for the database: what is saved is what later reads see.\"\"\"\n\n    def __init__(self):\n        self._orders = {}\n\n    def save(self, order):\n        self._orders[order.order_id] = order\n\n    def get(self, order_id):\n        try:\n            return self._orders[order_id]\n        except KeyError:\n            raise OrderNotFound(order_id)\n",
+    "service.py": "MAX_ORDER_CENTS = 100_000\n\n\nclass InvalidOrder(ValueError):\n    pass\n\n\nclass OrderService:\n    def __init__(self, repo):\n        self.repo = repo\n\n    def add_item(self, order_id, item):\n        order = self.repo.get(order_id)\n        order.items.append(item)\n        if order.total_cents > MAX_ORDER_CENTS:\n            raise InvalidOrder(\"order over the limit\")\n        self.repo.save(order)\n        return order\n\n    def apply_discount(self, order_id, cents):\n        order = self.repo.get(order_id)\n        order.discount_cents = cents\n        if order.total_cents < 0:\n            raise InvalidOrder(\"discount is bigger than the order\")\n        self.repo.save(order)\n        return order\n"
+  },
+  "failingTest": "import unittest\n\nfrom models import LineItem, Order\nfrom repository import InMemoryOrderRepository\nfrom service import InvalidOrder, OrderService\n\n\nclass Failing(unittest.TestCase):\n    def test_a_rejected_item_is_not_left_in_the_saved_order(self):\n        repo = InMemoryOrderRepository()\n        repo.save(Order(\"o-1\", [LineItem(\"book\", 4000)]))\n        service = OrderService(repo)\n        with self.assertRaises(InvalidOrder):\n            service.add_item(\"o-1\", LineItem(\"piano\", 99_000))\n        self.assertEqual([i.sku for i in repo.get(\"o-1\").items], [\"book\"])\n",
+  "regressionTests": "import unittest\n\nfrom models import LineItem, Order\nfrom repository import InMemoryOrderRepository, OrderNotFound\nfrom service import InvalidOrder, OrderService\n\n\nclass Regression(unittest.TestCase):\n    def setUp(self):\n        self.repo = InMemoryOrderRepository()\n        self.repo.save(Order(\"o-1\", [LineItem(\"book\", 4000, 2)]))\n        self.service = OrderService(self.repo)\n\n    def test_an_accepted_item_is_saved(self):\n        self.service.add_item(\"o-1\", LineItem(\"pen\", 150))\n        self.assertEqual([i.sku for i in self.repo.get(\"o-1\").items], [\"book\", \"pen\"])\n        self.assertEqual(self.repo.get(\"o-1\").total_cents, 8150)\n\n    def test_an_accepted_discount_is_saved(self):\n        self.service.apply_discount(\"o-1\", 500)\n        self.assertEqual(self.repo.get(\"o-1\").discount_cents, 500)\n\n    def test_a_rejected_discount_leaves_the_saved_discount_alone(self):\n        with self.assertRaises(InvalidOrder):\n            self.service.apply_discount(\"o-1\", 9_999_999)\n        self.assertEqual(self.repo.get(\"o-1\").discount_cents, 0)\n\n    def test_changing_an_order_after_saving_it_does_not_change_the_saved_copy(self):\n        order = Order(\"o-2\", [LineItem(\"lamp\", 2500)])\n        self.repo.save(order)\n        order.items.append(LineItem(\"rug\", 9000))\n        self.assertEqual(len(self.repo.get(\"o-2\").items), 1)\n\n    def test_unknown_orders_raise(self):\n        with self.assertRaises(OrderNotFound):\n            self.repo.get(\"missing\")\n",
+  "rootCause": "InMemoryOrderRepository stores and returns the same Order object. The service mutates what get() returned, so the 'saved' order changes before validation has passed, and an exception leaves it half-updated. A real database returns a fresh row each time, so the repository should save and return copies.",
+  "correctFix": {
+    "repository.py": "import copy\n\n\nclass OrderNotFound(KeyError):\n    pass\n\n\nclass InMemoryOrderRepository:\n    \"\"\"Stands in for the database: what is saved is what later reads see.\n\n    A real database hands back a fresh row each time, so this does too.\n    \"\"\"\n\n    def __init__(self):\n        self._orders = {}\n\n    def save(self, order):\n        self._orders[order.order_id] = copy.deepcopy(order)\n\n    def get(self, order_id):\n        try:\n            return copy.deepcopy(self._orders[order_id])\n        except KeyError:\n            raise OrderNotFound(order_id)\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "service.py": "MAX_ORDER_CENTS = 100_000\n\n\nclass InvalidOrder(ValueError):\n    pass\n\n\nclass OrderService:\n    def __init__(self, repo):\n        self.repo = repo\n\n    def add_item(self, order_id, item):\n        order = self.repo.get(order_id)\n        order.items.append(item)\n        if order.total_cents > MAX_ORDER_CENTS:\n            order.items.pop()\n            raise InvalidOrder(\"order over the limit\")\n        self.repo.save(order)\n        return order\n\n    def apply_discount(self, order_id, cents):\n        order = self.repo.get(order_id)\n        order.discount_cents = cents\n        if order.total_cents < 0:\n            raise InvalidOrder(\"discount is bigger than the order\")\n        self.repo.save(order)\n        return order\n"
+      },
+      "whyWrong": "Popping the item before raising fixes add_item only. apply_discount has the same flaw: a rejected discount is still left on the saved order, because the shared object is mutated before validation."
+    }
+  ],
+  "transcript": {
+    "kind": "subtle-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "When add_item rejects an order for being over the limit, the item is still in the order I read back afterwards. Why?"
+      },
+      {
+        "role": "agent",
+        "text": "add_item appends the item before it validates the total, so the item is there when it raises. The simplest fix is to take the item back out before raising.",
+        "fix": {
+          "service.py": "MAX_ORDER_CENTS = 100_000\n\n\nclass InvalidOrder(ValueError):\n    pass\n\n\nclass OrderService:\n    def __init__(self, repo):\n        self.repo = repo\n\n    def add_item(self, order_id, item):\n        order = self.repo.get(order_id)\n        order.items.append(item)\n        if order.total_cents > MAX_ORDER_CENTS:\n            order.items.pop()\n            raise InvalidOrder(\"order over the limit\")\n        self.repo.save(order)\n        return order\n\n    def apply_discount(self, order_id, cents):\n        order = self.repo.get(order_id)\n        order.discount_cents = cents\n        if order.total_cents < 0:\n            raise InvalidOrder(\"discount is bigger than the order\")\n        self.repo.save(order)\n        return order\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)"
+      },
+      {
+        "role": "agent",
+        "text": "That fixes it: a rejected item is now removed before the error is raised."
+      }
+    ],
+    "verdict": "The patch treats the symptom in one method. The real cause is that the repository hands out the very object it stores, so any caller that mutates and then fails has already changed the saved order. apply_discount has the identical problem, and the regression suite catches it: a rejected discount stays saved."
+  },
+  "grading": [
+    {
+      "question": "Why does a failed update change data that was never saved?",
+      "ideal": "get() returns the stored object itself, so mutating it mutates the 'database'. Nothing separates a working copy from the saved state."
+    },
+    {
+      "question": "Where is the right place to fix this, and why not in each service method?",
+      "ideal": "In the repository: it owns the boundary, so every caller gets safe copies. Patching each method leaves the next one broken."
+    },
+    {
+      "question": "What behaviour of a real database is the in-memory repository supposed to imitate?",
+      "ideal": "Reads return fresh copies; changes only become visible after an explicit save."
+    }
+  ]
+}

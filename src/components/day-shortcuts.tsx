@@ -23,7 +23,7 @@ export function DayShortcuts({ prev, next }: { prev: string | null; next: string
       if (e.key === "ArrowLeft" && prev) router.push(prev);
       else if (e.key === "ArrowRight" && next) router.push(next);
       else if (e.key === "g") g = Date.now();
-      else if (e.key === "t" && Date.now() - g < 1200) router.push("/");
+      else if (e.key === "t" && Date.now() - g < 1200) router.push("/learn");
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

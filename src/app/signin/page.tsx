@@ -17,20 +17,18 @@ export default function SignInPage() {
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none">
                   <path
                     d="M6 4.5h10.5a1.5 1.5 0 0 1 1.5 1.5v13H7.5A1.5 1.5 0 0 1 6 17.5v-13Z"
-                    fill="#fbf8f1"
+                    fill="#ffffff"
                   />
-                  <path d="M13 4.5v7l2-1.4 2 1.4v-7h-4Z" fill="#f4c84a" />
+                  <path d="M13 4.5v7l2-1.4 2 1.4v-7h-4Z" fill="#2b4ddb" />
                 </svg>
               </span>
-              Daybook
+              Rebase
             </Link>
             <div className="auth-pitch">
-              <h2>
-                Learn how computers <em>really</em> work.
-              </h2>
+              <h2>Keep your progress in Learn and Debug.</h2>
               <ul className="auth-points">
-                <li>A free 16-week plan: architecture, OS, networking, databases, ML and GenAI.</li>
-                <li>Your progress, notes and revision history saved to your account.</li>
+                <li>Your course days, notes and revision history, saved to your account.</li>
+                <li>Every Debug case you solve or review, with your reports.</li>
                 <li>Pick up on any device, right where you left off.</li>
               </ul>
             </div>

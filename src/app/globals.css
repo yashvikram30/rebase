@@ -1,76 +1,101 @@
-/* Palette: sage ground, cream panels, deep plum for action, mustard for the one loud moment. */
+/* Palette: warm white, one bright orange for action, chunky pressable buttons. Green and red mean pass and
+   fail. Text on orange is dark ink, because white on this orange fails contrast. The old names (--hot, --plum,
+   --amber) are kept so existing rules pick up the new values. */
 :root {
-  --bg: #e4ebd6;
-  --bg-soft: #f9faf4;
-  --bg-hover: #d9e2c8;
-  --text: #25261c;
-  --muted: #5d604f;
-  --line: #bcc6a4;
-  --accent: #5a2a52;
-  --accent-soft: #eddfe9;
-  --accent-text: #5a2a52;
-  --on-accent: #fbf8f1;
-  --hot: #f4c84a;
-  --on-hot: #25261c;
-  --plum: #5a2a52;
-  --ok: #2f6b3a;
-  --ok-soft: #dcebd3;
-  --warn: #8a5a00;
-  --warn-soft: #f6e7bd;
-  --bad: #a3322a;
-  --code-bg: #d5dfc3;
-  --panel: #f9faf4;
-  --top: 64px;
-  --navw: 292px;
+  --bg: #fffaf3;
+  --bg-soft: #ffffff;
+  --bg-hover: #fbeedd;
+  --text: #2a1d12;
+  --muted: #76614f;
+  --line: #f0dfc8;
+  --line-strong: #e2c9a8;
+  --accent: #ff6a1f;
+  --accent-edge: #d24f0c;
+  --accent-soft: #ffe8d9;
+  --accent-text: #c2470a;
+  --on-accent: #1f1208;
+  --hot: #ff6a1f;
+  --on-hot: #1f1208;
+  --plum: #2a1d12;
+  --amber: #ff6a1f;
+  --on-amber: #1f1208;
+  --ok: #2f8a1f;
+  --ok-soft: #e6f6df;
+  --warn: #9a5b00;
+  --warn-soft: #fff0cc;
+  --bad: #d63a2a;
+  --bad-soft: #fde4df;
+  --code-bg: #fff3e3;
+  --panel: #ffffff;
+  --ramp-a: #3a2a1d;
+  --ramp-b: #ff6a1f;
+  --radius: 16px;
+  --radius-sm: 12px;
+  --top: 0px;
+  --navw: 272px;
   --tocw: 220px;
-  --sans: var(--font-inter), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --serif: var(--font-fraunces), "Fraunces", Georgia, serif;
-  --mono: var(--font-mono), "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --sans: var(--font-sans), "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: var(--font-display), "Bricolage Grotesque", var(--sans);
+  --mono: var(--font-mono), "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
 :root[data-theme="dark"] {
-  --bg: #1b1720;
-  --bg-soft: #251f2b;
-  --bg-hover: #30283a;
-  --text: #efeadf;
-  --muted: #aba3b2;
-  --line: #3d3345;
-  --accent: #e0b4d6;
-  --accent-soft: #3a2a40;
-  --accent-text: #e8c4df;
-  --on-accent: #1b1720;
-  --hot: #f4c84a;
-  --on-hot: #25261c;
-  --plum: #46203f;
-  --ok: #7fd08e;
-  --ok-soft: #1e3025;
-  --warn: #f0b04f;
-  --warn-soft: #3a2d14;
-  --bad: #ff8a80;
-  --code-bg: #2c2433;
-  --panel: #251f2b;
+  --bg: #1a1410;
+  --bg-soft: #231b15;
+  --bg-hover: #2e241c;
+  --text: #f6ece2;
+  --muted: #b9a593;
+  --line: #3a2e24;
+  --line-strong: #52402f;
+  --accent: #ff7a33;
+  --accent-edge: #b9480b;
+  --accent-soft: #3a2316;
+  --accent-text: #ff9a5f;
+  --on-accent: #1a0d04;
+  --hot: #ff7a33;
+  --on-hot: #1a0d04;
+  --plum: #2e2118;
+  --amber: #ff7a33;
+  --on-amber: #1a0d04;
+  --ok: #7fe063;
+  --ok-soft: #1d3317;
+  --warn: #ffc061;
+  --warn-soft: #3a2a10;
+  --bad: #ff7b6b;
+  --bad-soft: #3a1c18;
+  --code-bg: #15100c;
+  --panel: #231b15;
+  --ramp-a: #3a2a1d;
+  --ramp-b: #ff7a33;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #1b1720;
-    --bg-soft: #251f2b;
-    --bg-hover: #30283a;
-    --text: #efeadf;
-    --muted: #aba3b2;
-    --line: #3d3345;
-    --accent: #e0b4d6;
-    --accent-soft: #3a2a40;
-    --accent-text: #e8c4df;
-    --on-accent: #1b1720;
-    --hot: #f4c84a;
-    --on-hot: #25261c;
-    --plum: #46203f;
-    --ok: #7fd08e;
-    --ok-soft: #1e3025;
-    --warn: #f0b04f;
-    --warn-soft: #3a2d14;
-    --bad: #ff8a80;
-    --code-bg: #2c2433;
-    --panel: #251f2b;
+    --bg: #1a1410;
+    --bg-soft: #231b15;
+    --bg-hover: #2e241c;
+    --text: #f6ece2;
+    --muted: #b9a593;
+    --line: #3a2e24;
+    --line-strong: #52402f;
+    --accent: #ff7a33;
+    --accent-edge: #b9480b;
+    --accent-soft: #3a2316;
+    --accent-text: #ff9a5f;
+    --on-accent: #1a0d04;
+    --hot: #ff7a33;
+    --on-hot: #1a0d04;
+    --plum: #2e2118;
+    --amber: #ff7a33;
+    --on-amber: #1a0d04;
+    --ok: #7fe063;
+    --ok-soft: #1d3317;
+    --warn: #ffc061;
+    --warn-soft: #3a2a10;
+    --bad: #ff7b6b;
+    --bad-soft: #3a1c18;
+    --code-bg: #15100c;
+    --panel: #231b15;
+    --ramp-a: #3a2a1d;
+    --ramp-b: #ff7a33;
   }
 }
 
@@ -84,7 +109,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 17px/1.7 var(--sans);
+  font: 16px/1.65 var(--sans);
   -webkit-font-smoothing: antialiased;
 }
 a {

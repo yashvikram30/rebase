@@ -1,0 +1,64 @@
+{
+  "id": "sales-report-two-tickets",
+  "title": "Two tickets about the same sales report",
+  "domain": "pipeline",
+  "concept": "Calendar days in the store's timezone, and signs on refunds",
+  "concepts": [
+    "timezones",
+    "edge-case-testing"
+  ],
+  "difficulty": 2,
+  "symptom": "Two tickets, both about the daily revenue report. One, from the Mumbai store: orders placed after midnight, until about 5:30 in the morning, show up under the previous day. Two, from finance: on a day with a refund, revenue goes up instead of down.",
+  "files": {
+    "report.py": "from datetime import datetime, timezone\n\n\ndef daily_revenue(orders, utc_offset_minutes):\n    \"\"\"Revenue in cents per local calendar day, for a store at a fixed UTC offset (IST is +330).\n\n    orders are dicts with ts (UNIX seconds), amount_cents (always positive) and kind (\"sale\" or\n    \"refund\"). Refunds reduce the day's revenue.\n    \"\"\"\n    totals = {}\n    for order in orders:\n        day = datetime.fromtimestamp(order[\"ts\"], tz=timezone.utc).date().isoformat()\n        totals[day] = totals.get(day, 0) + order[\"amount_cents\"]\n    return totals\n"
+  },
+  "failingTest": "import unittest\n\nfrom report import daily_revenue\n\n\nclass Failing(unittest.TestCase):\n    def test_an_order_after_midnight_in_mumbai_counts_for_the_new_day(self):\n        # 1772391600 is 19:00 UTC on 1 March, which is 00:30 on 2 March in Mumbai.\n        orders = [{\"ts\": 1772391600, \"amount_cents\": 500, \"kind\": \"sale\"}]\n        self.assertEqual(daily_revenue(orders, 330), {\"2026-03-02\": 500})\n",
+  "regressionTests": "import unittest\n\nfrom report import daily_revenue\n\n\nclass Regression(unittest.TestCase):\n    def test_a_refund_reduces_the_day(self):\n        orders = [\n            {\"ts\": 1772433000, \"amount_cents\": 1000, \"kind\": \"sale\"},\n            {\"ts\": 1772433000, \"amount_cents\": 300, \"kind\": \"refund\"},\n        ]\n        self.assertEqual(daily_revenue(orders, 330), {\"2026-03-02\": 700})\n\n    def test_a_store_behind_utc(self):\n        # 03:00 UTC on 2 March is 22:00 on 1 March in New York.\n        orders = [{\"ts\": 1772420400, \"amount_cents\": 250, \"kind\": \"sale\"}]\n        self.assertEqual(daily_revenue(orders, -300), {\"2026-03-01\": 250})\n\n    def test_sales_on_one_day_add_up(self):\n        orders = [{\"ts\": 1772433000, \"amount_cents\": 100, \"kind\": \"sale\"}] * 3\n        self.assertEqual(daily_revenue(orders, 330), {\"2026-03-02\": 300})\n",
+  "rootCause": "Two independent bugs. The day is taken from the timestamp in UTC, so for a store at +5:30 anything between local midnight and 05:30 lands on the previous day. And every order's amount is added, though refunds carry a positive amount and must be subtracted.",
+  "correctFix": {
+    "report.py": "from datetime import datetime, timedelta, timezone\n\n\ndef daily_revenue(orders, utc_offset_minutes):\n    \"\"\"Revenue in cents per local calendar day, for a store at a fixed UTC offset (IST is +330).\n\n    orders are dicts with ts (UNIX seconds), amount_cents (always positive) and kind (\"sale\" or\n    \"refund\"). Refunds reduce the day's revenue.\n    \"\"\"\n    local = timezone(timedelta(minutes=utc_offset_minutes))\n    totals = {}\n    for order in orders:\n        # The day is the store's calendar day, not the UTC one.\n        day = datetime.fromtimestamp(order[\"ts\"], tz=local).date().isoformat()\n        sign = -1 if order[\"kind\"] == \"refund\" else 1\n        totals[day] = totals.get(day, 0) + sign * order[\"amount_cents\"]\n    return totals\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "report.py": "from datetime import datetime, timedelta, timezone\n\n\ndef daily_revenue(orders, utc_offset_minutes):\n    \"\"\"Revenue in cents per local calendar day, for a store at a fixed UTC offset (IST is +330).\n\n    orders are dicts with ts (UNIX seconds), amount_cents (always positive) and kind (\"sale\" or\n    \"refund\"). Refunds reduce the day's revenue.\n    \"\"\"\n    local = timezone(timedelta(minutes=utc_offset_minutes))\n    totals = {}\n    for order in orders:\n        day = datetime.fromtimestamp(order[\"ts\"], tz=local).date().isoformat()\n        totals[day] = totals.get(day, 0) + order[\"amount_cents\"]\n    return totals\n"
+      },
+      "whyWrong": "Converting to the store's timezone closes the first ticket, but refunds are still added as revenue. The report had two bugs, and the second ticket is still open."
+    }
+  ],
+  "transcript": {
+    "kind": "subtle-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "Two tickets on the daily revenue report: the Mumbai store's late orders land on the wrong day, and refunds increase revenue. Please fix the report."
+      },
+      {
+        "role": "agent",
+        "text": "The report builds the date in UTC. For a store at UTC+5:30, an order at 00:30 local time is 19:00 the previous day in UTC. I convert each timestamp to the store's offset first.",
+        "fix": {
+          "report.py": "from datetime import datetime, timedelta, timezone\n\n\ndef daily_revenue(orders, utc_offset_minutes):\n    \"\"\"Revenue in cents per local calendar day, for a store at a fixed UTC offset (IST is +330).\n\n    orders are dicts with ts (UNIX seconds), amount_cents (always positive) and kind (\"sale\" or\n    \"refund\"). Refunds reduce the day's revenue.\n    \"\"\"\n    local = timezone(timedelta(minutes=utc_offset_minutes))\n    totals = {}\n    for order in orders:\n        day = datetime.fromtimestamp(order[\"ts\"], tz=local).date().isoformat()\n        totals[day] = totals.get(day, 0) + order[\"amount_cents\"]\n    return totals\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)"
+      },
+      {
+        "role": "agent",
+        "text": "Fixed: late orders now count toward the correct local day."
+      }
+    ],
+    "verdict": "Good work on the first ticket, and the second was never touched. Refunds are still added to revenue. When a report lists two symptoms, check each one before calling it done: the regression suite has a refund case that still fails."
+  },
+  "grading": [
+    {
+      "question": "Why does UTC put a Mumbai order on the wrong day?",
+      "ideal": "Mumbai is 5h30 ahead, so from local midnight until 05:30 the UTC date is still the previous day."
+    },
+    {
+      "question": "Two symptoms are reported. How do you know whether they share a cause?",
+      "ideal": "Reproduce each one separately with its own test; here one is about which day, the other about the amount, so they need separate fixes."
+    }
+  ]
+}

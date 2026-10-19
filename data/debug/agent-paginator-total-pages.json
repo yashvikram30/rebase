@@ -1,0 +1,69 @@
+{
+  "id": "agent-paginator-total-pages",
+  "title": "An AI-written paginator hides the last page",
+  "domain": "agent-review",
+  "concept": "Reviewing an AI fix: ceiling division and its edge cases",
+  "concepts": [
+    "off-by-one",
+    "boundary-conditions"
+  ],
+  "difficulty": 2,
+  "symptom": "An assistant wrote the pagination helper. Lists whose length is not a multiple of the page size report one page too few, so the last few items can never be reached through the API.",
+  "files": {
+    "pagination.py": "def total_pages(item_count, per_page):\n    \"\"\"How many pages are needed to show item_count items.\"\"\"\n    return item_count // per_page\n\n\ndef page_items(items, page, per_page):\n    \"\"\"The items on a 1-based page; an empty list for a page that does not exist.\"\"\"\n    if page < 1 or page > total_pages(len(items), per_page):\n        return []\n    start = (page - 1) * per_page\n    return items[start : start + per_page]\n",
+    "api.py": "from pagination import page_items, total_pages\n\n\ndef list_response(items, page, per_page=10):\n    \"\"\"What the API returns for one page of a list.\"\"\"\n    return {\n        \"items\": page_items(items, page, per_page),\n        \"page\": page,\n        \"total_pages\": total_pages(len(items), per_page),\n    }\n"
+  },
+  "failingTest": "import unittest\n\nfrom api import list_response\n\nITEMS = list(range(25))\n\n\nclass Failing(unittest.TestCase):\n    def test_a_partial_last_page_exists(self):\n        response = list_response(ITEMS, page=3, per_page=10)\n        self.assertEqual(response[\"items\"], [20, 21, 22, 23, 24])\n        self.assertEqual(response[\"total_pages\"], 3)\n",
+  "regressionTests": "import unittest\n\nfrom api import list_response\nfrom pagination import total_pages\n\nITEMS = list(range(30))\n\n\nclass Regression(unittest.TestCase):\n    def test_an_exact_multiple_has_no_extra_empty_page(self):\n        self.assertEqual(total_pages(30, 10), 3)\n        self.assertEqual(list_response(ITEMS, page=4, per_page=10)[\"items\"], [])\n\n    def test_no_items_means_no_pages(self):\n        self.assertEqual(total_pages(0, 10), 0)\n\n    def test_one_item_is_one_page(self):\n        self.assertEqual(total_pages(1, 10), 1)\n\n    def test_pages_before_the_first_are_empty(self):\n        self.assertEqual(list_response(ITEMS, page=0, per_page=10)[\"items\"], [])\n\n    def test_a_middle_page_is_full(self):\n        self.assertEqual(list_response(ITEMS, page=2, per_page=10)[\"items\"], list(range(10, 20)))\n",
+  "rootCause": "total_pages uses floor division, which drops the partial last page. The page count is a ceiling division: -(-count // per_page), or (count + per_page - 1) // per_page. Adding 1 to the floor is not the same thing and breaks on exact multiples and on an empty list.",
+  "correctFix": {
+    "pagination.py": "def total_pages(item_count, per_page):\n    \"\"\"How many pages are needed to show item_count items.\"\"\"\n    return -(-item_count // per_page)\n\n\ndef page_items(items, page, per_page):\n    \"\"\"The items on a 1-based page; an empty list for a page that does not exist.\"\"\"\n    if page < 1 or page > total_pages(len(items), per_page):\n        return []\n    start = (page - 1) * per_page\n    return items[start : start + per_page]\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "pagination.py": "def total_pages(item_count, per_page):\n    \"\"\"How many pages are needed to show item_count items.\"\"\"\n    return item_count // per_page + 1\n\n\ndef page_items(items, page, per_page):\n    \"\"\"The items on a 1-based page; an empty list for a page that does not exist.\"\"\"\n    if page < 1 or page > total_pages(len(items), per_page):\n        return []\n    start = (page - 1) * per_page\n    return items[start : start + per_page]\n"
+      },
+      "whyWrong": "Adding 1 fixes counts with a remainder but adds a phantom empty page when the count divides exactly (30 items give 4 pages) and reports one page for an empty list."
+    }
+  ],
+  "transcript": {
+    "kind": "confident-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "Our list API says a 25-item list has 2 pages and never shows items 21 to 25. Please fix total_pages."
+      },
+      {
+        "role": "agent",
+        "text": "total_pages uses floor division, so the partial last page is dropped. Adding 1 to the result gives the extra page for the remainder. This is the standard fix and handles every case.",
+        "fix": {
+          "pagination.py": "def total_pages(item_count, per_page):\n    \"\"\"How many pages are needed to show item_count items.\"\"\"\n    return item_count // per_page + 1\n\n\ndef page_items(items, page, per_page):\n    \"\"\"The items on a 1-based page; an empty list for a page that does not exist.\"\"\"\n    if page < 1 or page > total_pages(len(items), per_page):\n        return []\n    start = (page - 1) * per_page\n    return items[start : start + per_page]\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)"
+      },
+      {
+        "role": "agent",
+        "text": "Fixed. 25 items now give 3 pages, so the last five items are reachable."
+      }
+    ],
+    "verdict": "It works for 25 items and is stated with total confidence, but adding 1 is wrong whenever the count divides exactly: 30 items would report 4 pages with the last one empty, and 0 items would report 1 page. Only a ceiling division is right for every count, and the regression suite checks exactly those cases."
+  },
+  "grading": [
+    {
+      "question": "Write two correct ways to compute a ceiling division with integers.",
+      "ideal": "-(-n // d), or (n + d - 1) // d."
+    },
+    {
+      "question": "Which inputs would you test to catch 'floor plus one'?",
+      "ideal": "An exact multiple (30, 10), zero items, and one item."
+    },
+    {
+      "question": "The assistant said 'handles every case'. What should you do with a claim like that?",
+      "ideal": "Treat it as unverified: try the boundary cases yourself instead of trusting the summary."
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "id": "bank-transfer-deadlock",
+  "title": "Two transfers in opposite directions hang forever",
+  "domain": "os",
+  "concept": "Deadlock: acquire locks in one global order",
+  "concepts": [
+    "deadlock-lock-ordering",
+    "check-then-act-races"
+  ],
+  "difficulty": 3,
+  "symptom": "A transfer from Alice to Bob works. So does one from Bob to Alice. But when both happen at the same time, neither finishes and the test run ends with Deadlock.",
+  "files": {
+    "sched.py": "\"\"\"A tiny cooperative scheduler, so tests control exactly how tasks interleave.\n\nReal services use asyncio; this stands in for it so every run is the same.\nA task runs until it awaits yield_control(), then the next task gets a turn.\n\"\"\"\nimport types\n\n\nclass Deadlock(Exception):\n    \"\"\"Tasks are still waiting after far more turns than any of them needs.\"\"\"\n\n\n@types.coroutine\ndef yield_control():\n    \"\"\"Let the other tasks run (think: waiting on the network).\"\"\"\n    yield\n\n\nclass Lock:\n    def __init__(self):\n        self._held = False\n\n    async def acquire(self):\n        while self._held:\n            await yield_control()\n        self._held = True\n\n    def release(self):\n        self._held = False\n\n    async def __aenter__(self):\n        await self.acquire()\n\n    async def __aexit__(self, *exc_info):\n        self.release()\n\n\ndef run_all(*coroutines, max_turns=100):\n    \"\"\"Runs coroutines round-robin until they all finish; returns each one's result or its exception.\"\"\"\n    pending = list(enumerate(coroutines))\n    results = [None] * len(coroutines)\n    turns = 0\n    while pending:\n        turns += 1\n        if turns > max_turns:\n            raise Deadlock(\"still waiting after %d turns\" % max_turns)\n        still_running = []\n        for index, task in pending:\n            try:\n                task.send(None)\n            except StopIteration as done:\n                results[index] = done.value\n            except Exception as error:\n                results[index] = error\n            else:\n                still_running.append((index, task))\n        pending = still_running\n    return results\n",
+    "accounts.py": "from sched import Lock\n\n\nclass Account:\n    def __init__(self, account_id, balance):\n        self.id = account_id\n        self.balance = balance\n        self.lock = Lock()\n",
+    "bank.py": "from sched import yield_control\n\n\nclass InsufficientFunds(Exception):\n    pass\n\n\nclass Bank:\n    def __init__(self):\n        self.active = 0  # transfers inside their critical section right now\n        self.peak = 0    # the most that were ever inside at once\n\n    async def transfer(self, source, target, cents):\n        async with source.lock:\n            await yield_control()  # e.g. a fraud check on the sending account\n            async with target.lock:\n                self.active += 1\n                self.peak = max(self.peak, self.active)\n                try:\n                    await yield_control()\n                    if source.balance < cents:\n                        raise InsufficientFunds(source.id)\n                    source.balance -= cents\n                    target.balance += cents\n                finally:\n                    self.active -= 1\n"
+  },
+  "failingTest": "import unittest\n\nfrom accounts import Account\nfrom bank import Bank\nfrom sched import run_all\n\n\nclass Failing(unittest.TestCase):\n    def test_opposite_transfers_at_the_same_time_both_complete(self):\n        alice, bob = Account(\"alice\", 100), Account(\"bob\", 100)\n        bank = Bank()\n        results = run_all(bank.transfer(alice, bob, 10), bank.transfer(bob, alice, 5))\n        self.assertEqual(results, [None, None])\n        self.assertEqual((alice.balance, bob.balance), (95, 105))\n",
+  "regressionTests": "import unittest\n\nfrom accounts import Account\nfrom bank import Bank, InsufficientFunds\nfrom sched import run_all\n\n\nclass Regression(unittest.TestCase):\n    def test_transfers_between_different_accounts_still_run_at_the_same_time(self):\n        a, b, c, d = (Account(name, 100) for name in \"abcd\")\n        bank = Bank()\n        run_all(bank.transfer(a, b, 10), bank.transfer(c, d, 10))\n        self.assertEqual(bank.peak, 2)\n\n    def test_insufficient_funds_is_reported_and_the_locks_are_released(self):\n        a, b = Account(\"a\", 5), Account(\"b\", 0)\n        bank = Bank()\n        [result] = run_all(bank.transfer(a, b, 50))\n        self.assertIsInstance(result, InsufficientFunds)\n        self.assertEqual((a.balance, b.balance), (5, 0))\n        self.assertEqual(run_all(bank.transfer(a, b, 5)), [None])\n\n    def test_many_crossing_transfers_keep_the_total(self):\n        accounts = [Account(str(i), 100) for i in range(3)]\n        bank = Bank()\n        jobs = [bank.transfer(accounts[i % 3], accounts[(i + 1) % 3], 5) for i in range(6)]\n        jobs += [bank.transfer(accounts[(i + 1) % 3], accounts[i % 3], 3) for i in range(6)]\n        results = run_all(*jobs, max_turns=400)\n        self.assertEqual(results, [None] * 12)\n        self.assertEqual(sum(a.balance for a in accounts), 300)\n",
+  "rootCause": "transfer locks the source account and then the target, so Alice-to-Bob holds Alice and waits for Bob while Bob-to-Alice holds Bob and waits for Alice: a circular wait. Every transfer must take the two locks in the same order whatever the direction, for example by account id.",
+  "correctFix": {
+    "bank.py": "from sched import yield_control\n\n\nclass InsufficientFunds(Exception):\n    pass\n\n\nclass Bank:\n    def __init__(self):\n        self.active = 0  # transfers inside their critical section right now\n        self.peak = 0    # the most that were ever inside at once\n\n    async def transfer(self, source, target, cents):\n        # Always lock the lower id first, so two transfers can never wait on each other in a circle.\n        first, second = sorted((source, target), key=lambda account: account.id)\n        async with first.lock:\n            await yield_control()  # e.g. a fraud check on the first account\n            async with second.lock:\n                self.active += 1\n                self.peak = max(self.peak, self.active)\n                try:\n                    await yield_control()\n                    if source.balance < cents:\n                        raise InsufficientFunds(source.id)\n                    source.balance -= cents\n                    target.balance += cents\n                finally:\n                    self.active -= 1\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "bank.py": "from sched import Lock, yield_control\n\n\nclass InsufficientFunds(Exception):\n    pass\n\n\nclass Bank:\n    def __init__(self):\n        self._lock = Lock()\n        self.active = 0  # transfers inside their critical section right now\n        self.peak = 0    # the most that were ever inside at once\n\n    async def transfer(self, source, target, cents):\n        async with self._lock:\n            async with source.lock:\n                await yield_control()  # e.g. a fraud check on the sending account\n                async with target.lock:\n                    self.active += 1\n                    self.peak = max(self.peak, self.active)\n                    try:\n                        await yield_control()\n                        if source.balance < cents:\n                            raise InsufficientFunds(source.id)\n                        source.balance -= cents\n                        target.balance += cents\n                    finally:\n                        self.active -= 1\n"
+      },
+      "whyWrong": "One bank-wide lock does remove the deadlock, but now every transfer waits for every other, even between unrelated accounts. Transfers that could safely overlap are forced to run one at a time."
+    }
+  ],
+  "grading": [
+    {
+      "question": "Name the four conditions for a deadlock. Which one does lock ordering break?",
+      "ideal": "Mutual exclusion, hold and wait, no preemption, circular wait. Ordering breaks circular wait."
+    },
+    {
+      "question": "Why does sorting by id make the circular wait impossible?",
+      "ideal": "Everyone acquires in the same global order, so a task can only wait for a lock held by a task that is earlier in that order, never in a cycle."
+    },
+    {
+      "question": "What does a single global lock cost, even though it is correct?",
+      "ideal": "It serialises all transfers, so unrelated accounts lose their concurrency."
+    }
+  ],
+  "transcript": {
+    "kind": "correct",
+    "turns": [
+      {
+        "role": "user",
+        "text": "Opposite transfers between Alice and Bob deadlock. Fix it without making transfers run one at a time."
+      },
+      {
+        "role": "agent",
+        "text": "Each transfer locks its source, then its target, so opposite transfers each hold one lock and wait for the other: a circular wait. I take the two locks in a fixed order, lowest account id first, so no cycle can form. Unrelated accounts still transfer in parallel.",
+        "fix": {
+          "bank.py": "from sched import yield_control\n\n\nclass InsufficientFunds(Exception):\n    pass\n\n\nclass Bank:\n    def __init__(self):\n        self.active = 0  # transfers inside their critical section right now\n        self.peak = 0    # the most that were ever inside at once\n\n    async def transfer(self, source, target, cents):\n        # Always lock the lower id first, so two transfers can never wait on each other in a circle.\n        first, second = sorted((source, target), key=lambda account: account.id)\n        async with first.lock:\n            await yield_control()  # e.g. a fraud check on the first account\n            async with second.lock:\n                self.active += 1\n                self.peak = max(self.peak, self.active)\n                try:\n                    await yield_control()\n                    if source.balance < cents:\n                        raise InsufficientFunds(source.id)\n                    source.balance -= cents\n                    target.balance += cents\n                finally:\n                    self.active -= 1\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)\ntest_regression: OK (3 tests)"
+      },
+      {
+        "role": "agent",
+        "text": "Both suites pass, including the check that unrelated transfers still overlap."
+      }
+    ],
+    "verdict": "Approve. A global lock order removes the circular wait without serialising unrelated transfers, the balance check stays inside both locks, and the agent ran the regression suite, which checks concurrency is preserved."
+  }
+}

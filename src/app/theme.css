@@ -1,7 +1,7 @@
 /* Theme layer: open, warm, serif headlines. Loaded after globals.css. */
 h1,
 h2 {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-optical-sizing: auto;
 }
 .top {
@@ -10,7 +10,7 @@ h2 {
   padding: 0 28px;
 }
 .brand {
-  font: 700 22px var(--serif);
+  font: 700 22px var(--display);
   letter-spacing: -0.01em;
 }
 .logo {
@@ -19,39 +19,47 @@ h2 {
   border-radius: 50%;
   background: var(--plum);
   font-size: 10px;
-  color: #fbf8f1;
+  color: #ffffff;
 }
 .search-btn {
   background: var(--panel);
   border-radius: 10px;
 }
+/* Buttons press down: a solid bottom edge that shrinks when held. */
 .btn {
   background: var(--panel);
-  border-color: var(--text);
-  border-radius: 8px;
-  min-height: 40px;
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  min-height: 42px;
   padding: 0 18px;
+  font-weight: 700;
+  box-shadow: 0 3px 0 var(--line-strong);
+  transition:
+    transform 0.08s ease,
+    box-shadow 0.08s ease;
 }
 .btn:hover {
   background: var(--bg-hover);
 }
-.btn.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
+.btn:active:not([disabled]) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--line-strong);
 }
-.btn.primary:hover {
-  background: var(--accent);
-  filter: brightness(1.12);
-}
+.btn.primary,
 .btn.hot {
   background: var(--hot);
-  border-color: var(--hot);
+  border-color: var(--accent-edge);
   color: var(--on-hot);
+  box-shadow: 0 4px 0 var(--accent-edge);
 }
+.btn.primary:hover,
 .btn.hot:hover {
   background: var(--hot);
-  filter: brightness(0.96);
+  filter: brightness(1.04);
+}
+.btn.primary:active:not([disabled]),
+.btn.hot:active:not([disabled]) {
+  box-shadow: 0 1px 0 var(--accent-edge);
 }
 .btn.big {
   min-height: 52px;
@@ -119,7 +127,7 @@ article h2 .sub {
   border: 0;
   border-radius: 16px;
   padding: 28px 32px;
-  color: #f6f0e6;
+  color: #ffffff;
 }
 .today-card small {
   color: var(--hot);
@@ -144,7 +152,7 @@ article h2 .sub {
   color: var(--on-hot);
 }
 .card b {
-  font-family: var(--serif);
+  font-family: var(--display);
   font-size: 30px;
 }
 th {
@@ -182,7 +190,6 @@ kbd {
 .shell[data-home] .layout:has(.landing) .toc,
 .shell[data-home]:has(.landing) .menu-btn,
 .shell[data-home]:has(.landing) .scrim,
-.shell[data-home]:has(.landing) .top-links,
 .shell[data-home]:has(.landing) .search-btn {
   display: none;
 }
@@ -199,13 +206,13 @@ kbd {
   padding: 0 32px;
 }
 .landing h1 {
-  font: 700 clamp(44px, 7.4vw, 88px)/0.98 var(--serif);
+  font: 700 clamp(44px, 7.4vw, 88px)/0.98 var(--display);
   letter-spacing: -0.03em;
   margin: 0;
   max-width: 11.5em;
 }
 .landing h2 {
-  font: 700 clamp(32px, 4.4vw, 52px)/1.04 var(--serif);
+  font: 700 clamp(32px, 4.4vw, 52px)/1.04 var(--display);
   letter-spacing: -0.025em;
   margin: 0;
   padding: 0;
@@ -304,7 +311,7 @@ kbd {
 }
 .demo h3 {
   margin: 0;
-  font: 700 24px/1.2 var(--serif);
+  font: 700 24px/1.2 var(--display);
 }
 .demo .eyebrow {
   color: var(--muted);
@@ -351,7 +358,7 @@ kbd {
   border-left: 0;
 }
 .steps .n {
-  font: 700 44px/1 var(--serif);
+  font: 700 44px/1 var(--display);
   color: var(--accent);
 }
 .steps h3 {
@@ -408,7 +415,7 @@ kbd {
 }
 .tile b {
   display: block;
-  font: 700 22px/1.2 var(--serif);
+  font: 700 22px/1.2 var(--display);
   margin: 4px 0 8px;
 }
 .tile small {
@@ -423,7 +430,7 @@ kbd {
 }
 .cta-band {
   background: var(--plum);
-  color: #f6f0e6;
+  color: #ffffff;
   padding: 88px 0;
 }
 .cta-band .wrap {
@@ -438,7 +445,7 @@ kbd {
 }
 .cta-band p {
   margin: 14px 0 0;
-  color: #e0d3dd;
+  color: #c9d1e6;
   font-size: 18px;
 }
 @media (max-width: 900px) {
@@ -660,7 +667,7 @@ main:has(.brain) {
   margin-bottom: 32px;
 }
 .brain-head h1 {
-  font: 700 46px/1.05 var(--serif);
+  font: 700 46px/1.05 var(--display);
   letter-spacing: -0.025em;
   margin: 0 0 12px;
 }
@@ -756,7 +763,7 @@ main:has(.brain) {
 }
 .tag.on {
   background: var(--plum);
-  color: #fbf8f1;
+  color: #ffffff;
 }
 .brain-empty {
   color: var(--muted);
@@ -773,7 +780,7 @@ main:has(.brain) {
 }
 .ed-title {
   width: 100%;
-  font: 700 34px/1.15 var(--serif);
+  font: 700 34px/1.15 var(--display);
   letter-spacing: -0.02em;
   border: 0;
   background: transparent;
@@ -834,7 +841,7 @@ main:has(.brain) {
 }
 .seg button[aria-pressed="true"] {
   background: var(--plum);
-  color: #fbf8f1;
+  color: #ffffff;
 }
 .fmt {
   display: flex;
@@ -929,7 +936,7 @@ main:has(.brain) {
   border-radius: 16px;
 }
 .brain-welcome h2 {
-  font: 700 30px var(--serif);
+  font: 700 30px var(--display);
   letter-spacing: -0.02em;
   margin: 0 0 8px;
 }
@@ -976,7 +983,7 @@ main:has(.brain) {
   max-width: 44em;
 }
 .md h2 {
-  font: 700 24px/1.2 var(--serif);
+  font: 700 24px/1.2 var(--display);
   letter-spacing: -0.015em;
   margin: 1.5em 0 0.4em;
 }
@@ -1021,7 +1028,7 @@ main:has(.brain) {
   padding: 2px 18px;
   border-left: 3px solid var(--hot);
   color: var(--muted);
-  font: 19px/1.55 var(--serif);
+  font: 19px/1.55 var(--display);
 }
 .md pre {
   background: var(--code-bg);
@@ -1149,7 +1156,7 @@ a.wiki.day::before {
 }
 .lab-summary b {
   display: block;
-  font: 700 38px/1 var(--serif);
+  font: 700 38px/1 var(--display);
   color: var(--accent-text);
 }
 .lab-summary span {
@@ -1180,7 +1187,7 @@ a.wiki.day::before {
 }
 .round.idle b {
   display: block;
-  font: 700 34px/1 var(--serif);
+  font: 700 34px/1 var(--display);
 }
 .round.idle span {
   color: var(--muted);
@@ -1194,7 +1201,7 @@ a.wiki.day::before {
 }
 .round.live {
   background: var(--plum);
-  color: #f6f0e6;
+  color: #ffffff;
   border-color: transparent;
 }
 .round-top {
@@ -1210,7 +1217,7 @@ a.wiki.day::before {
   color: #d9cad5;
 }
 .round-q {
-  font: 600 clamp(22px, 3vw, 30px) / 1.3 var(--serif);
+  font: 600 clamp(22px, 3vw, 30px) / 1.3 var(--display);
   margin: 20px 0 28px;
   max-width: 28em;
 }
@@ -1231,10 +1238,10 @@ a.wiki.day::before {
   border-color: rgb(255 255 255 / 0.6);
 }
 .round.live .linkbtn {
-  color: #f6f0e6;
+  color: #ffffff;
 }
 .round.done h3 {
-  font: 700 28px var(--serif);
+  font: 700 28px var(--display);
   margin: 0;
 }
 .round.done ul {
@@ -1339,10 +1346,10 @@ a.wiki.day::before {
 .lab-card.month {
   margin-top: 16px;
   background: var(--plum);
-  color: #fbf8f1;
+  color: #ffffff;
 }
 .lab-card b {
-  font: 700 28px var(--serif);
+  font: 700 28px var(--display);
 }
 .lab-card small {
   font-size: 14px;
@@ -1410,25 +1417,25 @@ article.day h2 {
   margin: 40px 0 12px;
   letter-spacing: -0.01em;
 }
+/* The day's outcome: a panel with an accent edge, the same in both themes (a tinted fill turned muddy brown in
+   dark mode when the theme came from the device setting). */
 .goal {
   margin: 28px 0 8px;
-  padding: 20px 24px;
-  background: color-mix(in srgb, var(--hot) 32%, var(--panel));
-  border-radius: 14px;
+  padding: 18px 22px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--hot);
+  border-radius: 12px;
   max-width: 40em;
 }
 .goal small {
   display: block;
   font: 650 14px var(--sans);
-  color: var(--on-hot);
-  opacity: 0.75;
-}
-:root[data-theme="dark"] .goal {
-  background: color-mix(in srgb, var(--hot) 16%, var(--panel));
+  color: var(--muted);
 }
 .goal p {
   margin: 4px 0 0;
-  font: 500 19px/1.5 var(--serif);
+  font: 500 19px/1.5 var(--display);
   color: var(--text);
 }
 .steplist {
@@ -1477,7 +1484,7 @@ article.day h2 {
   min-width: 0;
 }
 .step-body b {
-  font: 700 22px/1.2 var(--serif);
+  font: 700 22px/1.2 var(--display);
 }
 .step-body span {
   color: var(--muted);
@@ -1518,7 +1525,7 @@ article.day h2 {
 }
 .stepnav a.on {
   background: var(--plum);
-  color: #fbf8f1;
+  color: #ffffff;
 }
 .stepnav a.full:not(.on) {
   color: var(--ok);
@@ -1549,7 +1556,7 @@ article.day h2 {
   padding-left: 26px;
   display: grid;
   gap: 14px;
-  font: 500 20px/1.5 var(--serif);
+  font: 500 20px/1.5 var(--display);
   max-width: 36em;
 }
 .questions li::marker {
@@ -1608,7 +1615,7 @@ article.day h2 {
   gap: 2px;
   padding: 13px 20px;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--hot) calc(var(--t) * 1%), var(--plum));
+  background: color-mix(in srgb, var(--ramp-b) calc(var(--t) * 1%), var(--ramp-a));
   color: var(--fg);
   transition: transform 0.15s;
 }
@@ -1617,7 +1624,7 @@ article.day h2 {
   transform: translateY(-3px);
 }
 .stack b {
-  font: 700 16px/1.25 var(--serif);
+  font: 700 16px/1.25 var(--display);
 }
 .stack span {
   font-size: 13px;
@@ -1671,7 +1678,7 @@ article.day h2 {
   border-bottom: 1px solid var(--line);
 }
 .mock-bar b {
-  font: 700 26px var(--serif);
+  font: 700 26px var(--display);
 }
 .mock-bar span {
   color: var(--accent-text);
@@ -1712,7 +1719,7 @@ article.day h2 {
   min-height: 112px;
   padding: 12px 14px;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--hot) calc(var(--t) * 1%), var(--plum));
+  background: color-mix(in srgb, var(--ramp-b) calc(var(--t) * 1%), var(--ramp-a));
   color: var(--fg);
   transition: transform 0.15s;
 }
@@ -1720,7 +1727,7 @@ article.day h2 {
   transform: translateY(-3px);
 }
 .roadmap b {
-  font: 700 26px/1 var(--serif);
+  font: 700 26px/1 var(--display);
 }
 .roadmap span {
   font-size: 13px;
@@ -1800,18 +1807,10 @@ article.day h2 {
   color: var(--on-pop);
   box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--pop) 70%, transparent);
 }
-.landing .hero .btn.primary::after {
-  content: "\2192";
-  font-size: 18px;
-  transition: transform 0.2s var(--ease-out, ease);
-}
 .landing .hero .btn.primary:hover {
   filter: none;
   background: color-mix(in srgb, var(--pop) 88%, white);
   transform: translateY(-1px);
-}
-.landing .hero .btn.primary:hover::after {
-  transform: translateX(3px);
 }
 .landing .hero .btn:not(.primary) {
   background: transparent;
@@ -1856,7 +1855,7 @@ article.day h2 {
   margin-bottom: 20px;
 }
 .why li h3 {
-  font: 700 24px/1.2 var(--serif);
+  font: 700 24px/1.2 var(--display);
   letter-spacing: -0.01em;
   margin: 0 0 12px;
 }
@@ -1951,10 +1950,8 @@ main.auth {
   justify-content: space-between;
   gap: 2rem;
   padding: clamp(2rem, 5vw, 4.5rem);
-  background:
-    radial-gradient(60rem 30rem at 0% 0%, rgb(244 200 74 / 0.18), transparent 60%),
-    linear-gradient(160deg, #6b3361 0%, var(--plum) 55%, #3f1c39 100%);
-  color: #fbf8f1;
+  background: radial-gradient(50rem 28rem at 0% 0%, rgb(43 77 219 / 0.45), transparent 65%), var(--ramp-a);
+  color: #ffffff;
   overflow: hidden;
 }
 .auth-aside::after {
@@ -1964,24 +1961,26 @@ main.auth {
   width: 22rem;
   height: 22rem;
   border-radius: 50%;
-  border: 2px solid rgb(251 248 241 / 0.12);
-  box-shadow: 0 0 0 3rem rgb(251 248 241 / 0.04), 0 0 0 6rem rgb(251 248 241 / 0.03);
+  border: 2px solid rgb(255 255 255 / 0.12);
+  box-shadow:
+    0 0 0 3rem rgb(255 255 255 / 0.04),
+    0 0 0 6rem rgb(255 255 255 / 0.03);
   pointer-events: none;
 }
 .auth-brand {
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
-  font: 700 1.15rem/1 var(--serif);
+  font: 700 1.15rem/1 var(--display);
   color: inherit;
   text-decoration: none;
 }
 .auth-brand .logo {
-  background: rgb(251 248 241 / 0.14);
+  background: rgb(255 255 255 / 0.14);
 }
 .auth-pitch h2 {
   margin: 0 0 1.25rem;
-  font: 600 clamp(2rem, 3.6vw, 3rem)/1.1 var(--serif);
+  font: 600 clamp(2rem, 3.6vw, 3rem)/1.1 var(--display);
   letter-spacing: -0.01em;
 }
 .auth-pitch h2 em {
@@ -2001,7 +2000,7 @@ main.auth {
   gap: 0.7rem;
   align-items: flex-start;
   line-height: 1.5;
-  color: rgb(251 248 241 / 0.88);
+  color: rgb(255 255 255 / 0.88);
 }
 .auth-points li::before {
   content: "";
@@ -2016,7 +2015,7 @@ main.auth {
 }
 .auth-foot {
   font-size: 0.85rem;
-  color: rgb(251 248 241 / 0.6);
+  color: rgb(255 255 255 / 0.6);
 }
 .auth-main {
   display: grid;
@@ -2031,7 +2030,7 @@ main.auth {
 }
 .auth-card h1 {
   margin: 0;
-  font: 600 2rem/1.15 var(--serif);
+  font: 600 2rem/1.15 var(--display);
   letter-spacing: -0.01em;
 }
 .auth-sub {
@@ -2058,7 +2057,10 @@ main.auth {
   font: 600 1rem/1 var(--sans);
   cursor: pointer;
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
-  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    border-color 0.12s ease;
 }
 .auth-google:hover {
   border-color: var(--accent);
@@ -2155,18 +2157,241 @@ main.auth {
   }
 }
 
-/* Settings: only the page, no sidebar or "on this page" column (header stays for navigation) */
-.shell[data-settings] .nav,
-.shell[data-settings] .toc,
-.shell[data-settings] .scrim,
-.shell[data-settings] .menu-btn {
+/* Bare shell (Debug, account pages): only the page, no sidebar or "on this page" column (header stays for navigation) */
+.shell[data-bare] .toc {
   display: none;
 }
-.shell[data-settings] .layout {
-  grid-template-columns: minmax(0, 1fr);
+.shell[data-bare] .layout {
+  grid-template-columns: var(--navw) minmax(0, 1fr);
 }
-.shell[data-settings] main {
+.shell[data-bare] main {
   margin: 0 auto;
   width: 100%;
   max-width: 760px;
+}
+.shell[data-bare="wide"] main {
+  max-width: 1100px;
+}
+
+/* ---------- app frame: one sidebar ----------
+   The sidebar holds both products and their pages, the course outline on course pages, and search, theme and
+   account at the bottom. On narrow screens it slides in from the slim top bar's menu button. */
+.top {
+  display: none;
+}
+.layout {
+  max-width: none;
+}
+.nav.sb {
+  top: 0;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 12px 0;
+  background: color-mix(in srgb, var(--accent) 5%, var(--bg));
+  border-right: 2px solid var(--line);
+  font-size: 15px;
+}
+.sb-brand {
+  padding: 4px 8px 14px;
+}
+.sb-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 2px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--muted);
+  font: 500 14px var(--sans);
+  cursor: pointer;
+}
+.sb-search:hover {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+.sb-search span {
+  flex: 1;
+  text-align: left;
+}
+.sb-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 16px;
+}
+.sb-group h2 {
+  margin: 0 0 4px;
+  padding: 0 12px;
+  border: 0;
+  font: 700 13px var(--sans);
+  letter-spacing: 0.01em;
+  color: var(--muted);
+}
+.nav.sb a.sb-link {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-weight: 600;
+}
+.nav.sb a.sb-link:hover {
+  background: var(--bg-hover);
+  text-decoration: none;
+}
+.nav.sb a.sb-link.on {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.sb-outline {
+  margin: 6px 0 10px 10px;
+  padding-left: 8px;
+  border-left: 2px solid var(--line);
+  font-size: 14px;
+}
+.sb-foot {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: auto -12px 0;
+  padding: 10px 12px;
+  border-top: 2px solid var(--line);
+  background: inherit;
+}
+.sb-foot .more-pop {
+  top: auto;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: auto;
+}
+
+/* The marketing home has a top bar instead of the app sidebar. */
+.site-top {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 64px;
+  padding: 0 24px;
+  background: color-mix(in srgb, var(--bg) 90%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 2px solid var(--line);
+}
+.site-top nav {
+  display: flex;
+  gap: 4px;
+}
+.site-top nav a {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 15px;
+}
+.site-top nav a:hover {
+  background: var(--bg-hover);
+  text-decoration: none;
+}
+.site-top .grow {
+  flex: 1;
+}
+
+/* Learn's Today before a plan exists, and the course overview's first actions. */
+.start-card {
+  margin: 28px 0 20px;
+  padding: 24px;
+  max-width: 40em;
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: 0 4px 0 var(--line);
+}
+.start-card h2 {
+  margin: 0 0 8px;
+}
+.start-card p {
+  margin: 0;
+  color: var(--muted);
+}
+.start-actions,
+.plan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.start-card .start-actions {
+  margin-top: 20px;
+}
+.start-more {
+  color: var(--muted);
+}
+
+/* Chunkier panels to match the pressable buttons. */
+.today-card,
+.card,
+.goal,
+.steplist a,
+.plt-mock,
+.plt-continue-card {
+  border-width: 2px;
+  border-radius: var(--radius);
+}
+
+@media (max-width: 900px) {
+  :root {
+    --top: 56px;
+  }
+  .top {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    height: var(--top);
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 2px solid var(--line);
+  }
+  .top .grow {
+    flex: 1;
+  }
+  .nav.sb {
+    top: var(--top);
+    height: auto;
+    background: var(--bg);
+  }
+  .sb-brand {
+    display: none;
+  }
+  .shell[data-bare] .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .site-top {
+    padding: 0 12px;
+    gap: 8px;
+  }
+  .site-top nav a {
+    padding: 8px;
+    font-size: 14px;
+  }
+}
+@media (max-width: 420px) {
+  .site-top .brand {
+    font-size: 0;
+    gap: 0;
+  }
 }

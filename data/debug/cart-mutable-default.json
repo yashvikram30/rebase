@@ -1,0 +1,64 @@
+{
+  "id": "cart-mutable-default",
+  "title": "New carts start with old items",
+  "domain": "oop",
+  "concept": "Mutable default argument is shared across calls",
+  "concepts": [
+    "aliasing-mutable-state",
+    "python-defaults"
+  ],
+  "difficulty": 1,
+  "symptom": "Create a Cart, add an item, then create a second Cart. The second one already has 1 item.",
+  "files": {
+    "cart.py": "class Cart:\n    def __init__(self, items=[]):\n        self.items = items\n\n    def add(self, item):\n        self.items.append(item)\n\n    def count(self):\n        return len(self.items)\n"
+  },
+  "failingTest": "import unittest\nfrom cart import Cart\n\n\nclass Failing(unittest.TestCase):\n    def test_new_cart_is_empty(self):\n        a = Cart()\n        a.add(\"apple\")\n        b = Cart()\n        self.assertEqual(b.count(), 0)\n",
+  "regressionTests": "import unittest\nfrom cart import Cart\n\n\nclass Regression(unittest.TestCase):\n    def test_uses_supplied_list(self):\n        shared = []\n        c = Cart(shared)\n        c.add(\"apple\")\n        self.assertEqual(shared, [\"apple\"])\n\n    def test_supplied_items_counted(self):\n        self.assertEqual(Cart([\"a\", \"b\"]).count(), 2)\n\n    def test_add_increments(self):\n        c = Cart()\n        c.add(\"x\")\n        c.add(\"y\")\n        self.assertEqual(c.count(), 2)\n",
+  "rootCause": "The default [] is evaluated once, when the function is defined. Every Cart() without arguments stores a reference to that same list.",
+  "correctFix": {
+    "cart.py": "class Cart:\n    def __init__(self, items=None):\n        if items is None:\n            items = []\n        self.items = items\n\n    def add(self, item):\n        self.items.append(item)\n\n    def count(self):\n        return len(self.items)\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "cart.py": "class Cart:\n    def __init__(self, items=None):\n        self.items = items or []\n\n    def add(self, item):\n        self.items.append(item)\n\n    def count(self):\n        return len(self.items)\n"
+      },
+      "whyWrong": "items or [] treats an empty list the caller passed in as 'missing' and swaps in a new one, so the caller's list is no longer the one being appended to."
+    }
+  ],
+  "transcript": {
+    "kind": "confident-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "Second Cart() starts with items from the first. What's wrong?"
+      },
+      {
+        "role": "agent",
+        "text": "Classic mutable default argument. I'll default to None and use `items or []`. This is the standard pattern and fully resolves the issue.",
+        "fix": {
+          "cart.py": "class Cart:\n    def __init__(self, items=None):\n        self.items = items or []\n\n    def add(self, item):\n        self.items.append(item)\n\n    def count(self):\n        return len(self.items)\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)"
+      },
+      {
+        "role": "agent",
+        "text": "Done. The shared state is gone, so no other behaviour should change."
+      }
+    ],
+    "verdict": "The diagnosis is right but the fix is stated with more certainty than it earned. `or` also fires for an empty list the caller deliberately passed, so Cart(shared) no longer appends to shared. 'No other behaviour should change' was never checked."
+  },
+  "grading": [
+    {
+      "question": "When is a default argument evaluated?",
+      "ideal": "Once, at function definition time."
+    },
+    {
+      "question": "Why is `items or []` not equivalent to `if items is None`?",
+      "ideal": "An empty list is falsy, so a caller-supplied empty list gets replaced."
+    }
+  ]
+}

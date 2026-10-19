@@ -38,3 +38,32 @@ export async function visits(): Promise<Collection<Visit>> {
   }
   return col;
 }
+
+/** Chat usage for one round: { _id: roundId, messages, exp }. Expires with the round. */
+export type RoundUse = { _id: string; messages: number; exp: Date };
+/** Tokens spent per UTC day across all rounds: { _id: "YYYY-MM-DD", tokens }. */
+export type DayUse = { _id: string; tokens: number; exp: Date };
+/** Request counters per caller and window: { _id: "<key>", n, exp }. */
+export type Hit = { _id: string; n: number; exp: Date };
+
+let agentIndexed = false;
+
+async function agentDb() {
+  const db = (await client()).db(process.env.MONGODB_DB || "daybook");
+  const rounds = db.collection<RoundUse>("agent_rounds");
+  const days = db.collection<DayUse>("agent_days");
+  const hits = db.collection<Hit>("agent_hits");
+  if (!agentIndexed) {
+    await Promise.all([
+      rounds.createIndex({ exp: 1 }, { expireAfterSeconds: 3600 }),
+      days.createIndex({ exp: 1 }, { expireAfterSeconds: 0 }),
+      hits.createIndex({ exp: 1 }, { expireAfterSeconds: 0 }),
+    ]);
+    agentIndexed = true;
+  }
+  return { rounds, days, hits };
+}
+
+export const agentRounds = async () => (await agentDb()).rounds;
+export const agentDays = async () => (await agentDb()).days;
+export const agentHits = async () => (await agentDb()).hits;

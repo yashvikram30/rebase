@@ -1,0 +1,64 @@
+{
+  "id": "progress-integer-division",
+  "title": "The progress ring is stuck at 0%",
+  "domain": "snippet",
+  "concept": "Integer division before scaling",
+  "concepts": [
+    "integer-division",
+    "boundary-conditions"
+  ],
+  "difficulty": 1,
+  "symptom": "Learners say the progress ring shows 0% for the whole course and then jumps to 100% on the last day. Three days into a four-day week, it should read 75%.",
+  "files": {
+    "progress.py": "def percent_complete(done, total):\n    \"\"\"Whole-number percentage of days done, rounded to the nearest percent. 0 when total is 0.\"\"\"\n    return done // total * 100\n"
+  },
+  "failingTest": "import unittest\n\nfrom progress import percent_complete\n\n\nclass Failing(unittest.TestCase):\n    def test_three_of_four_days(self):\n        self.assertEqual(percent_complete(3, 4), 75)\n",
+  "regressionTests": "import unittest\n\nfrom progress import percent_complete\n\n\nclass Regression(unittest.TestCase):\n    def test_it_rounds_to_the_nearest_percent(self):\n        self.assertEqual(percent_complete(2, 3), 67)\n        self.assertEqual(percent_complete(1, 64), 2)\n\n    def test_the_ends(self):\n        self.assertEqual(percent_complete(0, 64), 0)\n        self.assertEqual(percent_complete(64, 64), 100)\n\n    def test_an_empty_plan_is_zero_percent(self):\n        self.assertEqual(percent_complete(0, 0), 0)\n",
+  "rootCause": "done // total is integer division, so anything short of finished floors to 0 before it is multiplied by 100. The order of operations hides it: the scaling happens after the information is gone.",
+  "correctFix": {
+    "progress.py": "def percent_complete(done, total):\n    \"\"\"Whole-number percentage of days done, rounded to the nearest percent. 0 when total is 0.\"\"\"\n    if total == 0:\n        return 0\n    # // floors before the multiplication, so any partial progress became 0. Divide with /, then round.\n    return round(done * 100 / total)\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "progress.py": "def percent_complete(done, total):\n    \"\"\"Whole-number percentage of days done, rounded to the nearest percent. 0 when total is 0.\"\"\"\n    return done * 100 // total\n"
+      },
+      "whyWrong": "Multiplying first fixes 3 of 4, but // still floors instead of rounding (2 of 3 shows 66, not 67), and an empty plan divides by zero."
+    }
+  ],
+  "transcript": {
+    "kind": "correct",
+    "turns": [
+      {
+        "role": "user",
+        "text": "percent_complete(3, 4) returns 0. It should be 75."
+      },
+      {
+        "role": "agent",
+        "text": "done // total floors to 0 before the multiplication. I divide with / and round, as the docstring asks, and return 0 for an empty plan instead of dividing by zero.",
+        "fix": {
+          "progress.py": "def percent_complete(done, total):\n    \"\"\"Whole-number percentage of days done, rounded to the nearest percent. 0 when total is 0.\"\"\"\n    if total == 0:\n        return 0\n    # // floors before the multiplication, so any partial progress became 0. Divide with /, then round.\n    return round(done * 100 / total)\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)\ntest_regression: OK (3 tests)"
+      },
+      {
+        "role": "agent",
+        "text": "Both suites pass. I also checked 2 of 3 (67) and 0 of 0 (0), which the docstring covers."
+      }
+    ],
+    "verdict": "Approve. It fixed the cause rather than the example, followed the docstring's rounding rule, handled the zero case, and ran the regression suite before claiming success."
+  },
+  "grading": [
+    {
+      "question": "Why does the order of // and * matter here?",
+      "ideal": "done // total is 0 for any partial progress, and 0 x 100 is still 0. Dividing last, with /, keeps the fraction."
+    },
+    {
+      "question": "Which inputs should every percentage function be tested with?",
+      "ideal": "Zero, the total, a value that needs rounding, and a total of zero."
+    }
+  ]
+}

@@ -180,7 +180,7 @@ export function NotesApp({ days }: { days: DayRef[] }) {
     <div className={"brain" + (current ? " has-sel" : "")}>
       <header className="brain-head">
         <div>
-          <h1>Second brain</h1>
+          <h1>Notes</h1>
           <p className="lead">
             Write what you learn in your own words, link notes to each other and to any day with{" "}
             <code>[[double brackets]]</code>, and find it again by tag. It all stays in this browser.
