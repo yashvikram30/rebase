@@ -1,6 +1,6 @@
 {
   "id": "cart-totals-three-bugs",
-  "title": "Checkout totals are off in three ways",
+  "title": "Checkout Totals Off",
   "domain": "oop",
   "concept": "Money in cents: rounding rule, inclusive threshold and the base a percentage is taken from",
   "concepts": ["floating-point-money", "boundary-conditions"],

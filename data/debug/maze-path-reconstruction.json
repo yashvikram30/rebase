@@ -1,6 +1,6 @@
 {
   "id": "maze-path-reconstruction",
-  "title": "find_path returns the route backwards",
+  "title": "Backwards Route",
   "domain": "graph",
   "concept": "Parent-pointer path reconstruction",
   "concepts": ["shortest-path-bfs", "path-reconstruction"],

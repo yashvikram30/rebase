@@ -1,6 +1,6 @@
 {
   "id": "late-events-wrong-window",
-  "title": "Events that arrive late land in the wrong minute",
+  "title": "Late Events, Wrong Minute",
   "domain": "pipeline",
   "concept": "Event time versus processing time in windowed aggregation",
   "concepts": ["event-time-watermark"],

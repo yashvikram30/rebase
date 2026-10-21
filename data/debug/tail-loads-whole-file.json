@@ -1,6 +1,6 @@
 {
   "id": "tail-loads-whole-file",
-  "title": "tail runs out of memory on big logs",
+  "title": "Tail Runs Out of Memory",
   "domain": "build-optimize",
   "concept": "Streaming with a bounded buffer",
   "concepts": ["bounded-memory-streaming"],

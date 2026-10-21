@@ -1,6 +1,6 @@
 {
   "id": "feature-flag-string-false",
-  "title": "Turning the beta off turned it on for everyone",
+  "title": "Beta Switch Won't Turn Off",
   "domain": "pipeline",
   "concept": "Parsing booleans from configuration strings",
   "concepts": ["config-parsing", "falsy-vs-missing"],

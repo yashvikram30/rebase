@@ -1,6 +1,6 @@
 {
   "id": "config-merge-mutates-defaults",
-  "title": "A job's config overrides leak into every job after it",
+  "title": "Leaking Job Configs",
   "domain": "pipeline",
   "concept": "Merging onto shared defaults without copying them",
   "concepts": ["aliasing-mutable-state", "defensive-copying", "python-defaults"],

@@ -1,6 +1,6 @@
 {
   "id": "customer-equality-hash-contract",
-  "title": "The same customer gets two emails",
+  "title": "Duplicate Customer Emails",
   "domain": "oop",
   "concept": "Objects that compare equal must have equal hashes",
   "concepts": ["equality-hashing", "aliasing-mutable-state"],

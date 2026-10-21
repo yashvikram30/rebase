@@ -1,6 +1,6 @@
 {
   "id": "csv-importer-three-bugs",
-  "title": "The CSV import mangles quoted names, headers and blank lines",
+  "title": "Mangled CSV Import",
   "domain": "pipeline",
   "concept": "Hand-rolled CSV parsing: quoting, header normalisation and blank lines",
   "concepts": ["edge-case-testing", "config-parsing"],

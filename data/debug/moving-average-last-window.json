@@ -1,6 +1,6 @@
 {
   "id": "moving-average-last-window",
-  "title": "Moving average is one value short",
+  "title": "Short Moving Average",
   "domain": "snippet",
   "concept": "Off-by-one in range bound",
   "concepts": ["off-by-one", "sliding-window"],

@@ -1,6 +1,6 @@
 {
   "id": "agent-paginator-total-pages",
-  "title": "An AI-written paginator hides the last page",
+  "title": "The Missing Last Page",
   "domain": "agent-review",
   "concept": "Reviewing an AI fix: ceiling division and its edge cases",
   "concepts": ["off-by-one", "boundary-conditions"],

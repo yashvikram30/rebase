@@ -1,6 +1,6 @@
 {
   "id": "progress-integer-division",
-  "title": "The progress ring is stuck at 0%",
+  "title": "Progress Ring Stuck at Zero",
   "domain": "snippet",
   "concept": "Integer division before scaling",
   "concepts": ["integer-division", "boundary-conditions"],

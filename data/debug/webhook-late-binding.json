@@ -1,6 +1,6 @@
 {
   "id": "webhook-late-binding",
-  "title": "Every webhook goes to the last customer",
+  "title": "Every Webhook to the Last Customer",
   "domain": "oop",
   "concept": "Closures capture variables, not values",
   "concepts": ["closures-late-binding", "regression-testing"],

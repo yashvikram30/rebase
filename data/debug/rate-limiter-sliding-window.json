@@ -1,6 +1,6 @@
 {
   "id": "rate-limiter-sliding-window",
-  "title": "The rate limiter is off by one at the window edge",
+  "title": "Window Edge Rate Limiter",
   "domain": "network",
   "concept": "Sliding-window rate limiting: window boundaries and durations",
   "concepts": ["rate-limiting", "boundary-conditions"],

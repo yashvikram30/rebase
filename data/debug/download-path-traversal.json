@@ -1,6 +1,6 @@
 {
   "id": "download-path-traversal",
-  "title": "The download endpoint serves our secrets file",
+  "title": "The Download That Shares Too Much",
   "domain": "os",
   "concept": "Path traversal: check where a path resolves, not what it contains",
   "concepts": ["path-traversal", "edge-case-testing"],

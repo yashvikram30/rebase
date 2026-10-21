@@ -1,6 +1,6 @@
 {
   "id": "cart-mutable-default",
-  "title": "New carts start with old items",
+  "title": "Ghost Items in New Carts",
   "domain": "oop",
   "concept": "Mutable default argument is shared across calls",
   "concepts": ["aliasing-mutable-state", "python-defaults"],

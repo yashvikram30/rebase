@@ -1,6 +1,6 @@
 {
   "id": "rag-citation-offsets-shifted",
-  "title": "Highlighted citations are a few characters off",
+  "title": "Off-by-a-Few Citations",
   "domain": "rag",
   "concept": "Offsets must survive text normalisation",
   "concepts": ["citation-offsets", "off-by-one"],

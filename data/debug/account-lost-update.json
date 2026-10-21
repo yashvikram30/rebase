@@ -1,6 +1,6 @@
 {
   "id": "account-lost-update",
-  "title": "Two simultaneous withdrawals leave the wrong balance",
+  "title": "Double Withdrawal",
   "domain": "dbms",
   "concept": "Lost update: read-modify-write needs optimistic locking and a retry",
   "concepts": ["lost-update", "check-then-act-races"],

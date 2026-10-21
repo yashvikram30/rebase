@@ -1,6 +1,6 @@
 {
   "id": "order-repository-aliasing",
-  "title": "A failed order update changes the saved order anyway",
+  "title": "Phantom Order Update",
   "domain": "oop",
   "concept": "Repositories must not hand out their own mutable state",
   "concepts": ["aliasing-mutable-state", "defensive-copying"],

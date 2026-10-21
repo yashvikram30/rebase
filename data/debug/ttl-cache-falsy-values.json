@@ -1,6 +1,6 @@
 {
   "id": "ttl-cache-falsy-values",
-  "title": "The unread badge hits the database on every page",
+  "title": "Unread Badge Hammers the Database",
   "domain": "build-optimize",
   "concept": "A falsy value is not the same as a missing one",
   "concepts": ["falsy-vs-missing", "cache-eviction"],

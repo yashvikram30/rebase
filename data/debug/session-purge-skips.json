@@ -1,6 +1,6 @@
 {
   "id": "session-purge-skips",
-  "title": "The nightly purge leaves expired sessions behind",
+  "title": "Sessions That Survive the Purge",
   "domain": "snippet",
   "concept": "Changing a list while iterating over it",
   "concepts": ["mutation-during-iteration", "aliasing-mutable-state"],

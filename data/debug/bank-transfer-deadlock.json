@@ -1,6 +1,6 @@
 {
   "id": "bank-transfer-deadlock",
-  "title": "Two transfers in opposite directions hang forever",
+  "title": "Frozen Transfers",
   "domain": "os",
   "concept": "Deadlock: acquire locks in one global order",
   "concepts": ["deadlock-lock-ordering", "check-then-act-races"],

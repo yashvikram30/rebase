@@ -1,6 +1,6 @@
 {
   "id": "invoice-tax-rounding",
-  "title": "Invoices charge tax in whole dollars",
+  "title": "Whole-Dollar Tax",
   "domain": "oop",
   "concept": "Money in floats, and rounding to the cent",
   "concepts": ["floating-point-money", "boundary-conditions"],

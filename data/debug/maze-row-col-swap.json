@@ -1,6 +1,6 @@
 {
   "id": "maze-row-col-swap",
-  "title": "Shortest path breaks on wide grids",
+  "title": "Wide Grid Shortest Path",
   "domain": "graph",
   "concept": "Row/column bounds mix-up (rows vs cols)",
   "concepts": ["grid-coordinates", "shortest-path-bfs", "edge-case-testing"],

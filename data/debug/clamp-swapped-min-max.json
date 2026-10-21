@@ -1,6 +1,6 @@
 {
   "id": "clamp-swapped-min-max",
-  "title": "clamp always returns the lower bound",
+  "title": "Clamp Stuck at the Floor",
   "domain": "snippet",
   "concept": "Swapped min/max nesting",
   "concepts": ["boundary-conditions"],

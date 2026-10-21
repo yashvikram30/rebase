@@ -1,6 +1,6 @@
 {
   "id": "gradebook-three-bugs",
-  "title": "The gradebook gets three things wrong",
+  "title": "Gradebook Gone Wrong",
   "domain": "snippet",
   "concept": "Several unrelated bugs: empty input, inclusive boundaries and sort order with ties",
   "concepts": ["boundary-conditions", "edge-case-testing"],

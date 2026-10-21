@@ -1,6 +1,6 @@
 {
   "id": "meeting-rooms-three-bugs",
-  "title": "Room booking rejects back-to-back meetings and hides free time",
+  "title": "Back-to-Back Meetings",
   "domain": "simulation",
   "concept": "Interval logic: half-open ranges, sorting before merging and the gap after the last interval",
   "concepts": ["boundary-conditions", "off-by-one"],

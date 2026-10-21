@@ -1,6 +1,6 @@
 {
   "id": "report-n-plus-one",
-  "title": "The books report gets slower with every book we add",
+  "title": "Slower With Every Book",
   "domain": "dbms",
   "concept": "N+1 queries: fetch related rows in one batch",
   "concepts": ["n-plus-one-queries"],

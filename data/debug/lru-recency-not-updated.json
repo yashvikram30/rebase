@@ -1,6 +1,6 @@
 {
   "id": "lru-recency-not-updated",
-  "title": "LRU cache evicts the key I just read",
+  "title": "LRU Evicts the Wrong Key",
   "domain": "build-optimize",
   "concept": "LRU recency must update on every access",
   "concepts": ["lru-cache", "cache-eviction"],

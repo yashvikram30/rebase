@@ -1,6 +1,6 @@
 {
   "id": "event-bus-shared-handlers",
-  "title": "One tenant's signups show up in another tenant's audit log",
+  "title": "Cross-Tenant Audit Log",
   "domain": "oop",
   "concept": "Mutable class attributes are shared by every instance",
   "concepts": ["aliasing-mutable-state", "python-defaults"],

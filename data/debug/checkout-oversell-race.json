@@ -1,6 +1,6 @@
 {
   "id": "checkout-oversell-race",
-  "title": "Five buyers were charged for the last three mugs",
+  "title": "The Last Three Mugs",
   "domain": "os",
   "concept": "Check-then-act across an await: reserve before you wait",
   "concepts": ["check-then-act-races", "idempotency"],

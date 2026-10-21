@@ -1,6 +1,6 @@
 {
   "id": "find-duplicates-early-return",
-  "title": "find_duplicates stops at the first one",
+  "title": "Find Duplicates Stops Early",
   "domain": "snippet",
   "concept": "Early return inside a loop",
   "concepts": ["early-return", "hashing-dedupe"],

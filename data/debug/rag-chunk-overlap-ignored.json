@@ -1,6 +1,6 @@
 {
   "id": "rag-chunk-overlap-ignored",
-  "title": "The assistant cannot find a policy sentence that is clearly in the docs",
+  "title": "The Policy Sentence Nobody Can Find",
   "domain": "rag",
   "concept": "Chunking with overlap: step by size minus overlap",
   "concepts": ["chunking-overlap"],

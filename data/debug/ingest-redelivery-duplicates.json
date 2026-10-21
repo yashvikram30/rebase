@@ -1,6 +1,6 @@
 {
   "id": "ingest-redelivery-duplicates",
-  "title": "Every retried batch doubles our click counts",
+  "title": "Double-Counted Clicks",
   "domain": "pipeline",
   "concept": "Idempotent ingestion: dedupe on the event's identity, not its contents",
   "concepts": ["idempotency", "retries-backoff"],

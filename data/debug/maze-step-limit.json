@@ -1,6 +1,6 @@
 {
   "id": "maze-step-limit",
-  "title": "The route planner gives up on an empty room",
+  "title": "Empty Room Route Planner",
   "domain": "graph",
   "concept": "A step limit hiding a missing visited set",
   "concepts": ["visited-set", "graph-traversal"],

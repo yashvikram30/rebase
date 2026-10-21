@@ -1,6 +1,6 @@
 {
   "id": "deal-shared-hands",
-  "title": "Every player gets the same cards",
+  "title": "Everyone Gets the Same Hand",
   "domain": "simulation",
   "concept": "Aliased mutable objects from list multiplication",
   "concepts": ["aliasing-mutable-state"],

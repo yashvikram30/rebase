@@ -1,6 +1,6 @@
 {
   "id": "maze-recursion-overflow",
-  "title": "has_path crashes on some mazes",
+  "title": "Maze Crash",
   "domain": "graph",
   "concept": "DFS needs a visited set on graphs with cycles",
   "concepts": ["graph-traversal", "visited-set", "recursion-call-stack", "global-state"],

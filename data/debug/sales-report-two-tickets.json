@@ -1,6 +1,6 @@
 {
   "id": "sales-report-two-tickets",
-  "title": "Two tickets about the same sales report",
+  "title": "Two Tickets, One Sales Report",
   "domain": "pipeline",
   "concept": "Calendar days in the store's timezone, and signs on refunds",
   "concepts": ["timezones", "edge-case-testing"],

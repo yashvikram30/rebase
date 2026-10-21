@@ -1,6 +1,6 @@
 {
   "id": "url-router-three-bugs",
-  "title": "The router matches the wrong routes",
+  "title": "Wrong Route Matches",
   "domain": "network",
   "concept": "Pattern matching: segment boundaries, normalising input and route precedence",
   "concepts": ["boundary-conditions", "regression-testing"],

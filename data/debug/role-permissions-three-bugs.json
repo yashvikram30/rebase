@@ -1,6 +1,6 @@
 {
   "id": "role-permissions-three-bugs",
-  "title": "Role permissions loop, ignore denies and miss wildcards",
+  "title": "Role Permissions Roulette",
   "domain": "oop",
   "concept": "Inheritance graphs: cycle guards, deny-overrides-allow and pattern matching",
   "concepts": ["recursion-call-stack", "edge-case-testing"],

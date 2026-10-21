@@ -1,6 +1,6 @@
 {
   "id": "keyset-pagination-ties",
-  "title": "The nightly export is missing a few rows",
+  "title": "Missing Export Rows",
   "domain": "dbms",
   "concept": "Keyset pagination on a key that is not unique",
   "concepts": ["keyset-pagination", "boundary-conditions"],

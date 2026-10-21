@@ -1,6 +1,6 @@
 {
   "id": "retry-client-backoff",
-  "title": "Our client retries requests it should never retry",
+  "title": "Retrying the Unretryable",
   "domain": "network",
   "concept": "Retry policy: which errors are retryable, and when to stop sleeping",
   "concepts": ["retries-backoff", "idempotency"],

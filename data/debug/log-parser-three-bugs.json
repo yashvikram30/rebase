@@ -1,6 +1,6 @@
 {
   "id": "log-parser-three-bugs",
-  "title": "The log summary loses text, levels and the last second",
+  "title": "Lossy Log Summary",
   "domain": "pipeline",
   "concept": "Parsing with split(): a limit on splits, normalising keys before counting and inclusive range ends",
   "concepts": ["edge-case-testing", "regression-testing"],
