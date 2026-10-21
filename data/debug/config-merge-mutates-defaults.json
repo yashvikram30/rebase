@@ -1,0 +1,71 @@
+{
+  "id": "config-merge-mutates-defaults",
+  "title": "A job's config overrides leak into every job after it",
+  "domain": "pipeline",
+  "concept": "Merging onto shared defaults without copying them",
+  "concepts": [
+    "aliasing-mutable-state",
+    "defensive-copying",
+    "python-defaults"
+  ],
+  "difficulty": 2,
+  "symptom": "The nightly export job overrides batch_size to 50. After that, the hourly job, which overrides nothing, also runs with batches of 50, and its retry attempts change too when nightly raises them.",
+  "files": {
+    "defaults.py": "DEFAULTS = {\n    \"batch_size\": 500,\n    \"retry\": {\"attempts\": 3, \"backoff_seconds\": 2},\n    \"destinations\": [\"warehouse\"],\n}\n",
+    "config.py": "from defaults import DEFAULTS\n\n\ndef build_config(overrides=None):\n    \"\"\"The job's settings: the defaults with any overrides applied on top.\"\"\"\n    config = DEFAULTS\n    for key, value in (overrides or {}).items():\n        if isinstance(value, dict) and isinstance(config.get(key), dict):\n            config[key].update(value)\n        else:\n            config[key] = value\n    return config\n",
+    "job.py": "from config import build_config\n\n\nclass ExportJob:\n    def __init__(self, name, overrides=None):\n        self.name = name\n        self.config = build_config(overrides)\n\n    def batches(self, rows):\n        size = self.config[\"batch_size\"]\n        return [rows[i : i + size] for i in range(0, len(rows), size)]\n\n    def describe(self):\n        retry = self.config[\"retry\"]\n        return \"%s: batches of %d, %d attempts\" % (self.name, self.config[\"batch_size\"], retry[\"attempts\"])\n"
+  },
+  "failingTest": "import unittest\n\nfrom defaults import DEFAULTS\nfrom job import ExportJob\n\n\nclass Failing(unittest.TestCase):\n    def test_one_jobs_overrides_do_not_leak_into_the_next_job(self):\n        ExportJob(\"nightly\", {\"batch_size\": 50, \"destinations\": [\"s3\"]})\n        other = ExportJob(\"hourly\")\n        self.assertEqual(other.config[\"batch_size\"], 500)\n        self.assertEqual(other.config[\"destinations\"], [\"warehouse\"])\n\n    def test_the_shared_defaults_are_never_modified(self):\n        ExportJob(\"nightly\", {\"batch_size\": 50})\n        self.assertEqual(DEFAULTS[\"batch_size\"], 500)\n",
+  "regressionTests": "import unittest\n\nfrom job import ExportJob\n\n\nclass Regression(unittest.TestCase):\n    def test_nested_overrides_leave_other_nested_values_alone(self):\n        job = ExportJob(\"nightly\", {\"retry\": {\"attempts\": 10}})\n        self.assertEqual(job.config[\"retry\"], {\"attempts\": 10, \"backoff_seconds\": 2})\n\n    def test_a_nested_override_does_not_leak_into_the_next_job(self):\n        ExportJob(\"nightly\", {\"retry\": {\"attempts\": 10}})\n        self.assertEqual(ExportJob(\"hourly\").config[\"retry\"][\"attempts\"], 3)\n\n    def test_new_keys_can_be_added(self):\n        self.assertEqual(ExportJob(\"x\", {\"owner\": \"data\"}).config[\"owner\"], \"data\")\n\n    def test_batching_uses_the_configured_size(self):\n        job = ExportJob(\"small\", {\"batch_size\": 2})\n        self.assertEqual(job.batches([1, 2, 3, 4, 5]), [[1, 2], [3, 4], [5]])\n",
+  "rootCause": "build_config starts from config = DEFAULTS, which is the module's own dict, not a copy, and then writes the overrides into it. The change sticks for the rest of the process. And because retry is a nested dict, even a copy of the top level (dict(DEFAULTS)) would still share that inner dict, so the copy must be deep.",
+  "correctFix": {
+    "config.py": "import copy\n\nfrom defaults import DEFAULTS\n\n\ndef build_config(overrides=None):\n    \"\"\"The job's settings: the defaults with any overrides applied on top.\"\"\"\n    config = copy.deepcopy(DEFAULTS)\n    for key, value in (overrides or {}).items():\n        if isinstance(value, dict) and isinstance(config.get(key), dict):\n            config[key].update(value)\n        else:\n            config[key] = value\n    return config\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "config.py": "from defaults import DEFAULTS\n\n\ndef build_config(overrides=None):\n    \"\"\"The job's settings: the defaults with any overrides applied on top.\"\"\"\n    config = dict(DEFAULTS)\n    for key, value in (overrides or {}).items():\n        if isinstance(value, dict) and isinstance(config.get(key), dict):\n            config[key].update(value)\n        else:\n            config[key] = value\n    return config\n"
+      },
+      "whyWrong": "A shallow copy protects the top-level keys, but retry and destinations are still the same inner objects as in DEFAULTS. config['retry'].update(...) edits the shared dict, so nested overrides still leak into later jobs."
+    }
+  ],
+  "grading": [
+    {
+      "question": "Why does dict(DEFAULTS) fix some leaks and not others?",
+      "ideal": "It copies only the top level. Nested dicts and lists are shared references, so changing them still changes the original."
+    },
+    {
+      "question": "What does 'config = DEFAULTS' do?",
+      "ideal": "It binds a second name to the same dict. No copy is made."
+    },
+    {
+      "question": "Where would you also protect DEFAULTS from accidental edits?",
+      "ideal": "Make it read-only (types.MappingProxyType, frozen structures) or build it from a function that returns a fresh dict."
+    }
+  ],
+  "transcript": {
+    "kind": "subtle-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "The nightly job's batch_size override leaks into the hourly job. Fix the config merge."
+      },
+      {
+        "role": "agent",
+        "text": "build_config starts from DEFAULTS itself, not a copy, so each job's overrides are written into the shared defaults. I start from dict(DEFAULTS) instead.",
+        "fix": {
+          "config.py": "from defaults import DEFAULTS\n\n\ndef build_config(overrides=None):\n    \"\"\"The job's settings: the defaults with any overrides applied on top.\"\"\"\n    config = dict(DEFAULTS)\n    for key, value in (overrides or {}).items():\n        if isinstance(value, dict) and isinstance(config.get(key), dict):\n            config[key].update(value)\n        else:\n            config[key] = value\n    return config\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (2 tests)"
+      },
+      {
+        "role": "agent",
+        "text": "Fixed: the hourly job is back to the default batch size."
+      }
+    ],
+    "verdict": "A shallow copy only protects the top level. retry and destinations are nested dicts and lists still shared with DEFAULTS, so nightly raising its retry attempts still changes everyone's. It needs a deep copy or a merge that builds new nested objects."
+  }
+}

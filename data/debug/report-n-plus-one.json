@@ -1,0 +1,69 @@
+{
+  "id": "report-n-plus-one",
+  "title": "The books report gets slower with every book we add",
+  "domain": "dbms",
+  "concept": "N+1 queries: fetch related rows in one batch",
+  "concepts": [
+    "n-plus-one-queries"
+  ],
+  "difficulty": 2,
+  "symptom": "A report of 30 books by 6 authors makes 31 database queries. At 10,000 books it makes 10,001 and the report times out. The output is correct; only the number of queries is wrong.",
+  "files": {
+    "db.py": "class FakeDB:\n    \"\"\"A stand-in for a SQL database that counts how much work it is asked to do.\"\"\"\n\n    def __init__(self, books, authors):\n        self._books = list(books)\n        self._authors = dict(authors)  # id -> row\n        self.queries = 0\n        self.rows_read = 0\n\n    def select_books(self):\n        self.queries += 1\n        self.rows_read += len(self._books)\n        return [dict(book) for book in self._books]\n\n    def select_author(self, author_id):\n        \"\"\"SELECT * FROM authors WHERE id = ?\"\"\"\n        self.queries += 1\n        row = self._authors.get(author_id)\n        self.rows_read += 1 if row else 0\n        return dict(row) if row else None\n\n    def select_authors(self, author_ids):\n        \"\"\"SELECT * FROM authors WHERE id IN (...)\"\"\"\n        self.queries += 1\n        rows = [dict(self._authors[i]) for i in sorted(set(author_ids)) if i in self._authors]\n        self.rows_read += len(rows)\n        return rows\n\n    def select_all_authors(self):\n        \"\"\"SELECT * FROM authors\"\"\"\n        self.queries += 1\n        self.rows_read += len(self._authors)\n        return [dict(row) for row in self._authors.values()]\n",
+    "repo.py": "class LibraryRepo:\n    def __init__(self, db):\n        self.db = db\n\n    def books(self):\n        return self.db.select_books()\n\n    def author(self, author_id):\n        return self.db.select_author(author_id)\n\n    def authors(self, author_ids):\n        \"\"\"{id: row} for just these authors, in one query.\"\"\"\n        return {row[\"id\"]: row for row in self.db.select_authors(author_ids)}\n\n    def all_authors(self):\n        return {row[\"id\"]: row for row in self.db.select_all_authors()}\n",
+    "report.py": "def build_report(repo):\n    \"\"\"One line per book: 'Title by Author'.\"\"\"\n    lines = []\n    for book in repo.books():\n        author = repo.author(book[\"author_id\"])\n        name = author[\"name\"] if author else \"Unknown\"\n        lines.append(\"%s by %s\" % (book[\"title\"], name))\n    return lines\n"
+  },
+  "failingTest": "import unittest\n\nfrom db import FakeDB\nfrom report import build_report\nfrom repo import LibraryRepo\n\n\ndef library(book_count, author_count):\n    authors = {i: {\"id\": i, \"name\": \"Author %d\" % i} for i in range(1, author_count + 1)}\n    books = [{\"title\": \"Book %d\" % n, \"author_id\": (n % author_count) + 1} for n in range(book_count)]\n    return FakeDB(books, authors)\n\n\nclass Failing(unittest.TestCase):\n    def test_the_report_needs_two_queries_however_many_books_there_are(self):\n        db = library(book_count=30, author_count=6)\n        lines = build_report(LibraryRepo(db))\n        self.assertEqual(len(lines), 30)\n        self.assertEqual(lines[0], \"Book 0 by Author 1\")\n        self.assertLessEqual(db.queries, 2)\n",
+  "regressionTests": "import unittest\n\nfrom db import FakeDB\nfrom report import build_report\nfrom repo import LibraryRepo\n\n\nclass Regression(unittest.TestCase):\n    def test_only_the_authors_that_are_needed_are_read(self):\n        authors = {i: {\"id\": i, \"name\": \"Author %d\" % i} for i in range(1, 401)}\n        books = [{\"title\": \"T%d\" % n, \"author_id\": n + 1} for n in range(5)]\n        db = FakeDB(books, authors)\n        build_report(LibraryRepo(db))\n        self.assertLessEqual(db.rows_read, 5 + 5)\n\n    def test_a_book_with_an_unknown_author_is_reported_as_unknown(self):\n        db = FakeDB([{\"title\": \"Orphan\", \"author_id\": 99}], {1: {\"id\": 1, \"name\": \"Ada\"}})\n        self.assertEqual(build_report(LibraryRepo(db)), [\"Orphan by Unknown\"])\n\n    def test_books_keep_their_order(self):\n        authors = {1: {\"id\": 1, \"name\": \"Ada\"}, 2: {\"id\": 2, \"name\": \"Bob\"}}\n        books = [{\"title\": \"Z\", \"author_id\": 2}, {\"title\": \"A\", \"author_id\": 1}]\n        self.assertEqual(build_report(LibraryRepo(FakeDB(books, authors))), [\"Z by Bob\", \"A by Ada\"])\n\n    def test_no_books_means_no_author_query(self):\n        db = FakeDB([], {1: {\"id\": 1, \"name\": \"Ada\"}})\n        self.assertEqual(build_report(LibraryRepo(db)), [])\n        self.assertEqual(db.queries, 1)\n",
+  "rootCause": "build_report loops over the books and asks for each author with its own query: one query for the list plus one per row, the classic N+1. The fix is to collect the distinct author ids and fetch them in a single IN (...) query, then look names up in memory.",
+  "correctFix": {
+    "report.py": "def build_report(repo):\n    \"\"\"One line per book: 'Title by Author'.\"\"\"\n    books = repo.books()\n    authors = repo.authors({book[\"author_id\"] for book in books}) if books else {}\n    lines = []\n    for book in books:\n        author = authors.get(book[\"author_id\"])\n        name = author[\"name\"] if author else \"Unknown\"\n        lines.append(\"%s by %s\" % (book[\"title\"], name))\n    return lines\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "report.py": "def build_report(repo):\n    \"\"\"One line per book: 'Title by Author'.\"\"\"\n    books = repo.books()\n    authors = repo.all_authors()\n    lines = []\n    for book in books:\n        author = authors.get(book[\"author_id\"])\n        name = author[\"name\"] if author else \"Unknown\"\n        lines.append(\"%s by %s\" % (book[\"title\"], name))\n    return lines\n"
+      },
+      "whyWrong": "Loading the whole authors table makes the query count two, but it reads every author row to display a few. With 400 authors and 5 books it reads 400 rows, and it queries the table even when there are no books at all."
+    }
+  ],
+  "grading": [
+    {
+      "question": "Why is N+1 easy to miss in development and painful in production?",
+      "ideal": "With a few rows it is fast and correct; the cost grows with the data and with network latency per query."
+    },
+    {
+      "question": "Why is 'SELECT * FROM authors' not a good fix?",
+      "ideal": "It trades many small queries for one query that reads far more than needed, and it gets worse as the table grows."
+    },
+    {
+      "question": "What would you look at to spot this in a real system?",
+      "ideal": "Query counts per request, the database's slow-query or EXPLAIN output, or an ORM's query log."
+    }
+  ],
+  "transcript": {
+    "kind": "correct",
+    "turns": [
+      {
+        "role": "user",
+        "text": "The books report makes one query per book and times out on big catalogues. Make it fast without changing the output."
+      },
+      {
+        "role": "agent",
+        "text": "It queries each book's author separately: one query for the books plus one per book. I collect the distinct author ids and fetch them in one query, and skip that query when there are no books.",
+        "fix": {
+          "report.py": "def build_report(repo):\n    \"\"\"One line per book: 'Title by Author'.\"\"\"\n    books = repo.books()\n    authors = repo.authors({book[\"author_id\"] for book in books}) if books else {}\n    lines = []\n    for book in books:\n        author = authors.get(book[\"author_id\"])\n        name = author[\"name\"] if author else \"Unknown\"\n        lines.append(\"%s by %s\" % (book[\"title\"], name))\n    return lines\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)\ntest_regression: OK (4 tests)"
+      },
+      {
+        "role": "agent",
+        "text": "Both suites pass: two queries for any number of books, none for authors when the list is empty."
+      }
+    ],
+    "verdict": "Approve. It batches exactly the authors the books need, rather than reading the whole authors table, keeps 'Unknown' for missing authors, and handles the empty report."
+  }
+}

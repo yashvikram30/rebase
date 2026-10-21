@@ -1,0 +1,71 @@
+{
+  "id": "keyset-pagination-ties",
+  "title": "The nightly export is missing a few rows",
+  "domain": "dbms",
+  "concept": "Keyset pagination on a key that is not unique",
+  "concepts": [
+    "keyset-pagination",
+    "boundary-conditions"
+  ],
+  "difficulty": 3,
+  "symptom": "The nightly export of the events table comes up a few rows short. It is never many, and only on busy days; quiet days export perfectly. The export walks the same paginated API our customers use, and some of them have reported gaps too.",
+  "files": {
+    "db.py": "class EventTable:\n    \"\"\"An in-memory stand-in for the events table: id is unique, created_at is not.\"\"\"\n\n    def __init__(self, rows):\n        self.rows = [dict(r) for r in rows]\n        self.queries = 0\n\n    def page_after(self, created_after, limit):\n        \"\"\"SELECT * FROM events WHERE created_at > ? ORDER BY created_at LIMIT ?\"\"\"\n        self.queries += 1\n        hits = [r for r in self.rows if created_after is None or r[\"created_at\"] > created_after]\n        hits.sort(key=lambda r: r[\"created_at\"])\n        return hits[:limit]\n",
+    "api.py": "def list_events(table, cursor=None, limit=100):\n    \"\"\"One page of events, oldest first, and the cursor for the next page (None at the end).\"\"\"\n    rows = table.page_after(cursor, limit)\n    next_cursor = rows[-1][\"created_at\"] if len(rows) == limit else None\n    return rows, next_cursor\n",
+    "export.py": "from api import list_events\n\nMAX_PAGES = 10_000\n\n\ndef export_all(table, page_size=100):\n    \"\"\"Every event, by walking the pages the same way the public API does.\"\"\"\n    out = []\n    cursor = None\n    for _ in range(MAX_PAGES):\n        rows, cursor = list_events(table, cursor, page_size)\n        out.extend(rows)\n        if cursor is None:\n            return out\n    raise RuntimeError(\"export did not finish after %d pages\" % MAX_PAGES)\n"
+  },
+  "failingTest": "import unittest\n\nfrom db import EventTable\nfrom export import export_all\n\n\nclass Failing(unittest.TestCase):\n    def test_the_export_has_every_event(self):\n        # Events 3, 4 and 5 were written in the same second, and a page ends at event 4.\n        times = [100, 101, 102, 102, 102, 103]\n        table = EventTable([{\"id\": i + 1, \"created_at\": t} for i, t in enumerate(times)])\n        exported = export_all(table, page_size=4)\n        self.assertEqual({r[\"id\"] for r in exported}, {1, 2, 3, 4, 5, 6})\n",
+  "regressionTests": "import unittest\n\nfrom api import list_events\nfrom db import EventTable\nfrom export import export_all\n\n\ndef table_of(times):\n    return EventTable([{\"id\": i + 1, \"created_at\": t} for i, t in enumerate(times)])\n\n\nclass Regression(unittest.TestCase):\n    def test_no_event_is_exported_twice(self):\n        exported = export_all(table_of([100, 101, 102, 102, 102, 103]), page_size=4)\n        ids = [r[\"id\"] for r in exported]\n        self.assertEqual(len(ids), len(set(ids)))\n\n    def test_a_burst_bigger_than_a_page(self):\n        # Five events in one second, read two at a time.\n        exported = export_all(table_of([100, 100, 100, 100, 100]), page_size=2)\n        self.assertEqual([r[\"id\"] for r in exported], [1, 2, 3, 4, 5])\n\n    def test_pages_are_in_time_order(self):\n        exported = export_all(table_of([105, 101, 103, 102, 104]), page_size=2)\n        self.assertEqual([r[\"created_at\"] for r in exported], [101, 102, 103, 104, 105])\n\n    def test_the_last_page_says_there_is_no_more(self):\n        rows, cursor = list_events(table_of([100, 101, 102]), None, 5)\n        self.assertEqual(len(rows), 3)\n        self.assertIsNone(cursor)\n",
+  "rootCause": "The cursor is the created_at of the last row on the page, and the next page asks for created_at > cursor. created_at is not unique: on busy days several events share a second. When a page ends partway through such a group, the rest of the group has the same created_at as the cursor and is skipped. The cursor must name a unique position: order and compare by (created_at, id).",
+  "correctFix": {
+    "db.py": "class EventTable:\n    \"\"\"An in-memory stand-in for the events table: id is unique, created_at is not.\"\"\"\n\n    def __init__(self, rows):\n        self.rows = [dict(r) for r in rows]\n        self.queries = 0\n\n    def page_after(self, after, limit):\n        \"\"\"SELECT * FROM events WHERE (created_at, id) > (?, ?) ORDER BY created_at, id LIMIT ?\n\n        after is the (created_at, id) of the last row already seen, or None for the first page. Ordering\n        by a unique key makes the position of every row exact, even when timestamps are equal.\n        \"\"\"\n        self.queries += 1\n        key = lambda r: (r[\"created_at\"], r[\"id\"])\n        hits = [r for r in self.rows if after is None or key(r) > after]\n        hits.sort(key=key)\n        return hits[:limit]\n",
+    "api.py": "def list_events(table, cursor=None, limit=100):\n    \"\"\"One page of events, oldest first, and the cursor for the next page (None at the end).\"\"\"\n    rows = table.page_after(cursor, limit)\n    # The cursor must name a unique row, so it carries the id as a tie-breaker for equal timestamps.\n    next_cursor = (rows[-1][\"created_at\"], rows[-1][\"id\"]) if len(rows) == limit else None\n    return rows, next_cursor\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "db.py": "class EventTable:\n    \"\"\"An in-memory stand-in for the events table: id is unique, created_at is not.\"\"\"\n\n    def __init__(self, rows):\n        self.rows = [dict(r) for r in rows]\n        self.queries = 0\n\n    def page_after(self, created_after, limit):\n        \"\"\"SELECT * FROM events WHERE created_at >= ? ORDER BY created_at LIMIT ?\"\"\"\n        self.queries += 1\n        hits = [r for r in self.rows if created_after is None or r[\"created_at\"] >= created_after]\n        hits.sort(key=lambda r: r[\"created_at\"])\n        return hits[:limit]\n"
+      },
+      "whyWrong": "Switching to >= brings the skipped rows back, but the row the cursor points at comes back too, so every page boundary inside a busy second exports duplicates. When more rows share a second than fit on a page, the next page is the same page again and the export never finishes."
+    }
+  ],
+  "transcript": {
+    "kind": "subtle-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "The export loses rows when several events share a timestamp. Can you fix the paging?"
+      },
+      {
+        "role": "agent",
+        "text": "The query uses created_at > cursor, which excludes every row with the cursor's timestamp, including ones that were not on the previous page. Using >= keeps them.",
+        "fix": {
+          "db.py": "class EventTable:\n    \"\"\"An in-memory stand-in for the events table: id is unique, created_at is not.\"\"\"\n\n    def __init__(self, rows):\n        self.rows = [dict(r) for r in rows]\n        self.queries = 0\n\n    def page_after(self, created_after, limit):\n        \"\"\"SELECT * FROM events WHERE created_at >= ? ORDER BY created_at LIMIT ?\"\"\"\n        self.queries += 1\n        hits = [r for r in self.rows if created_after is None or r[\"created_at\"] >= created_after]\n        hits.sort(key=lambda r: r[\"created_at\"])\n        return hits[:limit]\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)"
+      },
+      {
+        "role": "agent",
+        "text": "Fixed: all six events are exported now."
+      }
+    ],
+    "verdict": "The diagnosis is right and the fix is not. With >= the row the cursor names is read again, so busy seconds produce duplicates, and five events in one second with a page size of two loop forever. The cursor has to identify one row: (created_at, id), compared as a pair."
+  },
+  "grading": [
+    {
+      "question": "Why does created_at > cursor skip rows?",
+      "ideal": "Rows that share the cursor's timestamp but were not on the previous page are excluded, because their created_at is equal, not greater."
+    },
+    {
+      "question": "What makes a pagination cursor safe?",
+      "ideal": "It must identify exactly one row in a total order, so add a unique tie-breaker like id and compare (created_at, id) as a pair, in the same order the query sorts by."
+    },
+    {
+      "question": "Why did only busy days lose rows?",
+      "ideal": "Only then do several events share a second, and only a page boundary inside such a group skips rows."
+    }
+  ]
+}

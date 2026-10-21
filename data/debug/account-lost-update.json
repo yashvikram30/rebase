@@ -1,0 +1,71 @@
+{
+  "id": "account-lost-update",
+  "title": "Two simultaneous withdrawals leave the wrong balance",
+  "domain": "dbms",
+  "concept": "Lost update: read-modify-write needs optimistic locking and a retry",
+  "concepts": [
+    "lost-update",
+    "check-then-act-races"
+  ],
+  "difficulty": 3,
+  "symptom": "Withdrawing 30 and 50 from a balance of 100 at the same time should leave 20. It leaves 70 or 50, as if one of the withdrawals never happened.",
+  "files": {
+    "sched.py": "\"\"\"A tiny cooperative scheduler, so tests control exactly how tasks interleave.\n\nReal services use asyncio; this stands in for it so every run is the same.\nA task runs until it awaits yield_control(), then the next task gets a turn.\n\"\"\"\nimport types\n\n\nclass Deadlock(Exception):\n    \"\"\"Tasks are still waiting after far more turns than any of them needs.\"\"\"\n\n\n@types.coroutine\ndef yield_control():\n    \"\"\"Let the other tasks run (think: waiting on the network).\"\"\"\n    yield\n\n\nclass Lock:\n    def __init__(self):\n        self._held = False\n\n    async def acquire(self):\n        while self._held:\n            await yield_control()\n        self._held = True\n\n    def release(self):\n        self._held = False\n\n    async def __aenter__(self):\n        await self.acquire()\n\n    async def __aexit__(self, *exc_info):\n        self.release()\n\n\ndef run_all(*coroutines, max_turns=100):\n    \"\"\"Runs coroutines round-robin until they all finish; returns each one's result or its exception.\"\"\"\n    pending = list(enumerate(coroutines))\n    results = [None] * len(coroutines)\n    turns = 0\n    while pending:\n        turns += 1\n        if turns > max_turns:\n            raise Deadlock(\"still waiting after %d turns\" % max_turns)\n        still_running = []\n        for index, task in pending:\n            try:\n                task.send(None)\n            except StopIteration as done:\n                results[index] = done.value\n            except Exception as error:\n                results[index] = error\n            else:\n                still_running.append((index, task))\n        pending = still_running\n    return results\n",
+    "store.py": "class Conflict(Exception):\n    \"\"\"Someone else changed the row since you read it.\"\"\"\n\n\nclass AccountStore:\n    \"\"\"Rows with a version number, like a table with an optimistic-locking column.\"\"\"\n\n    def __init__(self, balances):\n        self._rows = {account: {\"balance\": balance, \"version\": 0} for account, balance in balances.items()}\n\n    def read(self, account_id):\n        row = self._rows[account_id]\n        return row[\"balance\"], row[\"version\"]\n\n    def write(self, account_id, balance, expected_version):\n        row = self._rows[account_id]\n        row[\"balance\"] = balance\n        row[\"version\"] += 1\n",
+    "service.py": "from sched import yield_control\n\n\nclass InsufficientFunds(Exception):\n    pass\n\n\nclass AccountService:\n    def __init__(self, store):\n        self.store = store\n\n    async def withdraw(self, account_id, cents):\n        balance, version = self.store.read(account_id)\n        await yield_control()  # e.g. a fraud check between reading the balance and writing it back\n        if balance < cents:\n            raise InsufficientFunds(account_id)\n        self.store.write(account_id, balance - cents, version)\n        return balance - cents\n"
+  },
+  "failingTest": "import unittest\n\nfrom sched import run_all\nfrom service import AccountService\nfrom store import AccountStore\n\n\nclass Failing(unittest.TestCase):\n    def test_no_withdrawal_is_lost(self):\n        store = AccountStore({\"acc\": 100})\n        service = AccountService(store)\n        amounts = [30, 50]\n        results = run_all(*[service.withdraw(\"acc\", cents) for cents in amounts])\n        paid_out = sum(cents for cents, result in zip(amounts, results) if isinstance(result, int))\n        balance, _ = store.read(\"acc\")\n        self.assertEqual(balance, 100 - paid_out)\n",
+  "regressionTests": "import unittest\n\nfrom sched import run_all\nfrom service import AccountService, InsufficientFunds\nfrom store import AccountStore\n\n\nclass Regression(unittest.TestCase):\n    def test_both_withdrawals_succeed_when_there_is_enough_money(self):\n        store = AccountStore({\"acc\": 100})\n        service = AccountService(store)\n        results = run_all(service.withdraw(\"acc\", 30), service.withdraw(\"acc\", 50))\n        self.assertTrue(all(isinstance(r, int) for r in results), results)\n        self.assertEqual(store.read(\"acc\")[0], 20)\n\n    def test_three_at_once_all_succeed(self):\n        store = AccountStore({\"acc\": 100})\n        service = AccountService(store)\n        results = run_all(*[service.withdraw(\"acc\", 10) for _ in range(3)])\n        self.assertTrue(all(isinstance(r, int) for r in results), results)\n        self.assertEqual(store.read(\"acc\")[0], 70)\n\n    def test_a_withdrawal_that_would_overdraw_is_rejected(self):\n        store = AccountStore({\"acc\": 40})\n        service = AccountService(store)\n        results = run_all(service.withdraw(\"acc\", 30), service.withdraw(\"acc\", 30))\n        self.assertEqual(sum(isinstance(r, int) for r in results), 1)\n        self.assertEqual(sum(isinstance(r, InsufficientFunds) for r in results), 1)\n        self.assertEqual(store.read(\"acc\")[0], 10)\n\n    def test_a_lone_withdrawal_just_works(self):\n        store = AccountStore({\"acc\": 100})\n        self.assertEqual(run_all(AccountService(store).withdraw(\"acc\", 25)), [75])\n",
+  "rootCause": "withdraw reads the balance, waits, then writes balance - cents back. Two withdrawals read the same 100 before either writes, so the second write overwrites the first: a lost update. The write must be conditional on the row's version, and a failed (stale) write must be retried from a fresh read.",
+  "correctFix": {
+    "store.py": "class Conflict(Exception):\n    \"\"\"Someone else changed the row since you read it.\"\"\"\n\n\nclass AccountStore:\n    \"\"\"Rows with a version number, like a table with an optimistic-locking column.\"\"\"\n\n    def __init__(self, balances):\n        self._rows = {account: {\"balance\": balance, \"version\": 0} for account, balance in balances.items()}\n\n    def read(self, account_id):\n        row = self._rows[account_id]\n        return row[\"balance\"], row[\"version\"]\n\n    def write(self, account_id, balance, expected_version):\n        row = self._rows[account_id]\n        if row[\"version\"] != expected_version:\n            raise Conflict(account_id)\n        row[\"balance\"] = balance\n        row[\"version\"] += 1\n",
+    "service.py": "from sched import yield_control\nfrom store import Conflict\n\n\nclass InsufficientFunds(Exception):\n    pass\n\n\nclass AccountService:\n    def __init__(self, store):\n        self.store = store\n\n    async def withdraw(self, account_id, cents, attempts=5):\n        for _ in range(attempts):\n            balance, version = self.store.read(account_id)\n            await yield_control()  # e.g. a fraud check between reading the balance and writing it back\n            if balance < cents:\n                raise InsufficientFunds(account_id)\n            try:\n                self.store.write(account_id, balance - cents, version)\n            except Conflict:\n                continue  # someone else got in first: read the new balance and decide again\n            return balance - cents\n        raise Conflict(account_id)\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "store.py": "class Conflict(Exception):\n    \"\"\"Someone else changed the row since you read it.\"\"\"\n\n\nclass AccountStore:\n    \"\"\"Rows with a version number, like a table with an optimistic-locking column.\"\"\"\n\n    def __init__(self, balances):\n        self._rows = {account: {\"balance\": balance, \"version\": 0} for account, balance in balances.items()}\n\n    def read(self, account_id):\n        row = self._rows[account_id]\n        return row[\"balance\"], row[\"version\"]\n\n    def write(self, account_id, balance, expected_version):\n        row = self._rows[account_id]\n        if row[\"version\"] != expected_version:\n            raise Conflict(account_id)\n        row[\"balance\"] = balance\n        row[\"version\"] += 1\n"
+      },
+      "whyWrong": "Checking the version stops the lost update, but with no retry the loser gets a Conflict error and no money, even though the account had enough for both withdrawals."
+    }
+  ],
+  "transcript": {
+    "kind": "subtle-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "Two withdrawals at the same time (30 and 50 from 100) leave the balance at 70 or 50 instead of 20. Fix it."
+      },
+      {
+        "role": "agent",
+        "text": "That is a lost update: both read 100 and write back their own result. I'll add optimistic locking, so a write only succeeds if the row has not changed since it was read.",
+        "fix": {
+          "store.py": "class Conflict(Exception):\n    \"\"\"Someone else changed the row since you read it.\"\"\"\n\n\nclass AccountStore:\n    \"\"\"Rows with a version number, like a table with an optimistic-locking column.\"\"\"\n\n    def __init__(self, balances):\n        self._rows = {account: {\"balance\": balance, \"version\": 0} for account, balance in balances.items()}\n\n    def read(self, account_id):\n        row = self._rows[account_id]\n        return row[\"balance\"], row[\"version\"]\n\n    def write(self, account_id, balance, expected_version):\n        row = self._rows[account_id]\n        if row[\"version\"] != expected_version:\n            raise Conflict(account_id)\n        row[\"balance\"] = balance\n        row[\"version\"] += 1\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)"
+      },
+      {
+        "role": "agent",
+        "text": "Fixed. The store now refuses a stale write, so the balance can never be wrong."
+      }
+    ],
+    "verdict": "Right idea, half the job. The store now rejects the stale write, but nothing retries it, so one of the two customers gets a Conflict error and no money, even though there was plenty. The failing test only checks that the balance is consistent, not that both withdrawals went through; the regression suite does."
+  },
+  "grading": [
+    {
+      "question": "Why does reading, waiting and writing back lose an update?",
+      "ideal": "Both transactions start from the same old value, so the later write silently overwrites the earlier one."
+    },
+    {
+      "question": "How does a version column prevent it, and what must the caller then do?",
+      "ideal": "The write only applies if the version is unchanged; otherwise it fails and the caller re-reads and retries."
+    },
+    {
+      "question": "Name two other ways to avoid a lost update.",
+      "ideal": "Lock the row (SELECT ... FOR UPDATE), or do the arithmetic in the database in one atomic statement."
+    }
+  ]
+}

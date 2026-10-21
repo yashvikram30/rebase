@@ -1,0 +1,70 @@
+{
+  "id": "customer-equality-hash-contract",
+  "title": "The same customer gets two emails",
+  "domain": "oop",
+  "concept": "Objects that compare equal must have equal hashes",
+  "concepts": [
+    "equality-hashing",
+    "aliasing-mutable-state"
+  ],
+  "difficulty": 2,
+  "symptom": "Ada is on the newsletter as Ada@Example.com and on the promo list as ada@example.com. The mailer treats her as two people and sends two emails, and the directory registers her twice, even though customers == customers says they are equal.",
+  "files": {
+    "customer.py": "class Customer:\n    \"\"\"A person we email. Two customers are the same person if their emails match, ignoring case.\"\"\"\n\n    def __init__(self, email, name=\"\"):\n        self.email = email\n        self.name = name\n\n    def __eq__(self, other):\n        return isinstance(other, Customer) and self.email.lower() == other.email.lower()\n\n    def __hash__(self):\n        return hash(self.email)\n\n    def __repr__(self):\n        return \"Customer(%r)\" % self.email\n",
+    "directory.py": "class Directory:\n    \"\"\"Everyone we know about, without duplicates.\"\"\"\n\n    def __init__(self):\n        self._customers = {}\n\n    def add(self, customer):\n        \"\"\"Registers the customer; returns False if that person was already known.\"\"\"\n        if customer in self._customers:\n            return False\n        self._customers[customer] = customer\n        return True\n\n    def find(self, email):\n        from customer import Customer\n\n        return self._customers.get(Customer(email))\n\n    def __len__(self):\n        return len(self._customers)\n",
+    "mailer.py": "class Mailer:\n    \"\"\"Sends one message per person, however many lists they are on.\"\"\"\n\n    def __init__(self):\n        self.sent = []\n\n    def send_to_all(self, *lists, subject=\"\"):\n        recipients = set()\n        for customers in lists:\n            recipients.update(customers)\n        for customer in sorted(recipients, key=lambda c: c.email.lower()):\n            self.sent.append((customer.email, subject))\n        return len(recipients)\n"
+  },
+  "failingTest": "import unittest\n\nfrom customer import Customer\nfrom directory import Directory\nfrom mailer import Mailer\n\n\nclass Failing(unittest.TestCase):\n    def test_the_same_person_in_two_cases_is_one_recipient(self):\n        newsletter = [Customer(\"Ada@Example.com\"), Customer(\"bob@example.com\")]\n        promo = [Customer(\"ada@example.com\")]\n        mailer = Mailer()\n        self.assertEqual(mailer.send_to_all(newsletter, promo, subject=\"Sale\"), 2)\n\n    def test_the_directory_finds_a_customer_whatever_the_case(self):\n        directory = Directory()\n        self.assertTrue(directory.add(Customer(\"Ada@Example.com\", \"Ada\")))\n        self.assertFalse(directory.add(Customer(\"ada@example.com\")))\n        self.assertEqual(len(directory), 1)\n        self.assertEqual(directory.find(\"ADA@EXAMPLE.COM\").name, \"Ada\")\n",
+  "regressionTests": "import unittest\n\nfrom customer import Customer\nfrom directory import Directory\n\n\nclass Regression(unittest.TestCase):\n    def test_different_people_stay_different(self):\n        self.assertNotEqual(Customer(\"ada@example.com\"), Customer(\"bob@example.com\"))\n        directory = Directory()\n        directory.add(Customer(\"ada@example.com\"))\n        directory.add(Customer(\"bob@example.com\"))\n        self.assertEqual(len(directory), 2)\n\n    def test_the_email_is_kept_as_the_customer_typed_it(self):\n        self.assertEqual(Customer(\"Ada@Example.com\").email, \"Ada@Example.com\")\n\n    def test_the_first_registration_wins(self):\n        directory = Directory()\n        directory.add(Customer(\"Ada@Example.com\", \"Ada\"))\n        directory.add(Customer(\"ada@example.com\", \"Someone else\"))\n        self.assertEqual(directory.find(\"ada@example.com\").email, \"Ada@Example.com\")\n\n    def test_unknown_emails_are_not_found(self):\n        self.assertIsNone(Directory().find(\"nobody@example.com\"))\n",
+  "rootCause": "__eq__ compares emails ignoring case, but __hash__ hashes the email as typed. Equal objects must have equal hashes, so sets and dicts, which look in a bucket chosen by the hash, never even compare Ada@Example.com with ada@example.com. The hash must be computed from the same normalised value that equality uses.",
+  "correctFix": {
+    "customer.py": "class Customer:\n    \"\"\"A person we email. Two customers are the same person if their emails match, ignoring case.\"\"\"\n\n    def __init__(self, email, name=\"\"):\n        self.email = email\n        self.name = name\n\n    def __eq__(self, other):\n        return isinstance(other, Customer) and self.email.lower() == other.email.lower()\n\n    def __hash__(self):\n        return hash(self.email.lower())\n\n    def __repr__(self):\n        return \"Customer(%r)\" % self.email\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "customer.py": "class Customer:\n    \"\"\"A person we email. Two customers are the same person if their emails match, ignoring case.\"\"\"\n\n    def __init__(self, email, name=\"\"):\n        self.email = email.lower()\n        self.name = name\n\n    def __eq__(self, other):\n        return isinstance(other, Customer) and self.email == other.email\n\n    def __hash__(self):\n        return hash(self.email)\n\n    def __repr__(self):\n        return \"Customer(%r)\" % self.email\n"
+      },
+      "whyWrong": "Lowercasing the email in __init__ makes equality and hashing agree, but it throws away what the customer typed, so every email now goes out and displays in lower case."
+    }
+  ],
+  "grading": [
+    {
+      "question": "State the rule that connects __eq__ and __hash__.",
+      "ideal": "If a == b then hash(a) == hash(b). The converse need not hold."
+    },
+    {
+      "question": "Why did the set not even call __eq__ on the two Adas?",
+      "ideal": "It first picks a bucket from the hash. Different hashes mean different buckets, so the two objects are never compared."
+    },
+    {
+      "question": "Why is normalising inside __init__ a worse fix than normalising inside __hash__?",
+      "ideal": "It destroys the original value, which the app may need to show or send as typed."
+    }
+  ],
+  "transcript": {
+    "kind": "correct",
+    "turns": [
+      {
+        "role": "user",
+        "text": "Ada gets two emails because Ada@Example.com and ada@example.com are treated as different customers in a set."
+      },
+      {
+        "role": "agent",
+        "text": "__eq__ ignores case but __hash__ does not, so equal customers land in different hash buckets and a set never compares them. I hash the lower-cased email, matching __eq__, and keep the email as typed.",
+        "fix": {
+          "customer.py": "class Customer:\n    \"\"\"A person we email. Two customers are the same person if their emails match, ignoring case.\"\"\"\n\n    def __init__(self, email, name=\"\"):\n        self.email = email\n        self.name = name\n\n    def __eq__(self, other):\n        return isinstance(other, Customer) and self.email.lower() == other.email.lower()\n\n    def __hash__(self):\n        return hash(self.email.lower())\n\n    def __repr__(self):\n        return \"Customer(%r)\" % self.email\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (2 tests)\ntest_regression: OK (4 tests)"
+      },
+      {
+        "role": "agent",
+        "text": "Both suites pass. Equal customers now hash equally, and the stored email keeps its original case."
+      }
+    ],
+    "verdict": "Approve. It restored the rule that equal objects have equal hashes, changing only the hash, so emails are still sent and shown exactly as the customer typed them."
+  }
+}

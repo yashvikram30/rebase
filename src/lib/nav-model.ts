@@ -28,8 +28,8 @@ export function buildNav(c: Curriculum): NavPhase[] {
 export function buildSearch(c: Curriculum): SearchEntry[] {
   const phase = new Map(c.phases.map((p) => [p.slug, p.name]));
   const pages: SearchEntry[] = [
-    { href: "/", title: "Today", sub: "Page", text: "dashboard continue" },
-    { href: "/plan", title: "Plan overview", sub: "Page", text: "how a day works rules setup" },
+    { href: "/learn", title: "Today", sub: "Page", text: "dashboard continue" },
+    { href: "/plan", title: "Course overview", sub: "Page", text: "how a day works rules setup" },
     { href: "/schedule", title: "Schedule", sub: "Page", text: "dates start reschedule" },
     {
       href: "/foundations",
@@ -49,7 +49,7 @@ export function buildSearch(c: Curriculum): SearchEntry[] {
       sub: "Page",
       text: "quiz practice revision questions mcq fill in the blanks flashcards code snippets weeks",
     },
-    { href: "/notes", title: "Second brain", sub: "Page", text: "notes write markdown tags links journal" },
+    { href: "/notes", title: "Notes", sub: "Page", text: "notes write markdown tags links journal" },
   ];
   const weeks = c.weeks.map((w) => ({
     href: `/week/${w.number}`,

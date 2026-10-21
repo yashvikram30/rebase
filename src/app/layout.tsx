@@ -1,38 +1,37 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
-import { AppShell } from "@/components/app-shell";
+import { Bricolage_Grotesque, DM_Mono, DM_Sans } from "next/font/google";
 import { PageViewTracker } from "@/components/page-view-tracker";
-import { getCurriculum } from "@/lib/curriculum";
-import { buildNav, buildSearch } from "@/lib/nav-model";
+import { SyncManager } from "@/components/sync-manager";
+import { Toaster } from "@/components/toaster";
 import "./globals.css";
 import "./theme.css";
 import "./motion.css";
-import "./revise.css";
 import "./focus.css";
 
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
-const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"], axes: ["SOFT", "opsz"] });
-const mono = JetBrains_Mono({ variable: "--font-mono", subsets: ["latin"] });
+// Bricolage Grotesque for headings, DM Sans for text and UI, DM Mono for code and test names.
+const sans = DM_Sans({ variable: "--font-sans", subsets: ["latin"] });
+const display = Bricolage_Grotesque({ variable: "--font-display", subsets: ["latin"] });
+const mono = DM_Mono({ variable: "--font-mono", subsets: ["latin"], weight: ["400", "500"] });
 
+// Platform-level only. Each offering (the (learn), (debug) and (account) route groups) brings its own
+// shell and metadata; what is shared is sign-in, sync, theme and the global styles.
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://daybookcs.vercel.app"),
-  title: { default: "Daybook: learn how computers really work", template: "%s · Daybook" },
-  description:
-    "Daybook is a 16-week study plan: architecture, operating systems, networking, databases, distributed systems, software engineering, machine learning, generative AI and RAG. Start on any day.",
-  openGraph: { type: "website", siteName: "Daybook" },
+  title: { default: "Rebase", template: "%s · Rebase" },
+  description: "Rebase: learn how computers really work, and practice the AI-enabled debugging round.",
+  openGraph: { type: "website", siteName: "Rebase" },
   twitter: { card: "summary_large_image" },
 };
 
 // Runs before paint so the saved theme never flashes.
 const themeScript = `try{var t=localStorage.getItem("csplan.theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}`;
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const curriculum = await getCurriculum();
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${fraunces.variable} ${mono.variable}`}
+      className={`${sans.variable} ${display.variable} ${mono.variable}`}
       suppressHydrationWarning
     >
       <head>
@@ -42,9 +41,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <Suspense fallback={null}>
           <PageViewTracker />
         </Suspense>
-        <AppShell phases={buildNav(curriculum)} search={buildSearch(curriculum)}>
+        <SyncManager>
           {children}
-        </AppShell>
+          <Toaster />
+        </SyncManager>
       </body>
     </html>
   );

@@ -1,0 +1,69 @@
+{
+  "id": "rag-chunk-overlap-ignored",
+  "title": "The assistant cannot find a policy sentence that is clearly in the docs",
+  "domain": "rag",
+  "concept": "Chunking with overlap: step by size minus overlap",
+  "concepts": [
+    "chunking-overlap"
+  ],
+  "difficulty": 2,
+  "symptom": "Asked 'how many days do I have to return something?', the assistant says it does not know, even though the policy text says 'within thirty days of purchase'. Searching for that exact phrase returns nothing useful.",
+  "files": {
+    "chunker.py": "from dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass Chunk:\n    doc_id: str\n    start: int\n    end: int\n    text: str\n\n\ndef chunk_text(doc_id, text, size, overlap):\n    \"\"\"Splits text into chunks of at most `size` characters.\n\n    Neighbouring chunks share `overlap` characters, so a sentence cut at one chunk's edge is whole in the next.\n    \"\"\"\n    if overlap >= size:\n        raise ValueError(\"overlap must be smaller than size\")\n    chunks = []\n    for start in range(0, len(text), size):\n        end = min(start + size, len(text))\n        chunks.append(Chunk(doc_id, start, end, text[start:end]))\n    return chunks\n",
+    "index.py": "import re\n\n_TOKEN = re.compile(r\"[a-z0-9]+\")\n\n\ndef tokens(text):\n    return _TOKEN.findall(text.lower())\n\n\nclass KeywordIndex:\n    \"\"\"Ranks chunks by how many of the query's words they contain.\"\"\"\n\n    def __init__(self):\n        self._chunks = []\n\n    def add(self, chunks):\n        self._chunks.extend(chunks)\n\n    def search(self, query, k=3):\n        wanted = set(tokens(query))\n        scored = []\n        for chunk in self._chunks:\n            score = len(wanted & set(tokens(chunk.text)))\n            if score:\n                scored.append((score, chunk))\n        scored.sort(key=lambda pair: (-pair[0], pair[1].doc_id, pair[1].start))\n        return [chunk for _, chunk in scored[:k]]\n",
+    "pipeline.py": "from chunker import chunk_text\nfrom index import KeywordIndex\n\n\ndef build_index(documents, size=40, overlap=20):\n    \"\"\"documents is {doc_id: text}.\"\"\"\n    index = KeywordIndex()\n    for doc_id, text in documents.items():\n        index.add(chunk_text(doc_id, text, size, overlap))\n    return index\n"
+  },
+  "failingTest": "import unittest\n\nfrom chunker import chunk_text\nfrom pipeline import build_index\n\nTEXT = \"Returns are accepted within thirty days of purchase, and refunds go to the original payment method.\"\n\n\nclass Failing(unittest.TestCase):\n    def test_a_phrase_cut_by_a_chunk_edge_is_whole_in_a_neighbouring_chunk(self):\n        chunks = chunk_text(\"policy\", TEXT, size=40, overlap=20)\n        self.assertTrue(any(\"thirty days of purchase\" in c.text for c in chunks))\n\n    def test_search_finds_the_chunk_holding_the_whole_phrase(self):\n        index = build_index({\"policy\": TEXT})\n        best = index.search(\"thirty days of purchase\", k=1)[0]\n        self.assertIn(\"thirty days of purchase\", best.text)\n",
+  "regressionTests": "import unittest\n\nfrom chunker import chunk_text\n\nTEXT = \"Returns are accepted within thirty days of purchase, and refunds go to the original payment method.\"\n\n\nclass Regression(unittest.TestCase):\n    def test_no_chunk_is_longer_than_the_size(self):\n        for chunk in chunk_text(\"p\", TEXT, size=40, overlap=20):\n            self.assertLessEqual(len(chunk.text), 40)\n\n    def test_the_chunks_cover_the_whole_document(self):\n        chunks = chunk_text(\"p\", TEXT, size=40, overlap=20)\n        self.assertEqual(chunks[0].start, 0)\n        self.assertEqual(chunks[-1].end, len(TEXT))\n        for chunk in chunks:\n            self.assertEqual(TEXT[chunk.start : chunk.end], chunk.text)\n\n    def test_chunks_start_one_step_apart(self):\n        chunks = chunk_text(\"p\", TEXT, size=40, overlap=20)\n        self.assertEqual([c.start for c in chunks[:3]], [0, 20, 40])\n\n    def test_neighbouring_chunks_share_exactly_the_overlap(self):\n        chunks = chunk_text(\"p\", TEXT, size=40, overlap=20)\n        for current, following in zip(chunks, chunks[1:]):\n            self.assertEqual(current.end - following.start, 20)\n\n    def test_there_is_no_tiny_extra_chunk_at_the_end(self):\n        chunks = chunk_text(\"p\", \"x\" * 60, size=40, overlap=20)\n        self.assertEqual([(c.start, c.end) for c in chunks], [(0, 40), (20, 60)])\n\n    def test_an_overlap_as_big_as_the_size_is_refused(self):\n        with self.assertRaises(ValueError):\n            chunk_text(\"p\", TEXT, size=40, overlap=40)\n\n    def test_short_text_is_one_chunk(self):\n        self.assertEqual(len(chunk_text(\"p\", \"short\", size=40, overlap=20)), 1)\n",
+  "rootCause": "chunk_text accepts an overlap but never uses it: it steps through the text by size, so chunks never share any text. The phrase 'thirty days of purchase' is cut across a chunk edge and is whole in no chunk, so no chunk matches it. The loop must advance by size - overlap.",
+  "correctFix": {
+    "chunker.py": "from dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass Chunk:\n    doc_id: str\n    start: int\n    end: int\n    text: str\n\n\ndef chunk_text(doc_id, text, size, overlap):\n    \"\"\"Splits text into chunks of at most `size` characters.\n\n    Neighbouring chunks share `overlap` characters, so a sentence cut at one chunk's edge is whole in the next.\n    \"\"\"\n    if overlap >= size:\n        raise ValueError(\"overlap must be smaller than size\")\n    chunks = []\n    step = size - overlap\n    start = 0\n    while start < len(text):\n        end = min(start + size, len(text))\n        chunks.append(Chunk(doc_id, start, end, text[start:end]))\n        if end == len(text):\n            break\n        start += step\n    return chunks\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "chunker.py": "from dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass Chunk:\n    doc_id: str\n    start: int\n    end: int\n    text: str\n\n\ndef chunk_text(doc_id, text, size, overlap):\n    \"\"\"Splits text into chunks of at most `size` characters.\n\n    Neighbouring chunks share `overlap` characters, so a sentence cut at one chunk's edge is whole in the next.\n    \"\"\"\n    if overlap >= size:\n        raise ValueError(\"overlap must be smaller than size\")\n    chunks = []\n    for start in range(0, len(text), size):\n        end = min(start + size + overlap, len(text))\n        chunks.append(Chunk(doc_id, start, end, text[start:end]))\n    return chunks\n"
+      },
+      "whyWrong": "Extending each chunk's end by the overlap does create shared text, but chunks are now longer than size. A size limit exists for the embedding model or prompt budget, and this breaks it."
+    }
+  ],
+  "grading": [
+    {
+      "question": "Why use overlapping chunks at all?",
+      "ideal": "So a fact that straddles a boundary still appears whole in at least one chunk and can be retrieved."
+    },
+    {
+      "question": "How far should the window advance, and why does that equal size - overlap?",
+      "ideal": "By size - overlap, so that each new chunk starts overlap characters before the previous one ended."
+    },
+    {
+      "question": "What is the cost of a larger overlap?",
+      "ideal": "More chunks and more duplicated text to embed, store and retrieve."
+    }
+  ],
+  "transcript": {
+    "kind": "subtle-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "The assistant cannot find a policy sentence that is split across two chunks."
+      },
+      {
+        "role": "agent",
+        "text": "The chunker ignores the overlap setting, so a sentence on a boundary is cut in half. I extend each chunk's end by overlap characters so neighbouring chunks share text.",
+        "fix": {
+          "chunker.py": "from dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass Chunk:\n    doc_id: str\n    start: int\n    end: int\n    text: str\n\n\ndef chunk_text(doc_id, text, size, overlap):\n    \"\"\"Splits text into chunks of at most `size` characters.\n\n    Neighbouring chunks share `overlap` characters, so a sentence cut at one chunk's edge is whole in the next.\n    \"\"\"\n    if overlap >= size:\n        raise ValueError(\"overlap must be smaller than size\")\n    chunks = []\n    for start in range(0, len(text), size):\n        end = min(start + size + overlap, len(text))\n        chunks.append(Chunk(doc_id, start, end, text[start:end]))\n    return chunks\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (2 tests)"
+      },
+      {
+        "role": "agent",
+        "text": "Fixed: the return-policy sentence is now whole in one chunk."
+      }
+    ],
+    "verdict": "The overlap is there, but every chunk is now size + overlap long. The size limit exists for the embedding model and the prompt budget. Overlap means starting the next chunk earlier, stepping by size - overlap."
+  }
+}

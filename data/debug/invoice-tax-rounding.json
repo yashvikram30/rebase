@@ -1,0 +1,69 @@
+{
+  "id": "invoice-tax-rounding",
+  "title": "Invoices charge tax in whole dollars",
+  "domain": "oop",
+  "concept": "Money in floats, and rounding to the cent",
+  "concepts": [
+    "floating-point-money",
+    "boundary-conditions"
+  ],
+  "difficulty": 2,
+  "symptom": "Finance flagged it: a $19.99 mug was invoiced $2.00 in tax instead of $1.75, a total of $21.99 instead of $21.74. Small orders are worse; a $2 sticker sometimes shows no tax at all.",
+  "files": {
+    "money.py": "def format_money(amount):\n    \"\"\"Dollars with two decimals, e.g. $21.74.\"\"\"\n    return \"$%.2f\" % amount\n",
+    "invoice.py": "from money import format_money\n\n# Sales tax for the store's state. Accountants round tax half up, to the cent.\nTAX_RATE = \"0.0875\"\n\n\nclass Invoice:\n    def __init__(self):\n        self.lines = []\n\n    def add(self, description, unit_price, qty=1):\n        \"\"\"unit_price is a string in dollars and cents, e.g. \"19.99\".\"\"\"\n        self.lines.append((description, float(unit_price), qty))\n\n    def subtotal(self):\n        return sum(price * qty for _, price, qty in self.lines)\n\n    def tax(self):\n        return round(self.subtotal() * float(TAX_RATE))\n\n    def total(self):\n        return self.subtotal() + self.tax()\n\n    def summary(self):\n        return {\n            \"subtotal\": format_money(self.subtotal()),\n            \"tax\": format_money(self.tax()),\n            \"total\": format_money(self.total()),\n        }\n"
+  },
+  "failingTest": "import unittest\n\nfrom invoice import Invoice\n\n\nclass Failing(unittest.TestCase):\n    def test_tax_is_charged_to_the_cent(self):\n        inv = Invoice()\n        inv.add(\"Mug\", \"19.99\")\n        self.assertEqual(inv.summary(), {\"subtotal\": \"$19.99\", \"tax\": \"$1.75\", \"total\": \"$21.74\"})\n",
+  "regressionTests": "import unittest\n\nfrom invoice import Invoice\n\n\nclass Regression(unittest.TestCase):\n    def test_half_a_cent_rounds_up(self):\n        # 2.00 x 8.75% is exactly 0.175, which rounds half up to 0.18.\n        inv = Invoice()\n        inv.add(\"Sticker\", \"2.00\")\n        self.assertEqual(inv.summary()[\"tax\"], \"$0.18\")\n        self.assertEqual(inv.summary()[\"total\"], \"$2.18\")\n\n    def test_quantities_multiply(self):\n        inv = Invoice()\n        inv.add(\"Pen\", \"1.25\", qty=4)\n        self.assertEqual(inv.summary(), {\"subtotal\": \"$5.00\", \"tax\": \"$0.44\", \"total\": \"$5.44\"})\n\n    def test_many_small_lines_add_up_exactly(self):\n        inv = Invoice()\n        for _ in range(3):\n            inv.add(\"Postcard\", \"0.10\")\n        self.assertEqual(inv.subtotal() * 100, 30)\n\n    def test_an_empty_invoice_is_zero(self):\n        self.assertEqual(Invoice().summary(), {\"subtotal\": \"$0.00\", \"tax\": \"$0.00\", \"total\": \"$0.00\"})\n",
+  "rootCause": "tax() rounds to a whole number: round(x) with no digits rounds to dollars. Underneath that, prices are floats, which cannot hold most amounts in cents exactly, so even rounding to two places goes wrong on half cents: 2.00 x 0.0875 is stored as 0.17499999..., which rounds down to 0.17 instead of half up to 0.18. Money needs Decimal (or whole cents) and an explicit rounding mode.",
+  "correctFix": {
+    "invoice.py": "from decimal import ROUND_HALF_UP, Decimal\n\nfrom money import format_money\n\n# Sales tax for the store's state. Accountants round tax half up, to the cent.\nTAX_RATE = \"0.0875\"\nCENT = Decimal(\"0.01\")\n\n\nclass Invoice:\n    def __init__(self):\n        self.lines = []\n\n    def add(self, description, unit_price, qty=1):\n        \"\"\"unit_price is a string in dollars and cents, e.g. \"19.99\".\"\"\"\n        # Decimal keeps cents exact; a float cannot hold most of them (0.10 is really 0.1000000000000000055...).\n        self.lines.append((description, Decimal(unit_price), qty))\n\n    def subtotal(self):\n        return sum((price * qty for _, price, qty in self.lines), Decimal(\"0\"))\n\n    def tax(self):\n        return (self.subtotal() * Decimal(TAX_RATE)).quantize(CENT, rounding=ROUND_HALF_UP)\n\n    def total(self):\n        return self.subtotal() + self.tax()\n\n    def summary(self):\n        return {\n            \"subtotal\": format_money(self.subtotal()),\n            \"tax\": format_money(self.tax()),\n            \"total\": format_money(self.total()),\n        }\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "invoice.py": "from money import format_money\n\n# Sales tax for the store's state. Accountants round tax half up, to the cent.\nTAX_RATE = \"0.0875\"\n\n\nclass Invoice:\n    def __init__(self):\n        self.lines = []\n\n    def add(self, description, unit_price, qty=1):\n        \"\"\"unit_price is a string in dollars and cents, e.g. \"19.99\".\"\"\"\n        self.lines.append((description, float(unit_price), qty))\n\n    def subtotal(self):\n        return sum(price * qty for _, price, qty in self.lines)\n\n    def tax(self):\n        return round(self.subtotal() * float(TAX_RATE), 2)\n\n    def total(self):\n        return self.subtotal() + self.tax()\n\n    def summary(self):\n        return {\n            \"subtotal\": format_money(self.subtotal()),\n            \"tax\": format_money(self.tax()),\n            \"total\": format_money(self.total()),\n        }\n"
+      },
+      "whyWrong": "Rounding to two places fixes the $19.99 mug, but the amounts are still floats. 2.00 x 8.75% is stored as 0.17499999..., so round(x, 2) gives 0.17 where accountants expect 0.18, and three lines of $0.10 add up to 0.30000000000000004, not 0.30."
+    }
+  ],
+  "transcript": {
+    "kind": "subtle-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "Tax on a $19.99 item comes out as $2.00 instead of $1.75. Please fix the rounding."
+      },
+      {
+        "role": "agent",
+        "text": "round() with no second argument rounds to a whole number, so the tax is rounded to the dollar. Passing 2 rounds it to the cent instead.",
+        "fix": {
+          "invoice.py": "from money import format_money\n\n# Sales tax for the store's state. Accountants round tax half up, to the cent.\nTAX_RATE = \"0.0875\"\n\n\nclass Invoice:\n    def __init__(self):\n        self.lines = []\n\n    def add(self, description, unit_price, qty=1):\n        \"\"\"unit_price is a string in dollars and cents, e.g. \"19.99\".\"\"\"\n        self.lines.append((description, float(unit_price), qty))\n\n    def subtotal(self):\n        return sum(price * qty for _, price, qty in self.lines)\n\n    def tax(self):\n        return round(self.subtotal() * float(TAX_RATE), 2)\n\n    def total(self):\n        return self.subtotal() + self.tax()\n\n    def summary(self):\n        return {\n            \"subtotal\": format_money(self.subtotal()),\n            \"tax\": format_money(self.tax()),\n            \"total\": format_money(self.total()),\n        }\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)"
+      },
+      {
+        "role": "agent",
+        "text": "Done. The mug's tax is now $1.75 and the total is $21.74."
+      }
+    ],
+    "verdict": "It found the first bug and stopped. Prices are still floats, and Python's round() on a float cannot round half up reliably: $2.00 of tax at 8.75% is 0.175, stored as 0.17499999..., so it rounds to $0.17. Ask for Decimal prices and ROUND_HALF_UP before approving."
+  },
+  "grading": [
+    {
+      "question": "Why is round(x, 2) on a float not enough for money?",
+      "ideal": "Most decimal amounts have no exact binary float, so 0.175 is really 0.17499999..., and the rounding goes the wrong way. Use Decimal or integer cents."
+    },
+    {
+      "question": "Which rounding rule does an invoice need, and why name it explicitly?",
+      "ideal": "Half up to the cent, as the business specifies. Python's round() uses half to even, so the rule has to be stated, for example with quantize(Decimal('0.01'), ROUND_HALF_UP)."
+    },
+    {
+      "question": "Which test inputs would you add for money code?",
+      "ideal": "An exact half cent, many small lines that must sum exactly, quantities, and an empty invoice."
+    }
+  ]
+}

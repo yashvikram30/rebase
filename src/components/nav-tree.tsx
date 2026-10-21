@@ -9,18 +9,7 @@ export type NavDay = { index: number; id: string; week: number; day: number; tit
 export type NavWeek = { number: number; title: string; days: NavDay[] };
 export type NavPhase = { slug: string; name: string; language: string; weeks: NavWeek[] };
 
-// The header carries these on wide screens; the drawer shows them on phones.
-const QUICK = [
-  { href: "/plan", label: "Plan" },
-  { href: "/foundations", label: "Part 0: Foundations (optional)" },
-  { href: "/python", label: "Learn Python" },
-  { href: "/revise", label: "Revise" },
-  { href: "/notes", label: "Notes" },
-  { href: "/schedule", label: "Schedule" },
-  { href: "/settings", label: "Settings" },
-];
-
-/** The sidebar answers two questions: how far along am I, and what is in this week. */
+/** The course outline in the sidebar: how far along am I, and what is in this week. */
 export function NavTree({ phases, onNavigate }: { phases: NavPhase[]; onNavigate: () => void }) {
   const pathname = usePathname();
   const guest = useGuestState();
@@ -132,20 +121,6 @@ export function NavTree({ phases, onNavigate }: { phases: NavPhase[]; onNavigate
           </ol>
         </section>
       ))}
-
-      <div className="nv-quick">
-        {QUICK.map((l) => (
-          <Link
-            key={l.href}
-            href={l.href}
-            className={pathname === l.href ? "on" : undefined}
-            aria-current={pathname === l.href ? "page" : undefined}
-            onClick={onNavigate}
-          >
-            {l.label}
-          </Link>
-        ))}
-      </div>
     </>
   );
 }

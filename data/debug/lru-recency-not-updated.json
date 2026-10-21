@@ -1,0 +1,64 @@
+{
+  "id": "lru-recency-not-updated",
+  "title": "LRU cache evicts the key I just read",
+  "domain": "build-optimize",
+  "concept": "LRU recency must update on every access",
+  "concepts": [
+    "lru-cache",
+    "cache-eviction"
+  ],
+  "difficulty": 3,
+  "symptom": "Our profile cache keeps evicting the hottest users: a profile read a second ago is dropped, while profiles nobody has touched in minutes survive. With capacity 2: put a, put b, get a, put c drops a.",
+  "files": {
+    "lru.py": "from collections import OrderedDict\n\n\nclass LRUCache:\n    def __init__(self, capacity):\n        self.capacity = capacity\n        self.data = OrderedDict()\n\n    def get(self, key):\n        if key not in self.data:\n            return None\n        return self.data[key]\n\n    def put(self, key, value):\n        self.data[key] = value\n        if len(self.data) > self.capacity:\n            self.data.popitem(last=False)\n"
+  },
+  "failingTest": "import unittest\nfrom lru import LRUCache\n\n\nclass Failing(unittest.TestCase):\n    def test_get_refreshes(self):\n        c = LRUCache(2)\n        c.put(\"a\", 1)\n        c.put(\"b\", 2)\n        c.get(\"a\")\n        c.put(\"c\", 3)\n        self.assertEqual(c.get(\"a\"), 1)\n        self.assertIsNone(c.get(\"b\"))\n",
+  "regressionTests": "import unittest\nfrom lru import LRUCache\n\n\nclass Regression(unittest.TestCase):\n    def test_plain_eviction(self):\n        c = LRUCache(2)\n        c.put(\"a\", 1)\n        c.put(\"b\", 2)\n        c.put(\"c\", 3)\n        self.assertIsNone(c.get(\"a\"))\n        self.assertEqual(c.get(\"c\"), 3)\n\n    def test_update_refreshes(self):\n        c = LRUCache(2)\n        c.put(\"a\", 1)\n        c.put(\"b\", 2)\n        c.put(\"a\", 10)\n        c.put(\"c\", 3)\n        self.assertEqual(c.get(\"a\"), 10)\n        self.assertIsNone(c.get(\"b\"))\n\n    def test_miss_returns_none(self):\n        self.assertIsNone(LRUCache(1).get(\"x\"))\n\n    def test_capacity_respected(self):\n        c = LRUCache(3)\n        for i in range(10):\n            c.put(i, i)\n        self.assertEqual(len(c.data), 3)\n",
+  "rootCause": "OrderedDict order only tracks insertion unless you move keys. get never marks the key as recently used, and put on an existing key does not either, so eviction order is FIFO, not LRU.",
+  "correctFix": {
+    "lru.py": "from collections import OrderedDict\n\n\nclass LRUCache:\n    def __init__(self, capacity):\n        self.capacity = capacity\n        self.data = OrderedDict()\n\n    def get(self, key):\n        if key not in self.data:\n            return None\n        self.data.move_to_end(key)\n        return self.data[key]\n\n    def put(self, key, value):\n        self.data[key] = value\n        self.data.move_to_end(key)\n        if len(self.data) > self.capacity:\n            self.data.popitem(last=False)\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "lru.py": "from collections import OrderedDict\n\n\nclass LRUCache:\n    def __init__(self, capacity):\n        self.capacity = capacity\n        self.data = OrderedDict()\n\n    def get(self, key):\n        if key not in self.data:\n            return None\n        self.data.move_to_end(key)\n        return self.data[key]\n\n    def put(self, key, value):\n        self.data[key] = value\n        if len(self.data) > self.capacity:\n            self.data.popitem(last=False)\n"
+      },
+      "whyWrong": "Refreshing in get fixes the reported sequence, but updating an existing key with put still leaves it at its old position, so a just-written key can be evicted first."
+    }
+  ],
+  "transcript": {
+    "kind": "subtle-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "My LRU cache evicts a key right after I read it. Please fix."
+      },
+      {
+        "role": "agent",
+        "text": "get() never marks the key as most recently used. Adding move_to_end(key) in get() restores LRU order.",
+        "fix": {
+          "lru.py": "from collections import OrderedDict\n\n\nclass LRUCache:\n    def __init__(self, capacity):\n        self.capacity = capacity\n        self.data = OrderedDict()\n\n    def get(self, key):\n        if key not in self.data:\n            return None\n        self.data.move_to_end(key)\n        return self.data[key]\n\n    def put(self, key, value):\n        self.data[key] = value\n        if len(self.data) > self.capacity:\n            self.data.popitem(last=False)\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)"
+      },
+      {
+        "role": "agent",
+        "text": "The failing test passes. The cache now behaves as an LRU."
+      }
+    ],
+    "verdict": "Right diagnosis for get, but the agent never asked who else touches recency. put on an existing key has the same flaw. Only the regression suite (update_refreshes) shows it."
+  },
+  "grading": [
+    {
+      "question": "Which operations count as a 'use' of a key?",
+      "ideal": "Both get and put (including put on an existing key)."
+    },
+    {
+      "question": "How would you test this without reading the implementation?",
+      "ideal": "Drive sequences of put/get at capacity and assert which key is evicted, for both read and overwrite."
+    }
+  ]
+}

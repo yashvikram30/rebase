@@ -1,0 +1,70 @@
+{
+  "id": "maze-recursion-overflow",
+  "title": "has_path crashes on some mazes",
+  "domain": "graph",
+  "concept": "DFS needs a visited set on graphs with cycles",
+  "concepts": [
+    "graph-traversal",
+    "visited-set",
+    "recursion-call-stack",
+    "global-state"
+  ],
+  "difficulty": 1,
+  "symptom": "has_path works on a few hand-made corridors, but on a 3x4 grid where the goal is walled off it dies with RecursionError instead of returning False.",
+  "files": {
+    "maze.py": "def has_path(grid, start, end):\n    \"\"\"grid is a list of strings: '#' is a wall, '.' is open. start and end are (row, col).\"\"\"\n    rows, cols = len(grid), len(grid[0])\n\n    def dfs(r, c):\n        if (r, c) == end:\n            return True\n        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):\n            nr, nc = r + dr, c + dc\n            if 0 <= nr < rows and 0 <= nc < cols and grid[nr][nc] != \"#\":\n                if dfs(nr, nc):\n                    return True\n        return False\n\n    return dfs(*start)\n"
+  },
+  "failingTest": "import unittest\nfrom maze import has_path\n\n\nclass Failing(unittest.TestCase):\n    def test_goal_walled_off(self):\n        grid = [\"..#.\", \"..#.\", \"..#.\"]\n        self.assertFalse(has_path(grid, (0, 0), (0, 3)))\n",
+  "regressionTests": "import unittest\nfrom maze import has_path\n\n\nclass Regression(unittest.TestCase):\n    def test_corridor(self):\n        self.assertTrue(has_path([\"....\"], (0, 0), (0, 3)))\n\n    def test_same_cell(self):\n        self.assertTrue(has_path([\".\"], (0, 0), (0, 0)))\n\n    def test_repeated_calls_are_independent(self):\n        grid = [\"....\"]\n        self.assertTrue(has_path(grid, (0, 0), (0, 3)))\n        self.assertTrue(has_path(grid, (0, 0), (0, 3)))\n\n    def test_detour_around_wall(self):\n        grid = [\"..#\", \"#..\", \"...\"]\n        self.assertTrue(has_path(grid, (0, 0), (2, 2)))\n\n    def test_unreachable_then_reachable(self):\n        self.assertFalse(has_path([\"..#.\"], (0, 0), (0, 3)))\n        self.assertTrue(has_path([\"....\"], (0, 0), (0, 3)))\n",
+  "rootCause": "The DFS never remembers which cells it has entered. Whenever the grid has a cycle (any 2x2 open block), it walks back and forth between two cells until the stack overflows. It only appears to work when the goal is reachable on the first greedy path.",
+  "correctFix": {
+    "maze.py": "def has_path(grid, start, end):\n    \"\"\"grid is a list of strings: '#' is a wall, '.' is open. start and end are (row, col).\"\"\"\n    rows, cols = len(grid), len(grid[0])\n    visited = set()\n\n    def dfs(r, c):\n        if (r, c) == end:\n            return True\n        visited.add((r, c))\n        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):\n            nr, nc = r + dr, c + dc\n            if 0 <= nr < rows and 0 <= nc < cols and grid[nr][nc] != \"#\" and (nr, nc) not in visited:\n                if dfs(nr, nc):\n                    return True\n        return False\n\n    return dfs(*start)\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "maze.py": "visited = set()\n\n\ndef has_path(grid, start, end):\n    \"\"\"grid is a list of strings: '#' is a wall, '.' is open. start and end are (row, col).\"\"\"\n    rows, cols = len(grid), len(grid[0])\n\n    def dfs(r, c):\n        if (r, c) == end:\n            return True\n        visited.add((r, c))\n        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):\n            nr, nc = r + dr, c + dc\n            if 0 <= nr < rows and 0 <= nc < cols and grid[nr][nc] != \"#\" and (nr, nc) not in visited:\n                if dfs(nr, nc):\n                    return True\n        return False\n\n    return dfs(*start)\n"
+      },
+      "whyWrong": "visited is module-level, so it survives between calls. The second call on the same maze sees every cell as already visited and returns False."
+    }
+  ],
+  "transcript": {
+    "kind": "subtle-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "has_path raises RecursionError when the goal is walled off. Fix it."
+      },
+      {
+        "role": "agent",
+        "text": "The recursion has no base case for cells it has already seen. I'll track visited cells so each one is explored once.",
+        "fix": {
+          "maze.py": "visited = set()\n\n\ndef has_path(grid, start, end):\n    \"\"\"grid is a list of strings: '#' is a wall, '.' is open. start and end are (row, col).\"\"\"\n    rows, cols = len(grid), len(grid[0])\n\n    def dfs(r, c):\n        if (r, c) == end:\n            return True\n        visited.add((r, c))\n        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):\n            nr, nc = r + dr, c + dc\n            if 0 <= nr < rows and 0 <= nc < cols and grid[nr][nc] != \"#\" and (nr, nc) not in visited:\n                if dfs(nr, nc):\n                    return True\n        return False\n\n    return dfs(*start)\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)"
+      },
+      {
+        "role": "agent",
+        "text": "Fixed. The goal-walled-off case now returns False and the test passes."
+      }
+    ],
+    "verdict": "The agent only ran the one failing test. The visited set lives at module level, so a second has_path call in the same process starts with stale state. Running the regression suite (or just calling it twice) exposes it."
+  },
+  "grading": [
+    {
+      "question": "What is the root cause?",
+      "ideal": "No visited set, so DFS revisits cells in any cycle and recurses forever."
+    },
+    {
+      "question": "Why does the original code pass on simple corridors?",
+      "ideal": "A corridor has no cycles and the goal is found before any backtracking loop starts."
+    },
+    {
+      "question": "Where should the visited set live, and why?",
+      "ideal": "Inside has_path (per call). State shared across calls makes results depend on call history."
+    }
+  ]
+}

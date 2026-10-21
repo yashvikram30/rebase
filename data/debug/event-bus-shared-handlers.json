@@ -1,0 +1,70 @@
+{
+  "id": "event-bus-shared-handlers",
+  "title": "One tenant's signups show up in another tenant's audit log",
+  "domain": "oop",
+  "concept": "Mutable class attributes are shared by every instance",
+  "concepts": [
+    "aliasing-mutable-state",
+    "python-defaults"
+  ],
+  "difficulty": 2,
+  "symptom": "Each tenant has its own EventBus. But when acme signs a user up, globex's audit log records it too, and globex starts sending welcome emails it never turned on.",
+  "files": {
+    "bus.py": "class EventBus:\n    \"\"\"Delivers each published event to every handler subscribed to its topic, and remembers what it published.\"\"\"\n\n    handlers = {}\n    published = []\n\n    def subscribe(self, topic, handler):\n        self.handlers.setdefault(topic, []).append(handler)\n\n    def unsubscribe(self, topic, handler):\n        if handler in self.handlers.get(topic, []):\n            self.handlers[topic].remove(handler)\n\n    def publish(self, topic, payload):\n        self.published.append((topic, payload))\n        delivered = 0\n        for handler in list(self.handlers.get(topic, [])):\n            handler(payload)\n            delivered += 1\n        return delivered\n\n    def replay(self, topic):\n        \"\"\"Everything this bus has published on a topic, oldest first.\"\"\"\n        return [payload for t, payload in self.published if t == topic]\n",
+    "handlers.py": "class AuditLog:\n    \"\"\"Records every event it is given, so tests can see what was delivered.\"\"\"\n\n    def __init__(self):\n        self.events = []\n\n    def __call__(self, payload):\n        self.events.append(payload)\n\n\nclass Mailbox:\n    def __init__(self):\n        self.messages = []\n\n    def __call__(self, payload):\n        self.messages.append(\"welcome %s\" % payload[\"user\"])\n",
+    "app.py": "from bus import EventBus\nfrom handlers import AuditLog, Mailbox\n\n\nclass Tenant:\n    \"\"\"One customer of ours. Each tenant has its own bus, so one tenant's events never reach another's handlers.\"\"\"\n\n    def __init__(self, name):\n        self.name = name\n        self.bus = EventBus()\n        self.audit = AuditLog()\n        self.mailbox = Mailbox()\n        self.bus.subscribe(\"signup\", self.audit)\n\n    def enable_welcome_email(self):\n        self.bus.subscribe(\"signup\", self.mailbox)\n\n    def sign_up(self, user):\n        return self.bus.publish(\"signup\", {\"user\": user, \"tenant\": self.name})\n\n    def signups(self):\n        return [event[\"user\"] for event in self.bus.replay(\"signup\")]\n"
+  },
+  "failingTest": "import unittest\n\nfrom app import Tenant\n\n\nclass Failing(unittest.TestCase):\n    def test_one_tenants_events_do_not_reach_another_tenant(self):\n        acme = Tenant(\"acme\")\n        globex = Tenant(\"globex\")\n        acme.sign_up(\"ada\")\n        self.assertEqual([e[\"user\"] for e in acme.audit.events], [\"ada\"])\n        self.assertEqual(globex.audit.events, [])\n\n    def test_a_welcome_email_is_only_sent_for_tenants_that_enabled_it(self):\n        acme = Tenant(\"acme\")\n        globex = Tenant(\"globex\")\n        acme.enable_welcome_email()\n        globex.sign_up(\"bob\")\n        self.assertEqual(globex.mailbox.messages, [])\n",
+  "regressionTests": "import unittest\n\nfrom bus import EventBus\nfrom handlers import AuditLog\n\n\nclass Regression(unittest.TestCase):\n    def test_subscribed_handlers_receive_events_for_their_topic_only(self):\n        bus, log = EventBus(), AuditLog()\n        bus.subscribe(\"a\", log)\n        self.assertEqual(bus.publish(\"a\", 1), 1)\n        self.assertEqual(bus.publish(\"b\", 2), 0)\n        self.assertEqual(log.events, [1])\n\n    def test_unsubscribing_stops_delivery(self):\n        bus, log = EventBus(), AuditLog()\n        bus.subscribe(\"a\", log)\n        bus.unsubscribe(\"a\", log)\n        self.assertEqual(bus.publish(\"a\", 1), 0)\n\n    def test_unsubscribing_on_one_bus_does_not_unsubscribe_another(self):\n        one, two, log = EventBus(), EventBus(), AuditLog()\n        one.subscribe(\"a\", log)\n        two.subscribe(\"a\", log)\n        two.unsubscribe(\"a\", log)\n        self.assertEqual(one.publish(\"a\", 1), 1)\n\n    def test_each_bus_keeps_its_own_history(self):\n        one, two = EventBus(), EventBus()\n        one.publish(\"a\", 1)\n        two.publish(\"a\", 2)\n        self.assertEqual(one.replay(\"a\"), [1])\n        self.assertEqual(two.replay(\"a\"), [2])\n\n    def test_several_handlers_all_run(self):\n        bus, first, second = EventBus(), AuditLog(), AuditLog()\n        bus.subscribe(\"a\", first)\n        bus.subscribe(\"a\", second)\n        self.assertEqual(bus.publish(\"a\", 7), 2)\n",
+  "rootCause": "handlers = {} and published = [] are declared in the class body, so there is one dict and one list shared by every EventBus. subscribe and publish mutate those shared objects, so every tenant's handlers and history are in everyone's bus. Both have to be created per instance, in __init__.",
+  "correctFix": {
+    "bus.py": "class EventBus:\n    \"\"\"Delivers each published event to every handler subscribed to its topic, and remembers what it published.\"\"\"\n\n    def __init__(self):\n        self.handlers = {}\n        self.published = []\n\n    def subscribe(self, topic, handler):\n        self.handlers.setdefault(topic, []).append(handler)\n\n    def unsubscribe(self, topic, handler):\n        if handler in self.handlers.get(topic, []):\n            self.handlers[topic].remove(handler)\n\n    def publish(self, topic, payload):\n        self.published.append((topic, payload))\n        delivered = 0\n        for handler in list(self.handlers.get(topic, [])):\n            handler(payload)\n            delivered += 1\n        return delivered\n\n    def replay(self, topic):\n        \"\"\"Everything this bus has published on a topic, oldest first.\"\"\"\n        return [payload for t, payload in self.published if t == topic]\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "bus.py": "class EventBus:\n    \"\"\"Delivers each published event to every handler subscribed to its topic, and remembers what it published.\"\"\"\n\n    published = []\n\n    def __init__(self):\n        self.handlers = {}\n\n    def subscribe(self, topic, handler):\n        self.handlers.setdefault(topic, []).append(handler)\n\n    def unsubscribe(self, topic, handler):\n        if handler in self.handlers.get(topic, []):\n            self.handlers[topic].remove(handler)\n\n    def publish(self, topic, payload):\n        self.published.append((topic, payload))\n        delivered = 0\n        for handler in list(self.handlers.get(topic, [])):\n            handler(payload)\n            delivered += 1\n        return delivered\n\n    def replay(self, topic):\n        \"\"\"Everything this bus has published on a topic, oldest first.\"\"\"\n        return [payload for t, payload in self.published if t == topic]\n"
+      },
+      "whyWrong": "Moving handlers into __init__ fixes the symptom the test shows, but published is a second mutable class attribute with the same flaw. Every bus still appends to one shared history, so replay() on one tenant returns another tenant's events."
+    }
+  ],
+  "grading": [
+    {
+      "question": "What is the difference between a class attribute and an instance attribute here?",
+      "ideal": "A class attribute lives on the class and is shared by all instances; an instance attribute is created per object, usually in __init__."
+    },
+    {
+      "question": "Why did the first test pass for the first tenant but fail for the second?",
+      "ideal": "Both tenants mutate the same dict, so the second tenant sees everything the first one subscribed."
+    },
+    {
+      "question": "After fixing handlers, what else in the class needed the same fix?",
+      "ideal": "published. Any mutable class attribute that methods modify through self is shared in the same way."
+    }
+  ],
+  "transcript": {
+    "kind": "subtle-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "acme's signups trigger globex's audit log and welcome emails. Each tenant has its own EventBus."
+      },
+      {
+        "role": "agent",
+        "text": "handlers is a class attribute, so every EventBus shares one dict. I moved it into __init__ so each bus has its own.",
+        "fix": {
+          "bus.py": "class EventBus:\n    \"\"\"Delivers each published event to every handler subscribed to its topic, and remembers what it published.\"\"\"\n\n    published = []\n\n    def __init__(self):\n        self.handlers = {}\n\n    def subscribe(self, topic, handler):\n        self.handlers.setdefault(topic, []).append(handler)\n\n    def unsubscribe(self, topic, handler):\n        if handler in self.handlers.get(topic, []):\n            self.handlers[topic].remove(handler)\n\n    def publish(self, topic, payload):\n        self.published.append((topic, payload))\n        delivered = 0\n        for handler in list(self.handlers.get(topic, [])):\n            handler(payload)\n            delivered += 1\n        return delivered\n\n    def replay(self, topic):\n        \"\"\"Everything this bus has published on a topic, oldest first.\"\"\"\n        return [payload for t, payload in self.published if t == topic]\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (2 tests)"
+      },
+      {
+        "role": "agent",
+        "text": "Fixed: globex no longer receives acme's events."
+      }
+    ],
+    "verdict": "Half the problem. published is a second mutable class attribute with the same flaw, so every bus still appends to one shared history and replay() on one tenant returns another tenant's events. A reviewer should look for every class-level mutable, not only the one in the bug report."
+  }
+}

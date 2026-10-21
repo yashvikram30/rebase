@@ -1,0 +1,70 @@
+{
+  "id": "ingest-redelivery-duplicates",
+  "title": "Every retried batch doubles our click counts",
+  "domain": "pipeline",
+  "concept": "Idempotent ingestion: dedupe on the event's identity, not its contents",
+  "concepts": [
+    "idempotency",
+    "retries-backoff"
+  ],
+  "difficulty": 2,
+  "symptom": "Our queue delivers each message at least once, so after a consumer restart whole batches arrive again. Dashboards show doubled click and purchase counts after every deploy.",
+  "files": {
+    "events.py": "from dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass Event:\n    event_id: str\n    user_id: str\n    kind: str\n    ts: int\n",
+    "sink.py": "class WarehouseSink:\n    \"\"\"Where clean events end up. Appending is all it can do.\"\"\"\n\n    def __init__(self):\n        self.rows = []\n\n    def write(self, events):\n        self.rows.extend(events)\n",
+    "ingest.py": "class Ingestor:\n    \"\"\"Reads batches off an at-least-once queue and writes the ones we care about to the warehouse.\"\"\"\n\n    ALLOWED = {\"click\", \"purchase\"}\n\n    def __init__(self, sink):\n        self.sink = sink\n\n    def ingest(self, batch):\n        rows = [event for event in batch if event.kind in self.ALLOWED]\n        self.sink.write(rows)\n        return len(rows)\n"
+  },
+  "failingTest": "import unittest\n\nfrom events import Event\nfrom ingest import Ingestor\nfrom sink import WarehouseSink\n\nBATCH = [\n    Event(\"e1\", \"ada\", \"click\", 100),\n    Event(\"e2\", \"ada\", \"purchase\", 105),\n    Event(\"e3\", \"bob\", \"click\", 110),\n]\n\n\nclass Failing(unittest.TestCase):\n    def test_a_redelivered_batch_is_not_written_twice(self):\n        sink = WarehouseSink()\n        ingestor = Ingestor(sink)\n        self.assertEqual(ingestor.ingest(BATCH), 3)\n        self.assertEqual(ingestor.ingest(BATCH), 0)\n        self.assertEqual([e.event_id for e in sink.rows], [\"e1\", \"e2\", \"e3\"])\n",
+  "regressionTests": "import unittest\n\nfrom events import Event\nfrom ingest import Ingestor\nfrom sink import WarehouseSink\n\n\nclass Regression(unittest.TestCase):\n    def setUp(self):\n        self.sink = WarehouseSink()\n        self.ingestor = Ingestor(self.sink)\n\n    def test_two_different_events_in_the_same_second_are_both_kept(self):\n        batch = [Event(\"e1\", \"ada\", \"click\", 100), Event(\"e2\", \"ada\", \"purchase\", 100)]\n        self.assertEqual(self.ingestor.ingest(batch), 2)\n\n    def test_events_we_do_not_track_are_dropped(self):\n        batch = [Event(\"e1\", \"ada\", \"heartbeat\", 100), Event(\"e2\", \"ada\", \"click\", 101)]\n        self.assertEqual(self.ingestor.ingest(batch), 1)\n        self.assertEqual([e.event_id for e in self.sink.rows], [\"e2\"])\n\n    def test_a_duplicate_inside_one_batch_is_written_once(self):\n        event = Event(\"e1\", \"ada\", \"click\", 100)\n        self.assertEqual(self.ingestor.ingest([event, event]), 1)\n\n    def test_new_events_in_a_later_batch_are_still_written(self):\n        self.ingestor.ingest([Event(\"e1\", \"ada\", \"click\", 100)])\n        self.assertEqual(self.ingestor.ingest([Event(\"e2\", \"ada\", \"click\", 200)]), 1)\n        self.assertEqual(len(self.sink.rows), 2)\n",
+  "rootCause": "ingest writes whatever it is given, and an at-least-once queue guarantees duplicates. The pipeline must be idempotent: remember which event_ids it has already written and skip them, so replaying a batch changes nothing.",
+  "correctFix": {
+    "ingest.py": "class Ingestor:\n    \"\"\"Reads batches off an at-least-once queue and writes the ones we care about to the warehouse.\"\"\"\n\n    ALLOWED = {\"click\", \"purchase\"}\n\n    def __init__(self, sink):\n        self.sink = sink\n        self._seen = set()\n\n    def ingest(self, batch):\n        rows = []\n        for event in batch:\n            if event.kind not in self.ALLOWED or event.event_id in self._seen:\n                continue\n            self._seen.add(event.event_id)\n            rows.append(event)\n        self.sink.write(rows)\n        return len(rows)\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "ingest.py": "class Ingestor:\n    \"\"\"Reads batches off an at-least-once queue and writes the ones we care about to the warehouse.\"\"\"\n\n    ALLOWED = {\"click\", \"purchase\"}\n\n    def __init__(self, sink):\n        self.sink = sink\n        self._seen = set()\n\n    def ingest(self, batch):\n        rows = []\n        for event in batch:\n            if event.kind not in self.ALLOWED or (event.user_id, event.ts) in self._seen:\n                continue\n            self._seen.add((event.user_id, event.ts))\n            rows.append(event)\n        self.sink.write(rows)\n        return len(rows)\n"
+      },
+      "whyWrong": "Deduplicating on (user_id, ts) treats two different events from the same user in the same second as one and silently drops real data. The identity of an event is its event_id, not what it contains."
+    }
+  ],
+  "grading": [
+    {
+      "question": "Why can't the queue just promise exactly-once delivery?",
+      "ideal": "After a failure the sender cannot know whether the receiver processed the message, so it resends. At-least-once plus an idempotent consumer is the practical answer."
+    },
+    {
+      "question": "Why is (user_id, ts) a bad key for deduplication?",
+      "ideal": "Distinct events can share both values, so valid events would be dropped. Use the unique id."
+    },
+    {
+      "question": "What limits this in-memory set, and what would a production system use?",
+      "ideal": "It is lost on restart and grows without bound; use a unique key in the warehouse (an upsert) or an expiring store."
+    }
+  ],
+  "transcript": {
+    "kind": "correct",
+    "turns": [
+      {
+        "role": "user",
+        "text": "After every deploy the dashboards double: the queue redelivers batches and we ingest them again."
+      },
+      {
+        "role": "agent",
+        "text": "The queue is at-least-once, so redelivery is normal and ingest has to be idempotent. I remember the event_id of every event written and skip any I have seen, so a replayed batch writes nothing new.",
+        "fix": {
+          "ingest.py": "class Ingestor:\n    \"\"\"Reads batches off an at-least-once queue and writes the ones we care about to the warehouse.\"\"\"\n\n    ALLOWED = {\"click\", \"purchase\"}\n\n    def __init__(self, sink):\n        self.sink = sink\n        self._seen = set()\n\n    def ingest(self, batch):\n        rows = []\n        for event in batch:\n            if event.kind not in self.ALLOWED or event.event_id in self._seen:\n                continue\n            self._seen.add(event.event_id)\n            rows.append(event)\n        self.sink.write(rows)\n        return len(rows)\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)\ntest_regression: OK (4 tests)"
+      },
+      {
+        "role": "agent",
+        "text": "Both suites pass, including two different events with the same user and timestamp."
+      }
+    ],
+    "verdict": "Approve. It deduplicates on event_id, the event's identity, not on its contents, so genuine events that look alike are kept and only true redeliveries are dropped."
+  }
+}

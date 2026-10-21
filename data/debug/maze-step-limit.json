@@ -1,0 +1,69 @@
+{
+  "id": "maze-step-limit",
+  "title": "The route planner gives up on an empty room",
+  "domain": "graph",
+  "concept": "A step limit hiding a missing visited set",
+  "concepts": [
+    "visited-set",
+    "graph-traversal"
+  ],
+  "difficulty": 2,
+  "symptom": "The route planner handles our small hand-drawn mazes, but on a plain 6 by 6 room with no walls at all it gives up with SearchLimitExceeded. A teammate wants to raise MAX_STEPS and move on. Is that the right fix?",
+  "files": {
+    "maze.py": "\"\"\"Mazes are lists of strings. '#' is a wall; '.', 'S' and 'E' are open floor.\n\n'>', '<', '^' and 'v' are conveyor tiles: you may step onto one from any side,\nbut you can only leave it in the direction it points.\n\"\"\"\n\nARROWS = {\">\": (0, 1), \"<\": (0, -1), \"^\": (-1, 0), \"v\": (1, 0)}\nSTEPS = [(-1, 0), (1, 0), (0, -1), (0, 1)]\n\n\ndef find(grid, ch):\n    for r, row in enumerate(grid):\n        c = row.find(ch)\n        if c != -1:\n            return (r, c)\n    raise ValueError(\"no %r in maze\" % ch)\n\n\ndef neighbours(grid, cell):\n    \"\"\"The cells you can move to from cell in one step.\"\"\"\n    r, c = cell\n    here = grid[r][c]\n    moves = [ARROWS[here]] if here in ARROWS else STEPS\n    out = []\n    for dr, dc in moves:\n        nr, nc = r + dr, c + dc\n        if 0 <= nr < len(grid) and 0 <= nc < len(grid[nr]) and grid[nr][nc] != \"#\":\n            out.append((nr, nc))\n    return out\n",
+    "solver.py": "from collections import deque\n\nfrom maze import find, neighbours\n\n# A safety net: a search that runs this long has gone wrong somewhere.\nMAX_STEPS = 10_000\n\n\nclass SearchLimitExceeded(Exception):\n    pass\n\n\ndef shortest_path_length(grid, start, end):\n    \"\"\"Moves on the shortest route from start to end, or None if end cannot be reached.\"\"\"\n    queue = deque([(start, 0)])\n    steps = 0\n    while queue:\n        steps += 1\n        if steps > MAX_STEPS:\n            raise SearchLimitExceeded(\"gave up after %d steps\" % MAX_STEPS)\n        cell, dist = queue.popleft()\n        if cell == end:\n            return dist\n        for nxt in neighbours(grid, cell):\n            queue.append((nxt, dist + 1))\n    return None\n\n\ndef solve(grid):\n    return shortest_path_length(grid, find(grid, \"S\"), find(grid, \"E\"))\n"
+  },
+  "failingTest": "import unittest\n\nfrom solver import solve\n\n\nclass Failing(unittest.TestCase):\n    def test_an_empty_six_by_six_room(self):\n        room = [\"S.....\", \"......\", \"......\", \"......\", \"......\", \".....E\"]\n        self.assertEqual(solve(room), 10)\n",
+  "regressionTests": "import unittest\n\nfrom solver import solve\n\n\nclass Regression(unittest.TestCase):\n    def test_a_walled_off_goal_is_unreachable(self):\n        maze = [\"S.#..\", \"..#..\", \"###..\", \"....E\"]\n        self.assertIsNone(solve(maze))\n\n    def test_conveyors_only_carry_you_one_way(self):\n        self.assertEqual(solve([\"E<S\"]), 2)\n        self.assertIsNone(solve([\"E>S\"]))\n\n    def test_the_route_goes_around_a_wall(self):\n        maze = [\"S#...\", \".#.#.\", \".#.#.\", \"...#E\"]\n        self.assertEqual(solve(maze), 13)\n\n    def test_a_large_open_floor(self):\n        floor = [\"S\" + \".\" * 29] + [\".\" * 30] * 28 + [\".\" * 29 + \"E\"]\n        self.assertEqual(solve(floor), 58)\n",
+  "rootCause": "The search never records which cells it has already queued. Every cell is queued again from each neighbour, so the queue holds paths, not cells, and their number grows roughly threefold with every step of distance. A 36-cell room needs tens of thousands of steps to reach a goal 10 moves away. MAX_STEPS is only the alarm that went off.",
+  "correctFix": {
+    "solver.py": "from collections import deque\n\nfrom maze import find, neighbours\n\n# A safety net: a search that runs this long has gone wrong somewhere.\nMAX_STEPS = 10_000\n\n\nclass SearchLimitExceeded(Exception):\n    pass\n\n\ndef shortest_path_length(grid, start, end):\n    \"\"\"Moves on the shortest route from start to end, or None if end cannot be reached.\"\"\"\n    queue = deque([(start, 0)])\n    # Mark a cell when it is queued, so no cell is ever queued twice. Each cell is then\n    # visited at most once, and the number of steps can never exceed the number of cells.\n    seen = {start}\n    steps = 0\n    while queue:\n        steps += 1\n        if steps > MAX_STEPS:\n            raise SearchLimitExceeded(\"gave up after %d steps\" % MAX_STEPS)\n        cell, dist = queue.popleft()\n        if cell == end:\n            return dist\n        for nxt in neighbours(grid, cell):\n            if nxt not in seen:\n                seen.add(nxt)\n                queue.append((nxt, dist + 1))\n    return None\n\n\ndef solve(grid):\n    return shortest_path_length(grid, find(grid, \"S\"), find(grid, \"E\"))\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "solver.py": "from collections import deque\n\nfrom maze import find, neighbours\n\n# A safety net: a search that runs this long has gone wrong somewhere.\nMAX_STEPS = 100_000\n\n\nclass SearchLimitExceeded(Exception):\n    pass\n\n\ndef shortest_path_length(grid, start, end):\n    \"\"\"Moves on the shortest route from start to end, or None if end cannot be reached.\"\"\"\n    queue = deque([(start, 0)])\n    steps = 0\n    while queue:\n        steps += 1\n        if steps > MAX_STEPS:\n            raise SearchLimitExceeded(\"gave up after %d steps\" % MAX_STEPS)\n        cell, dist = queue.popleft()\n        if cell == end:\n            return dist\n        for nxt in neighbours(grid, cell):\n            queue.append((nxt, dist + 1))\n    return None\n\n\ndef solve(grid):\n    return shortest_path_length(grid, find(grid, \"S\"), find(grid, \"E\"))\n"
+      },
+      "whyWrong": "Raising the limit lets the 6 by 6 room finish, but the growth is still exponential: a 30 by 30 floor needs far more than 100,000 steps, and an unreachable goal now spins 100,000 times before raising instead of returning None."
+    }
+  ],
+  "transcript": {
+    "kind": "confident-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "solve() raises SearchLimitExceeded on a 6 by 6 room with no walls. Fix it."
+      },
+      {
+        "role": "agent",
+        "text": "The search hits MAX_STEPS = 10,000 before it reaches the far corner. Bigger mazes simply need more steps, so I raised the limit to 100,000, which leaves plenty of headroom.",
+        "fix": {
+          "solver.py": "from collections import deque\n\nfrom maze import find, neighbours\n\n# A safety net: a search that runs this long has gone wrong somewhere.\nMAX_STEPS = 100_000\n\n\nclass SearchLimitExceeded(Exception):\n    pass\n\n\ndef shortest_path_length(grid, start, end):\n    \"\"\"Moves on the shortest route from start to end, or None if end cannot be reached.\"\"\"\n    queue = deque([(start, 0)])\n    steps = 0\n    while queue:\n        steps += 1\n        if steps > MAX_STEPS:\n            raise SearchLimitExceeded(\"gave up after %d steps\" % MAX_STEPS)\n        cell, dist = queue.popleft()\n        if cell == end:\n            return dist\n        for nxt in neighbours(grid, cell):\n            queue.append((nxt, dist + 1))\n    return None\n\n\ndef solve(grid):\n    return shortest_path_length(grid, find(grid, \"S\"), find(grid, \"E\"))\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)"
+      },
+      {
+        "role": "agent",
+        "text": "Fixed. The 6 by 6 room now returns 10 moves."
+      }
+    ],
+    "verdict": "The limit was not the problem; it was hiding one. With no visited set the queue grows exponentially with distance, so a 30 by 30 floor still exhausts the new limit, and an unreachable goal now spins for 100,000 steps before raising instead of returning None. The fix is a visited set, marked when a cell is queued."
+  },
+  "grading": [
+    {
+      "question": "Why does a 36-cell room need more than 10,000 steps?",
+      "ideal": "Nothing stops a cell being queued again from each neighbour, so the queue holds every walk, not every cell, and that number grows about threefold per step of distance."
+    },
+    {
+      "question": "Where do you mark a cell as visited in breadth-first search, and why there?",
+      "ideal": "When it is queued, not when it is taken off the queue, so no cell is ever queued twice."
+    },
+    {
+      "question": "What is MAX_STEPS for once the search is fixed?",
+      "ideal": "Only a safety net. With a visited set the search takes at most one step per cell, so a correct search can never reach a limit set above the number of cells."
+    }
+  ]
+}

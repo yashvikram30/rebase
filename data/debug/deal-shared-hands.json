@@ -1,0 +1,63 @@
+{
+  "id": "deal-shared-hands",
+  "title": "Every player gets the same cards",
+  "domain": "simulation",
+  "concept": "Aliased mutable objects from list multiplication",
+  "concepts": [
+    "aliasing-mutable-state"
+  ],
+  "difficulty": 2,
+  "symptom": "Dealing 2 cards each to 2 players prints [[9, 8, 7, 6], [9, 8, 7, 6]]. The deck does shrink by 4 as expected.",
+  "files": {
+    "cards.py": "def deal(deck, n_players, cards_each):\n    \"\"\"Deal cards_each cards to every player from the top (end) of the deck.\n\n    Dealt cards are removed from deck. Cards go round the table one at a time.\n    \"\"\"\n    hands = [[]] * n_players\n    for _ in range(cards_each):\n        for p in range(n_players):\n            hands[p].append(deck.pop())\n    return hands\n"
+  },
+  "failingTest": "import unittest\nfrom cards import deal\n\n\nclass Failing(unittest.TestCase):\n    def test_two_players(self):\n        deck = list(range(10))\n        self.assertEqual(deal(deck, 2, 2), [[9, 7], [8, 6]])\n",
+  "regressionTests": "import unittest\nfrom cards import deal\n\n\nclass Regression(unittest.TestCase):\n    def test_deck_is_consumed(self):\n        deck = list(range(10))\n        deal(deck, 2, 2)\n        self.assertEqual(deck, [0, 1, 2, 3, 4, 5])\n\n    def test_three_players(self):\n        self.assertEqual(deal(list(range(9)), 3, 2), [[8, 5], [7, 4], [6, 3]])\n\n    def test_hands_are_independent_lists(self):\n        hands = deal(list(range(6)), 2, 1)\n        hands[0].append(\"x\")\n        self.assertEqual(hands[1], [4])\n\n    def test_empty_deck_raises(self):\n        with self.assertRaises(IndexError):\n            deal([], 2, 1)\n",
+  "rootCause": "[[]] * n makes n references to one list. Every append goes to the same hand, so all players print the same 4 cards while the deck shrinks correctly.",
+  "correctFix": {
+    "cards.py": "def deal(deck, n_players, cards_each):\n    \"\"\"Deal cards_each cards to every player from the top (end) of the deck.\n\n    Dealt cards are removed from deck. Cards go round the table one at a time.\n    \"\"\"\n    hands = [[] for _ in range(n_players)]\n    for _ in range(cards_each):\n        for p in range(n_players):\n            hands[p].append(deck.pop())\n    return hands\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "cards.py": "def deal(deck, n_players, cards_each):\n    \"\"\"Deal cards_each cards to every player from the top (end) of the deck.\n\n    Dealt cards are removed from deck. Cards go round the table one at a time.\n    \"\"\"\n    deck = list(deck)\n    hands = [[] for _ in range(n_players)]\n    for _ in range(cards_each):\n        for p in range(n_players):\n            hands[p].append(deck.pop())\n    return hands\n"
+      },
+      "whyWrong": "Copying the deck makes the hands right, but deal no longer removes dealt cards from the caller's deck, which other code relies on."
+    }
+  ],
+  "grading": [
+    {
+      "question": "Why does the deck shrink correctly while the hands are wrong?",
+      "ideal": "pop() acts on deck; only the hands are aliased."
+    },
+    {
+      "question": "Name the Python idiom that creates n independent empty lists.",
+      "ideal": "[[] for _ in range(n)]"
+    }
+  ],
+  "transcript": {
+    "kind": "subtle-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "Dealing 2 cards to 2 players gives both players the same four cards."
+      },
+      {
+        "role": "agent",
+        "text": "[[]] * n_players makes every hand the same list. I build the hands with a comprehension, and while I was there I made deal work on a copy of the deck so it no longer changes the caller's list.",
+        "fix": {
+          "cards.py": "def deal(deck, n_players, cards_each):\n    \"\"\"Deal cards_each cards to every player from the top (end) of the deck.\n\n    Dealt cards are removed from deck. Cards go round the table one at a time.\n    \"\"\"\n    deck = list(deck)\n    hands = [[] for _ in range(n_players)]\n    for _ in range(cards_each):\n        for p in range(n_players):\n            hands[p].append(deck.pop())\n    return hands\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)"
+      },
+      {
+        "role": "agent",
+        "text": "Fixed: each player now gets two different cards."
+      }
+    ],
+    "verdict": "The comprehension is the fix; the extra change is a new bug. deal() is meant to remove dealt cards from the caller's deck, and other code relies on the deck shrinking. Copying it 'while I was there' changed behaviour nobody asked about. Ask for the one-line fix alone."
+  }
+}

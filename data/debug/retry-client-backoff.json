@@ -1,0 +1,71 @@
+{
+  "id": "retry-client-backoff",
+  "title": "Our client retries requests it should never retry",
+  "domain": "network",
+  "concept": "Retry policy: which errors are retryable, and when to stop sleeping",
+  "concepts": [
+    "retries-backoff",
+    "idempotency"
+  ],
+  "difficulty": 2,
+  "symptom": "A charge with a bad amount comes back 400, yet the payment service sends it three more times. And when the server is really down, the client waits one extra backoff before giving up. Two things are wrong.",
+  "files": {
+    "errors.py": "class TransportError(Exception):\n    \"\"\"Anything that went wrong talking to the server.\"\"\"\n\n\nclass Timeout(TransportError):\n    pass\n\n\nclass ServerError(TransportError):\n    def __init__(self, status):\n        super().__init__(\"server error %d\" % status)\n        self.status = status\n\n\nclass ClientError(TransportError):\n    \"\"\"The request itself was rejected (a 4xx). Sending it again will not help.\"\"\"\n\n    def __init__(self, status, message=\"\"):\n        super().__init__(\"client error %d %s\" % (status, message))\n        self.status = status\n",
+    "transport.py": "class ScriptedTransport:\n    \"\"\"Replays a fixed list of outcomes: a response to return or an exception to raise.\"\"\"\n\n    def __init__(self, outcomes):\n        self.outcomes = list(outcomes)\n        self.requests = []\n\n    def send(self, request):\n        self.requests.append(request)\n        outcome = self.outcomes.pop(0)\n        if isinstance(outcome, Exception):\n            raise outcome\n        return outcome\n",
+    "retry.py": "from errors import TransportError\n\n\nclass RetryingClient:\n    \"\"\"Sends requests, retrying failures with exponential backoff.\"\"\"\n\n    def __init__(self, transport, sleep, max_attempts=4, base_delay=0.5):\n        self.transport = transport\n        self.sleep = sleep\n        self.max_attempts = max_attempts\n        self.base_delay = base_delay\n\n    def send(self, request):\n        last_error = None\n        for attempt in range(self.max_attempts):\n            try:\n                return self.transport.send(request)\n            except TransportError as err:\n                last_error = err\n                self.sleep(self.base_delay * 2 ** attempt)\n        raise last_error\n",
+    "payments.py": "class PaymentService:\n    \"\"\"Charges a card through a client that may retry, so every attempt must carry the same key.\"\"\"\n\n    def __init__(self, client):\n        self.client = client\n\n    def charge(self, amount_cents, idempotency_key):\n        request = {\"op\": \"charge\", \"amount\": amount_cents, \"key\": idempotency_key}\n        return self.client.send(request)\n"
+  },
+  "failingTest": "import unittest\n\nfrom errors import ClientError, ServerError\nfrom retry import RetryingClient\nfrom transport import ScriptedTransport\n\n\nclass Failing(unittest.TestCase):\n    def test_a_rejected_request_is_not_sent_again(self):\n        transport = ScriptedTransport([ClientError(400, \"bad amount\")])\n        sleeps = []\n        client = RetryingClient(transport, sleeps.append, max_attempts=3)\n        with self.assertRaises(ClientError):\n            client.send({\"op\": \"charge\"})\n        self.assertEqual(len(transport.requests), 1)\n        self.assertEqual(sleeps, [])\n\n    def test_it_does_not_sleep_after_the_last_attempt(self):\n        transport = ScriptedTransport([ServerError(503)] * 3)\n        sleeps = []\n        client = RetryingClient(transport, sleeps.append, max_attempts=3, base_delay=0.5)\n        with self.assertRaises(ServerError):\n            client.send({\"op\": \"charge\"})\n        self.assertEqual(len(transport.requests), 3)\n        self.assertEqual(sleeps, [0.5, 1.0])\n",
+  "regressionTests": "import unittest\n\nfrom errors import ServerError, Timeout\nfrom payments import PaymentService\nfrom retry import RetryingClient\nfrom transport import ScriptedTransport\n\n\nclass Regression(unittest.TestCase):\n    def test_timeouts_and_server_errors_are_retried_until_success(self):\n        transport = ScriptedTransport([Timeout(), ServerError(502), {\"ok\": True}])\n        sleeps = []\n        client = RetryingClient(transport, sleeps.append)\n        self.assertEqual(client.send({\"op\": \"ping\"}), {\"ok\": True})\n        self.assertEqual(len(transport.requests), 3)\n        self.assertEqual(sleeps, [0.5, 1.0])\n\n    def test_success_on_the_first_try_never_sleeps(self):\n        transport = ScriptedTransport([{\"ok\": True}])\n        sleeps = []\n        self.assertEqual(RetryingClient(transport, sleeps.append).send({}), {\"ok\": True})\n        self.assertEqual(sleeps, [])\n\n    def test_the_last_error_is_what_gets_raised(self):\n        last = ServerError(504)\n        transport = ScriptedTransport([ServerError(500), last])\n        client = RetryingClient(transport, lambda s: None, max_attempts=2)\n        with self.assertRaises(ServerError) as raised:\n            client.send({})\n        self.assertIs(raised.exception, last)\n\n    def test_every_attempt_carries_the_same_idempotency_key(self):\n        transport = ScriptedTransport([Timeout(), {\"charged\": True}])\n        service = PaymentService(RetryingClient(transport, lambda s: None))\n        service.charge(500, \"key-1\")\n        self.assertEqual([r[\"key\"] for r in transport.requests], [\"key-1\", \"key-1\"])\n",
+  "rootCause": "Two bugs in the retry loop. It catches the base TransportError, so a 4xx ClientError, which no retry can fix, is retried like a timeout. And it sleeps at the end of every failed attempt, including the last one, where nothing follows.",
+  "correctFix": {
+    "retry.py": "from errors import ServerError, Timeout\n\n\nRETRYABLE = (Timeout, ServerError)\n\n\nclass RetryingClient:\n    \"\"\"Sends requests, retrying failures with exponential backoff.\"\"\"\n\n    def __init__(self, transport, sleep, max_attempts=4, base_delay=0.5):\n        self.transport = transport\n        self.sleep = sleep\n        self.max_attempts = max_attempts\n        self.base_delay = base_delay\n\n    def send(self, request):\n        last_error = None\n        for attempt in range(self.max_attempts):\n            try:\n                return self.transport.send(request)\n            except RETRYABLE as err:\n                last_error = err\n                if attempt < self.max_attempts - 1:\n                    self.sleep(self.base_delay * 2 ** attempt)\n        raise last_error\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "retry.py": "from errors import ServerError, Timeout\n\n\nRETRYABLE = (ServerError,)\n\n\nclass RetryingClient:\n    \"\"\"Sends requests, retrying failures with exponential backoff.\"\"\"\n\n    def __init__(self, transport, sleep, max_attempts=4, base_delay=0.5):\n        self.transport = transport\n        self.sleep = sleep\n        self.max_attempts = max_attempts\n        self.base_delay = base_delay\n\n    def send(self, request):\n        last_error = None\n        for attempt in range(self.max_attempts):\n            try:\n                return self.transport.send(request)\n            except RETRYABLE as err:\n                last_error = err\n                if attempt < self.max_attempts - 1:\n                    self.sleep(self.base_delay * 2 ** attempt)\n        raise last_error\n"
+      },
+      "whyWrong": "Retrying only ServerError stops the 4xx retries, but timeouts are now never retried, though they are exactly the transient failures retries exist for."
+    }
+  ],
+  "grading": [
+    {
+      "question": "Which errors are safe to retry, and which are not?",
+      "ideal": "Transient ones: timeouts and 5xx. A 4xx means the request is wrong, so repeating it only repeats the failure."
+    },
+    {
+      "question": "Why must every retry of a charge carry the same idempotency key?",
+      "ideal": "So the server can recognise a repeat and not charge twice if the first attempt actually succeeded."
+    },
+    {
+      "question": "Why is sleeping after the final attempt wasteful?",
+      "ideal": "Nothing is retried afterwards, so it only delays the error."
+    }
+  ],
+  "transcript": {
+    "kind": "subtle-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "A 400 from the payment API is retried three more times, and the client sleeps once more after the last attempt. Fix both."
+      },
+      {
+        "role": "agent",
+        "text": "The loop catches every TransportError, including ClientError. I narrowed it to ServerError, the errors worth retrying, and only sleep when another attempt follows.",
+        "fix": {
+          "retry.py": "from errors import ServerError, Timeout\n\n\nRETRYABLE = (ServerError,)\n\n\nclass RetryingClient:\n    \"\"\"Sends requests, retrying failures with exponential backoff.\"\"\"\n\n    def __init__(self, transport, sleep, max_attempts=4, base_delay=0.5):\n        self.transport = transport\n        self.sleep = sleep\n        self.max_attempts = max_attempts\n        self.base_delay = base_delay\n\n    def send(self, request):\n        last_error = None\n        for attempt in range(self.max_attempts):\n            try:\n                return self.transport.send(request)\n            except RETRYABLE as err:\n                last_error = err\n                if attempt < self.max_attempts - 1:\n                    self.sleep(self.base_delay * 2 ** attempt)\n        raise last_error\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (2 tests)"
+      },
+      {
+        "role": "agent",
+        "text": "Both behaviours are fixed: 4xx fails at once and there is no trailing sleep."
+      }
+    ],
+    "verdict": "Too narrow. Timeouts are TransportErrors too, and they are exactly the transient failures retries exist for; they are now never retried. Exclude ClientError instead of including only ServerError."
+  }
+}

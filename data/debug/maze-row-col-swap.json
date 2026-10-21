@@ -1,0 +1,65 @@
+{
+  "id": "maze-row-col-swap",
+  "title": "Shortest path breaks on wide grids",
+  "domain": "graph",
+  "concept": "Row/column bounds mix-up (rows vs cols)",
+  "concepts": [
+    "grid-coordinates",
+    "shortest-path-bfs",
+    "edge-case-testing"
+  ],
+  "difficulty": 1,
+  "symptom": "shortest_path_len is right on every square test grid. On a 2-row, 5-column grid it throws IndexError.",
+  "files": {
+    "bfs.py": "from collections import deque\n\n\ndef shortest_path_len(grid, start, end):\n    \"\"\"Steps from start to end through open cells, or -1. Coordinates are (row, col).\"\"\"\n    rows, cols = len(grid), len(grid[0])\n    seen = {start}\n    queue = deque([(start, 0)])\n    while queue:\n        (r, c), d = queue.popleft()\n        if (r, c) == end:\n            return d\n        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):\n            nr, nc = r + dr, c + dc\n            if 0 <= nr < cols and 0 <= nc < rows and grid[nr][nc] != \"#\" and (nr, nc) not in seen:\n                seen.add((nr, nc))\n                queue.append(((nr, nc), d + 1))\n    return -1\n"
+  },
+  "failingTest": "import unittest\nfrom bfs import shortest_path_len\n\n\nclass Failing(unittest.TestCase):\n    def test_wide_grid(self):\n        grid = [\".....\", \".....\"]\n        self.assertEqual(shortest_path_len(grid, (0, 0), (1, 4)), 5)\n",
+  "regressionTests": "import unittest\nfrom bfs import shortest_path_len\n\n\nclass Regression(unittest.TestCase):\n    def test_square(self):\n        self.assertEqual(shortest_path_len([\"...\", \"...\", \"...\"], (0, 0), (2, 2)), 4)\n\n    def test_wall_forces_detour(self):\n        grid = [\"...\", \".#.\", \"...\"]\n        self.assertEqual(shortest_path_len(grid, (1, 0), (1, 2)), 4)\n\n    def test_wide_grid_fully_blocked(self):\n        grid = [\"..#..\", \"..#..\"]\n        self.assertEqual(shortest_path_len(grid, (0, 0), (0, 4)), -1)\n\n    def test_tall_grid(self):\n        self.assertEqual(shortest_path_len([\".\", \".\", \".\", \".\"], (0, 0), (3, 0)), 3)\n",
+  "rootCause": "The bounds check compares the row index with the column count and the column index with the row count. On square grids the two are equal so it hides; on a non-square grid it lets the row index run past the last row.",
+  "correctFix": {
+    "bfs.py": "from collections import deque\n\n\ndef shortest_path_len(grid, start, end):\n    \"\"\"Steps from start to end through open cells, or -1. Coordinates are (row, col).\"\"\"\n    rows, cols = len(grid), len(grid[0])\n    seen = {start}\n    queue = deque([(start, 0)])\n    while queue:\n        (r, c), d = queue.popleft()\n        if (r, c) == end:\n            return d\n        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):\n            nr, nc = r + dr, c + dc\n            if 0 <= nr < rows and 0 <= nc < cols and grid[nr][nc] != \"#\" and (nr, nc) not in seen:\n                seen.add((nr, nc))\n                queue.append(((nr, nc), d + 1))\n    return -1\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "bfs.py": "from collections import deque\n\n\ndef shortest_path_len(grid, start, end):\n    \"\"\"Steps from start to end through open cells, or -1. Coordinates are (row, col).\"\"\"\n    n = max(len(grid), len(grid[0]))\n    grid = [row.ljust(n, \".\") for row in grid] + [\".\" * n] * (n - len(grid))\n    rows, cols = len(grid), len(grid[0])\n    seen = {start}\n    queue = deque([(start, 0)])\n    while queue:\n        (r, c), d = queue.popleft()\n        if (r, c) == end:\n            return d\n        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):\n            nr, nc = r + dr, c + dc\n            if 0 <= nr < cols and 0 <= nc < rows and grid[nr][nc] != \"#\" and (nr, nc) not in seen:\n                seen.add((nr, nc))\n                queue.append(((nr, nc), d + 1))\n    return -1\n"
+      },
+      "whyWrong": "Padding the grid to a square makes the bounds bug unreachable, but the padding adds open cells that did not exist. A fully walled wide grid now has a route around the wall through the padding."
+    }
+  ],
+  "grading": [
+    {
+      "question": "Why did every square test pass?",
+      "ideal": "rows == cols, so swapping them in the check changes nothing."
+    },
+    {
+      "question": "What test would have caught this earlier?",
+      "ideal": "Any non-square grid, wide and tall, since each swaps the failure mode."
+    }
+  ],
+  "transcript": {
+    "kind": "confident-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "shortest_path_len works on square grids but raises IndexError on a 2 by 5 grid."
+      },
+      {
+        "role": "agent",
+        "text": "The algorithm assumes square input. The simplest robust fix is to pad any grid to a square with extra cells before searching.",
+        "fix": {
+          "bfs.py": "from collections import deque\n\n\ndef shortest_path_len(grid, start, end):\n    \"\"\"Steps from start to end through open cells, or -1. Coordinates are (row, col).\"\"\"\n    n = max(len(grid), len(grid[0]))\n    grid = [row.ljust(n, \".\") for row in grid] + [\".\" * n] * (n - len(grid))\n    rows, cols = len(grid), len(grid[0])\n    seen = {start}\n    queue = deque([(start, 0)])\n    while queue:\n        (r, c), d = queue.popleft()\n        if (r, c) == end:\n            return d\n        for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):\n            nr, nc = r + dr, c + dc\n            if 0 <= nr < cols and 0 <= nc < rows and grid[nr][nc] != \"#\" and (nr, nc) not in seen:\n                seen.add((nr, nc))\n                queue.append(((nr, nc), d + 1))\n    return -1\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)"
+      },
+      {
+        "role": "agent",
+        "text": "Fixed: non-square grids no longer crash."
+      }
+    ],
+    "verdict": "It stopped the crash by changing the maze. Padding adds open cells that do not exist, so a fully walled wide grid now has a route around the wall. The real bug is rows and columns swapped in the bounds check."
+  }
+}

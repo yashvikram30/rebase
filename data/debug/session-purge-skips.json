@@ -1,0 +1,65 @@
+{
+  "id": "session-purge-skips",
+  "title": "The nightly purge leaves expired sessions behind",
+  "domain": "snippet",
+  "concept": "Changing a list while iterating over it",
+  "concepts": [
+    "mutation-during-iteration",
+    "aliasing-mutable-state"
+  ],
+  "difficulty": 1,
+  "symptom": "The nightly purge logged 'removed 2 sessions', but 3 had expired, and one of them can still log in. It only seems to happen when several sessions expired together.",
+  "files": {
+    "sessions.py": "def purge_expired(sessions, now):\n    \"\"\"Remove sessions that have expired (expires <= now) and return how many were removed.\n\n    The list belongs to the session store, so it must be changed in place.\n    \"\"\"\n    removed = 0\n    for session in sessions:\n        if session[\"expires\"] <= now:\n            sessions.remove(session)\n            removed += 1\n    return removed\n",
+    "store.py": "from sessions import purge_expired\n\n\nclass SessionStore:\n    def __init__(self):\n        self.sessions = []\n\n    def add(self, user, expires):\n        self.sessions.append({\"user\": user, \"expires\": expires})\n\n    def purge(self, now):\n        \"\"\"Nightly job: drop expired sessions and report how many went.\"\"\"\n        return purge_expired(self.sessions, now)\n\n    def users(self):\n        return [s[\"user\"] for s in self.sessions]\n"
+  },
+  "failingTest": "import unittest\n\nfrom store import SessionStore\n\n\nclass Failing(unittest.TestCase):\n    def test_the_purge_counts_every_expired_session(self):\n        store = SessionStore()\n        for user, expires in [(\"ada\", 5), (\"bob\", 5), (\"cy\", 5), (\"dee\", 50)]:\n            store.add(user, expires)\n        self.assertEqual(store.purge(now=10), 3)\n",
+  "regressionTests": "import unittest\n\nfrom store import SessionStore\n\n\nclass Regression(unittest.TestCase):\n    def test_expired_sessions_are_gone_from_the_store(self):\n        store = SessionStore()\n        for user, expires in [(\"ada\", 5), (\"bob\", 5), (\"cy\", 50), (\"dee\", 5)]:\n            store.add(user, expires)\n        store.purge(now=10)\n        self.assertEqual(store.users(), [\"cy\"])\n\n    def test_a_session_expiring_exactly_now_goes(self):\n        store = SessionStore()\n        store.add(\"ada\", 10)\n        self.assertEqual(store.purge(now=10), 1)\n        self.assertEqual(store.users(), [])\n\n    def test_nothing_expired_changes_nothing(self):\n        store = SessionStore()\n        store.add(\"ada\", 50)\n        self.assertEqual(store.purge(now=10), 0)\n        self.assertEqual(store.users(), [\"ada\"])\n",
+  "rootCause": "The loop removes items from the list it is iterating. Each removal shifts the following items one place left, and the loop's next index skips the item that slid into the removed slot. Two expired sessions in a row: the second is never examined.",
+  "correctFix": {
+    "sessions.py": "def purge_expired(sessions, now):\n    \"\"\"Remove sessions that have expired (expires <= now) and return how many were removed.\n\n    The list belongs to the session store, so it must be changed in place.\n    \"\"\"\n    # Removing from a list while a for loop walks it shifts the next item into the slot the loop has\n    # just passed, so it is skipped. Build the survivors, then replace the contents of the same list.\n    keep = [s for s in sessions if s[\"expires\"] > now]\n    removed = len(sessions) - len(keep)\n    sessions[:] = keep\n    return removed\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "sessions.py": "def purge_expired(sessions, now):\n    \"\"\"Remove sessions that have expired (expires <= now) and return how many were removed.\n\n    The list belongs to the session store, so it must be changed in place.\n    \"\"\"\n    before = len(sessions)\n    sessions = [s for s in sessions if s[\"expires\"] > now]\n    return before - len(sessions)\n"
+      },
+      "whyWrong": "The comprehension counts correctly, but sessions = [...] only rebinds the local name. The store's list is untouched, so the purge reports 3 removed and removes none."
+    }
+  ],
+  "transcript": {
+    "kind": "confident-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "purge_expired reports 2 when 3 sessions expired. Fix it."
+      },
+      {
+        "role": "agent",
+        "text": "Removing items from a list while iterating over it skips elements. A list comprehension avoids mutating during iteration and is more Pythonic.",
+        "fix": {
+          "sessions.py": "def purge_expired(sessions, now):\n    \"\"\"Remove sessions that have expired (expires <= now) and return how many were removed.\n\n    The list belongs to the session store, so it must be changed in place.\n    \"\"\"\n    before = len(sessions)\n    sessions = [s for s in sessions if s[\"expires\"] > now]\n    return before - len(sessions)\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)"
+      },
+      {
+        "role": "agent",
+        "text": "Fixed. The count is correct and the code no longer mutates during iteration."
+      }
+    ],
+    "verdict": "Right cause, and now the purge does nothing at all. Assigning the comprehension to sessions rebinds the function's local name; the store's list keeps every expired session. The docstring says the change must be in place: sessions[:] = keep."
+  },
+  "grading": [
+    {
+      "question": "Why does removing inside the for loop skip items?",
+      "ideal": "The loop walks by index. After a removal the next item moves into the current slot, and the loop moves past it."
+    },
+    {
+      "question": "What is the difference between sessions = [...] and sessions[:] = [...]?",
+      "ideal": "The first points the local name at a new list; the second replaces the contents of the list the caller also holds."
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "id": "rate-limiter-sliding-window",
+  "title": "The rate limiter is off by one at the window edge",
+  "domain": "network",
+  "concept": "Sliding-window rate limiting: window boundaries and durations",
+  "concepts": [
+    "rate-limiting",
+    "boundary-conditions"
+  ],
+  "difficulty": 3,
+  "symptom": "A caller who used their 3 requests at t=0 is still blocked at t=10 on a 10-second window, and retry_after() returns numbers like 106 instead of 6. Two things are wrong.",
+  "files": {
+    "clock.py": "class FakeClock:\n    \"\"\"A clock the tests can move. Real code would read time.monotonic().\"\"\"\n\n    def __init__(self, start=0.0):\n        self._now = start\n\n    def now(self):\n        return self._now\n\n    def advance(self, seconds):\n        self._now += seconds\n",
+    "policy.py": "from dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass Policy:\n    \"\"\"At most `limit` requests per caller in any `window_seconds` window.\"\"\"\n\n    limit: int\n    window_seconds: float\n",
+    "window.py": "from collections import deque\n\n\nclass SlidingWindowLog:\n    \"\"\"Remembers when one caller's recent requests happened.\"\"\"\n\n    def __init__(self, window_seconds):\n        self.window = window_seconds\n        self._hits = deque()\n\n    def prune(self, now):\n        \"\"\"Forget requests that are no longer inside the window (now - window, now].\"\"\"\n        cutoff = now - self.window\n        while self._hits and self._hits[0] < cutoff:\n            self._hits.popleft()\n\n    def count(self):\n        return len(self._hits)\n\n    def oldest(self):\n        return self._hits[0]\n\n    def record(self, now):\n        self._hits.append(now)\n",
+    "limiter.py": "from window import SlidingWindowLog\n\n\nclass RateLimiter:\n    def __init__(self, clock, policy):\n        self.clock = clock\n        self.policy = policy\n        self._windows = {}\n\n    def _window_for(self, caller_id):\n        if caller_id not in self._windows:\n            self._windows[caller_id] = SlidingWindowLog(self.policy.window_seconds)\n        return self._windows[caller_id]\n\n    def allow(self, caller_id):\n        \"\"\"True and counts the request if the caller is under the limit; False and counts nothing otherwise.\"\"\"\n        now = self.clock.now()\n        window = self._window_for(caller_id)\n        window.prune(now)\n        if window.count() >= self.policy.limit:\n            return False\n        window.record(now)\n        return True\n\n    def retry_after(self, caller_id):\n        \"\"\"Seconds until this caller may try again; 0 if they can go now.\"\"\"\n        now = self.clock.now()\n        window = self._window_for(caller_id)\n        window.prune(now)\n        if window.count() < self.policy.limit:\n            return 0.0\n        return window.oldest() + self.policy.window_seconds\n"
+  },
+  "failingTest": "import unittest\n\nfrom clock import FakeClock\nfrom limiter import RateLimiter\nfrom policy import Policy\n\n\nclass Failing(unittest.TestCase):\n    def setUp(self):\n        self.clock = FakeClock()\n        self.limiter = RateLimiter(self.clock, Policy(limit=3, window_seconds=10))\n\n    def test_a_request_expires_exactly_when_the_window_ends(self):\n        for _ in range(3):\n            self.assertTrue(self.limiter.allow(\"u1\"))\n        self.clock.advance(10)  # the three requests are now exactly 10 seconds old\n        self.assertTrue(self.limiter.allow(\"u1\"))\n\n    def test_retry_after_is_a_duration_not_a_time(self):\n        self.clock.advance(100)\n        for _ in range(3):\n            self.limiter.allow(\"u1\")\n        self.clock.advance(4)\n        self.assertFalse(self.limiter.allow(\"u1\"))\n        self.assertAlmostEqual(self.limiter.retry_after(\"u1\"), 6.0)\n",
+  "regressionTests": "import unittest\n\nfrom clock import FakeClock\nfrom limiter import RateLimiter\nfrom policy import Policy\n\n\nclass Regression(unittest.TestCase):\n    def setUp(self):\n        self.clock = FakeClock()\n        self.limiter = RateLimiter(self.clock, Policy(limit=3, window_seconds=10))\n\n    def test_callers_do_not_share_a_budget(self):\n        for _ in range(3):\n            self.limiter.allow(\"u1\")\n        self.assertFalse(self.limiter.allow(\"u1\"))\n        self.assertTrue(self.limiter.allow(\"u2\"))\n\n    def test_denied_requests_do_not_extend_the_block(self):\n        for _ in range(3):\n            self.limiter.allow(\"u1\")\n        for _ in range(5):\n            self.clock.advance(1)\n            self.assertFalse(self.limiter.allow(\"u1\"))\n        self.clock.advance(5)  # t = 10: the original three have expired\n        self.assertTrue(self.limiter.allow(\"u1\"))\n\n    def test_the_window_slides_it_does_not_reset(self):\n        self.assertTrue(self.limiter.allow(\"u1\"))   # t = 0\n        self.clock.advance(5)\n        self.assertTrue(self.limiter.allow(\"u1\"))   # t = 5\n        self.clock.advance(4)\n        self.assertTrue(self.limiter.allow(\"u1\"))   # t = 9\n        self.clock.advance(1)                         # t = 10: only the t = 0 request has expired\n        self.assertTrue(self.limiter.allow(\"u1\"))\n        self.assertFalse(self.limiter.allow(\"u1\"))\n\n    def test_retry_after_is_zero_when_allowed(self):\n        self.limiter.allow(\"u1\")\n        self.assertEqual(self.limiter.retry_after(\"u1\"), 0.0)\n",
+  "rootCause": "Two bugs. The window should cover (now - window, now], so a request exactly `window` seconds old has expired and prune must use <=. And retry_after returned the absolute time the oldest request expires instead of the time remaining, because it forgot to subtract now.",
+  "correctFix": {
+    "window.py": "from collections import deque\n\n\nclass SlidingWindowLog:\n    \"\"\"Remembers when one caller's recent requests happened.\"\"\"\n\n    def __init__(self, window_seconds):\n        self.window = window_seconds\n        self._hits = deque()\n\n    def prune(self, now):\n        \"\"\"Forget requests that are no longer inside the window (now - window, now].\"\"\"\n        cutoff = now - self.window\n        while self._hits and self._hits[0] <= cutoff:\n            self._hits.popleft()\n\n    def count(self):\n        return len(self._hits)\n\n    def oldest(self):\n        return self._hits[0]\n\n    def record(self, now):\n        self._hits.append(now)\n",
+    "limiter.py": "from window import SlidingWindowLog\n\n\nclass RateLimiter:\n    def __init__(self, clock, policy):\n        self.clock = clock\n        self.policy = policy\n        self._windows = {}\n\n    def _window_for(self, caller_id):\n        if caller_id not in self._windows:\n            self._windows[caller_id] = SlidingWindowLog(self.policy.window_seconds)\n        return self._windows[caller_id]\n\n    def allow(self, caller_id):\n        \"\"\"True and counts the request if the caller is under the limit; False and counts nothing otherwise.\"\"\"\n        now = self.clock.now()\n        window = self._window_for(caller_id)\n        window.prune(now)\n        if window.count() >= self.policy.limit:\n            return False\n        window.record(now)\n        return True\n\n    def retry_after(self, caller_id):\n        \"\"\"Seconds until this caller may try again; 0 if they can go now.\"\"\"\n        now = self.clock.now()\n        window = self._window_for(caller_id)\n        window.prune(now)\n        if window.count() < self.policy.limit:\n            return 0.0\n        return window.oldest() + self.policy.window_seconds - now\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "window.py": "from collections import deque\n\n\nclass SlidingWindowLog:\n    \"\"\"Remembers when one caller's recent requests happened.\"\"\"\n\n    def __init__(self, window_seconds):\n        self.window = window_seconds\n        self._hits = deque()\n\n    def prune(self, now):\n        \"\"\"Forget requests that are no longer inside the window (now - window, now].\"\"\"\n        cutoff = now - self.window\n        if self._hits and self._hits[0] <= cutoff:\n            self._hits.clear()\n\n    def count(self):\n        return len(self._hits)\n\n    def oldest(self):\n        return self._hits[0]\n\n    def record(self, now):\n        self._hits.append(now)\n",
+        "limiter.py": "from window import SlidingWindowLog\n\n\nclass RateLimiter:\n    def __init__(self, clock, policy):\n        self.clock = clock\n        self.policy = policy\n        self._windows = {}\n\n    def _window_for(self, caller_id):\n        if caller_id not in self._windows:\n            self._windows[caller_id] = SlidingWindowLog(self.policy.window_seconds)\n        return self._windows[caller_id]\n\n    def allow(self, caller_id):\n        \"\"\"True and counts the request if the caller is under the limit; False and counts nothing otherwise.\"\"\"\n        now = self.clock.now()\n        window = self._window_for(caller_id)\n        window.prune(now)\n        if window.count() >= self.policy.limit:\n            return False\n        window.record(now)\n        return True\n\n    def retry_after(self, caller_id):\n        \"\"\"Seconds until this caller may try again; 0 if they can go now.\"\"\"\n        now = self.clock.now()\n        window = self._window_for(caller_id)\n        window.prune(now)\n        if window.count() < self.policy.limit:\n            return 0.0\n        return window.oldest() + self.policy.window_seconds - now\n"
+      },
+      "whyWrong": "Clearing the whole log when the oldest request expires turns the sliding window into a fixed window. Requests at t=0, 5 and 9 should leave one free slot at t=10, not three."
+    }
+  ],
+  "transcript": {
+    "kind": "subtle-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "Our limiter lets a caller back in one request late at the window edge, and retry_after returns huge numbers. Please fix both."
+      },
+      {
+        "role": "agent",
+        "text": "Two separate problems. A request exactly `window` seconds old should be treated as expired, so I'll reset the log when the oldest entry has aged out. For retry_after I'll return the time until the oldest request expires.",
+        "fix": {
+          "window.py": "from collections import deque\n\n\nclass SlidingWindowLog:\n    \"\"\"Remembers when one caller's recent requests happened.\"\"\"\n\n    def __init__(self, window_seconds):\n        self.window = window_seconds\n        self._hits = deque()\n\n    def prune(self, now):\n        \"\"\"Forget requests that are no longer inside the window (now - window, now].\"\"\"\n        cutoff = now - self.window\n        if self._hits and self._hits[0] <= cutoff:\n            self._hits.clear()\n\n    def count(self):\n        return len(self._hits)\n\n    def oldest(self):\n        return self._hits[0]\n\n    def record(self, now):\n        self._hits.append(now)\n",
+          "limiter.py": "from window import SlidingWindowLog\n\n\nclass RateLimiter:\n    def __init__(self, clock, policy):\n        self.clock = clock\n        self.policy = policy\n        self._windows = {}\n\n    def _window_for(self, caller_id):\n        if caller_id not in self._windows:\n            self._windows[caller_id] = SlidingWindowLog(self.policy.window_seconds)\n        return self._windows[caller_id]\n\n    def allow(self, caller_id):\n        \"\"\"True and counts the request if the caller is under the limit; False and counts nothing otherwise.\"\"\"\n        now = self.clock.now()\n        window = self._window_for(caller_id)\n        window.prune(now)\n        if window.count() >= self.policy.limit:\n            return False\n        window.record(now)\n        return True\n\n    def retry_after(self, caller_id):\n        \"\"\"Seconds until this caller may try again; 0 if they can go now.\"\"\"\n        now = self.clock.now()\n        window = self._window_for(caller_id)\n        window.prune(now)\n        if window.count() < self.policy.limit:\n            return 0.0\n        return window.oldest() + self.policy.window_seconds - now\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (2 tests)"
+      },
+      {
+        "role": "agent",
+        "text": "Both tests pass, so the boundary and the retry_after value are fixed."
+      }
+    ],
+    "verdict": "The agent only ran the failing tests. Clearing the whole log the moment the oldest request expires turns a sliding window into a fixed one: a caller with requests at t=0, 5 and 9 gets three fresh requests at t=10 instead of one. The regression suite (the window slides) shows it."
+  },
+  "grading": [
+    {
+      "question": "Why must the pruning comparison be <= and not <?",
+      "ideal": "The window is (now - window, now]. A request exactly window seconds old is outside it, so it must be dropped."
+    },
+    {
+      "question": "What is the difference between a sliding window log and a fixed window counter?",
+      "ideal": "A fixed window resets all at once at a boundary; a sliding window drops only the requests that individually aged out."
+    },
+    {
+      "question": "retry_after returned 106 instead of 6. What kind of mistake is that?",
+      "ideal": "Mixing up a timestamp and a duration. The result needs to be relative to now."
+    }
+  ]
+}

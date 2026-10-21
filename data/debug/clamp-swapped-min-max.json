@@ -1,0 +1,63 @@
+{
+  "id": "clamp-swapped-min-max",
+  "title": "clamp always returns the lower bound",
+  "domain": "snippet",
+  "concept": "Swapped min/max nesting",
+  "concepts": [
+    "boundary-conditions"
+  ],
+  "difficulty": 1,
+  "symptom": "clamp(5, 0, 10) returns 0.",
+  "files": {
+    "util.py": "def clamp(x, lo, hi):\n    \"\"\"Limit x to the range lo..hi.\"\"\"\n    return min(lo, max(x, hi))\n"
+  },
+  "failingTest": "import unittest\nfrom util import clamp\n\n\nclass Failing(unittest.TestCase):\n    def test_inside_range(self):\n        self.assertEqual(clamp(5, 0, 10), 5)\n",
+  "regressionTests": "import unittest\nfrom util import clamp\n\n\nclass Regression(unittest.TestCase):\n    def test_below(self):\n        self.assertEqual(clamp(-3, 0, 10), 0)\n\n    def test_above(self):\n        self.assertEqual(clamp(15, 0, 10), 10)\n\n    def test_on_the_edges(self):\n        self.assertEqual(clamp(0, 0, 10), 0)\n        self.assertEqual(clamp(10, 0, 10), 10)\n",
+  "rootCause": "max(x, hi) is always >= hi, and min(lo, ...) is always <= lo, so the result is always lo. The nesting is inside-out.",
+  "correctFix": {
+    "util.py": "def clamp(x, lo, hi):\n    \"\"\"Limit x to the range lo..hi.\"\"\"\n    return max(lo, min(x, hi))\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "util.py": "def clamp(x, lo, hi):\n    \"\"\"Limit x to the range lo..hi.\"\"\"\n    if lo <= x <= hi:\n        return x\n    return lo\n"
+      },
+      "whyWrong": "Returning x when it is in range fixes the visible case, but anything above hi now returns lo instead of hi."
+    }
+  ],
+  "transcript": {
+    "kind": "correct",
+    "turns": [
+      {
+        "role": "user",
+        "text": "clamp(5, 0, 10) returns 0. Why?"
+      },
+      {
+        "role": "agent",
+        "text": "max(x, hi) is at least hi, so min(lo, that) is always lo. The nesting is inverted. It should be max(lo, min(x, hi)). I'll apply that and check both ends of the range.",
+        "fix": {
+          "util.py": "def clamp(x, lo, hi):\n    \"\"\"Limit x to the range lo..hi.\"\"\"\n    return max(lo, min(x, hi))\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (1 test)\ntest_regression: OK (3 tests)"
+      },
+      {
+        "role": "agent",
+        "text": "Both suites pass, including below-range, above-range and the exact edges."
+      }
+    ],
+    "verdict": "A good session: the agent states the root cause, makes a one-line fix, and runs the regression suite covering both bounds rather than stopping at the failing test."
+  },
+  "grading": [
+    {
+      "question": "Why is the result always lo?",
+      "ideal": "max(x, hi) >= hi, then min(lo, that) <= lo, and lo <= hi makes it exactly lo."
+    },
+    {
+      "question": "Which two extra inputs prove a clamp correct?",
+      "ideal": "One below lo and one above hi."
+    }
+  ]
+}

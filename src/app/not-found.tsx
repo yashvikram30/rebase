@@ -14,11 +14,9 @@ export default function NotFound() {
       <article>
         <p className="nf-eyebrow">404</p>
         <h1>That page does not exist</h1>
-        <p className="lead">
-          The link may be old, or the day number may be out of range. The plan has 16 weeks of 4 days each.
-        </p>
+        <p className="lead">The link may be old or mistyped.</p>
         <p className="nf-actions">
-          <Link className="btn primary" href="/">
+          <Link className="btn primary" href="/learn">
             Go to Today
           </Link>
           <Link className="btn" href="/plan">
