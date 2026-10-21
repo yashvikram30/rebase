@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { WorkbenchScenario } from "@/lib/debug";
 import { runCode, runSuite, type SuiteResult } from "@/lib/debug-sandbox";
@@ -9,6 +9,7 @@ import { diffStats, lineDiff } from "@/lib/line-diff";
 import {
   clearDraft,
   getChat,
+  resetChatLog,
   recordEvent,
   useChats,
   saveDraft,
@@ -100,6 +101,11 @@ export function Workbench({ scenario }: { scenario: WorkbenchScenario }) {
     : "";
 
   // The first time a case is opened, the timeline starts.
+  // Opening a case starts a fresh conversation with the assistant (before paint, so old messages never flash).
+  useLayoutEffect(() => {
+    resetChatLog(scenario.id);
+  }, [scenario.id]);
+
   useEffect(() => {
     if (!getChat(scenario.id)?.events.length) recordEvent(scenario.id, { at: Date.now(), type: "open" });
   }, [scenario.id]);

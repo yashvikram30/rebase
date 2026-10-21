@@ -7,12 +7,16 @@ Practice for AI-enabled engineering interviews, and a free 16-week course on how
 
 Progress, revision cards and notes live in your browser first, and sync to your account if you sign in.
 
+[![Rebase promo preview](docs/promo.gif)](video/renders/video.mp4)
+
+_Click the preview to open the full 26-second promo ([video/renders/video.mp4](video/renders/video.mp4))._
+
 ## Debug
 
 - **Cases** is a table you can search and filter by topic, difficulty and status, with solved progress for Easy, Medium and Hard.
 - **Workbench:** a CodeMirror editor, a test runner (the failing test and a hidden regression suite), a terminal and a diff of your changes. Python runs in the browser, so nothing you write runs on the server.
 - **Review mode:** read what an agent did, run its patch against both suites, then approve or request changes. The answer is revealed afterwards.
-- **Assistant:** a limited chat (12 messages and 45 minutes a round). It answers only what you ask, uses only that case's code and test output, and gets slightly more specific each time you ask for help, but never writes the fix. Greetings get a short reply with no code. Each time you open the panel the log starts clean; earlier messages are kept for the review.
+- **Assistant:** a limited chat (12 messages and 45 minutes a round). It answers only what you ask, uses only that case's code and test output, and gets slightly more specific each time you ask for help, but never writes the fix. Greetings get a short reply with no code. Each time you open a case the conversation starts fresh, for you and for the assistant (the hint level resets too). The message budget of the round and the timeline used for the review are kept.
 - **Mentor report:** after you finish a round, a reviewer reads the chat, the timeline and what you changed and writes feedback.
 - **Random draw:** a case with its title and topic hidden until you finish.
 
@@ -40,7 +44,7 @@ The course content works without any configuration. Signing in, sync and the Deb
 | `TOKEN_REVIEW_MODEL`                   | Optional. The model for the mentor report                                            |
 | `DEBUG_DAILY_TOKEN_BUDGET`             | Optional. Tokens the assistant may use per UTC day, across everyone (default 400000) |
 
-Both `AUTH_SECRET` and `TOKEN_API_KEY` must be set for the assistant. Without them the chat says "Agent chat is not configured." On a host such as Vercel, set the variables for the right environment and redeploy, since changes only apply to new deployments.
+Of the `TOKEN_*` variables only `TOKEN_API_KEY` is needed; the rest have defaults. `AUTH_SECRET` and `TOKEN_API_KEY` must both be set for the assistant. Without them the chat says "Agent chat is not configured." On a host such as Vercel, set the variables for the right environment and redeploy, since changes only apply to new deployments.
 
 If `mongodb+srv://` fails locally with `querySrv EREFUSED`, your network's DNS is refusing SRV lookups. Switch to a public DNS server (8.8.8.8 or 1.1.1.1), or use Atlas's standard `mongodb://` connection string. The assistant needs MongoDB for its message limits, so it shows "temporarily unavailable" while this is broken.
 
