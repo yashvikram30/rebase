@@ -25,12 +25,17 @@ synced for signed-in users.
   that pitches Rebase: a hero that asks the visitor to judge a real agent patch (`PatchReview`, built from the
   `account-lost-update` case), a continue block for returning visitors, counts read from the content, one row each
   for Learn and Debug, a course map and a footer.
-- **[built] Inside the app, one left sidebar is the only navigation (`AppSidebar`).** It lists both products and
-  their pages (Learn: Today, Course, Revise, Notes, Schedule; Debug: Cases, Random round), shows the course outline
-  under Course on course pages, and keeps search, focus mode, theme and account at the bottom. On narrow screens a
-  slim top bar (`MobileBar`) opens it as a drawer. `AppShell` (Learn) and `BareShell` (Debug, account) both use it.
-  - Rejected: header tabs for Learn and Debug with a second row of page links. Three navigation surfaces (tabs,
-    sub-nav, course tree) and 100px of header for a two-product app. A dropdown switcher before that hid the choice.
+- **[built] Inside the app, one sidebar is the only navigation (`AppSidebar`), and it is a drawer on every screen
+  size.** It lists both products and their pages (Learn: Today, Course, Revise, Notes, Schedule; Debug: Cases,
+  Random round), shows the course outline under Course on course pages, and keeps search, focus mode, theme and
+  account at the bottom. The slim top bar (`MobileBar`) now shows everywhere: brand on the left, account menu and the
+  hamburger on the right. The hamburger opens the sidebar from the right edge over a blurred scrim; it closes on
+  navigation or Esc. `AppShell` (Learn) and `BareShell` (Debug, account) both use it. The drawer CSS is the last
+  block of `theme.css`.
+  - Chosen over a permanent sidebar after trying both with a switch: the content and the "On this page" column get
+    about 280px more width, at the cost of one extra click to reach the course outline.
+  - Rejected: header tabs for Learn and Debug with a second row of page links (three navigation surfaces and 100px
+    of header for a two-product app), and a dropdown switcher (it hid the choice).
 - **[built] Learn has no landing page of its own.** "Start the course" on the home page goes to the course overview
   (`/plan`), which leads with "Pick your start date". `/learn` is the Today dashboard, or a short "not started yet"
   state with the same actions. Picking a date no longer forces sign-in; guests keep the plan in this browser.
@@ -52,6 +57,12 @@ synced for signed-in users.
   - Route params are async (`PageProps<"/route">`), and typed routes come from `next typegen`. Stale generated types
     in `.next/dev/types` must be cleared after moving routes.
   - Route handlers use POST (never cached), and `maxDuration` is set on the model-calling routes.
+- **[built] Only the first two weeks of lesson pages are prerendered** (`PRERENDER_WEEKS` in `src/lib/day-steps.ts`,
+  used by `generateStaticParams` for `/day/[n]/[d]` and `/day/[n]/[d]/[step]`). Prerendering every day left about
+  234 MB of server output per build (about 173 MB for `/day`: roughly 320 step pages and 64 day pages at about
+  170 KB of HTML each, plus RSC and segment files), and Vercel keeps a copy for every deployment, which added up to
+  about 4.9 GB. With two weeks prerendered the output is about 87 MB (`/day` 22 MB). Later days render on first
+  visit and are then cached. Deployment retention in Vercel should also be set to a short window.
 
 ## 1a. Visual design
 
@@ -151,6 +162,12 @@ synced for signed-in users.
 - **[built] Solved means both suites pass,** and only the first solve time is stored.
 - **[built] Line diff** is a longest-common-subsequence over lines (`src/lib/line-diff.ts`), collapsed to the
   changed lines plus two lines of context. It is quadratic, which is fine for files this small.
+- **[built] The case list is a LeetCode-style table** (`DebugList`): a summary row (solved count and Easy, Medium,
+  Hard progress), a toolbar (search, topic, difficulty and status filters, Next case, Random) and one compact row per
+  case with status, number, title, topic, difficulty and a Review link. Difficulty 1-3 shows as Easy, Medium, Hard;
+  the symptom text is a tooltip on the title so the list does not spoil the case. The filters are a custom
+  `Select` (button plus listbox, arrow keys, Esc, click outside) styled with the site tokens instead of the native
+  control. The "Ways to practice" section was removed.
 - **[built] Review mode** runs the agent's patch against both suites, then collects an Approve or Request changes
   verdict. The answer is revealed by server action after that.
 
@@ -198,9 +215,25 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
 
   Counters are fixed-window buckets (`{_id: key:bucket, n}`) with expiry indexes.
 
-- **[built] Patch gating has two layers.** The system prompt withholds fixes until a hypothesis exists, and in the
-  explore phase the server also strips any patch block the model sends (`withholdPatches`). The prompt layer can be
-  talked around, which is acceptable for self-practice.
+- **[built] The assistant gives hints, never fixes.** Two layers again: the prompt, and the server.
+  - _Prompt_ (`src/lib/debug-agent.ts`): answer only what the last message asks (no unprompted analysis); use only
+    the bug report, failing test, files, test output and the conversation; decline off-topic requests in one
+    sentence; never write corrected code, a patch or the replacement for a line, and never state the root cause so
+    plainly that the fix is obvious. Replies are about 80 words, no lists, at most one question.
+  - _Hint ladder:_ the number of real questions the candidate has asked (greetings and thanks are not counted, see
+    `isSmallTalk`) sets a ceiling on what may be revealed: 1 what the test expects versus what happens, 2 the file or
+    function involved, 3 the kind of mistake and what to trace, 4 which part deserves the closest look. The ceiling
+    applies only when they ask for help.
+  - _Greetings:_ when the last message is only small talk, the model gets a minimal prompt with no code, test or bug
+    report, so it cannot volunteer anything.
+  - _Hypothesis box:_ "Check my hypothesis" sends the phase `fix` with the hypothesis; the assistant says whether it
+    holds and what to re-check, without writing the change.
+  - _Server:_ `withholdPatches` removes every patch block and every fenced block longer than 4 lines from every
+    reply, in both phases. The prompt layer can be talked around, which is acceptable for self-practice; the server
+    layer is what guarantees no fix reaches the page. The Apply patch UI remains for older recorded sessions.
+- **[built] The chat log starts clean each time the panel is opened.** `ChatPanel` shows only messages stamped after
+  it mounted. Earlier messages stay in the store for the end-of-round review and still count towards the hint level
+  and the history sent to the model.
 - **[built] Fixed reply caps** (`src/lib/llm-limits.ts`, constants, not settings, never read from a request): chat
   1,000 tokens and 4,000 characters; the reviewer 4,000 tokens and 16,000 characters. **Measured:** the gateway
   applies `max_tokens` to the visible answer only, and thinking can exceed it (one reply used 1,268 tokens against
@@ -211,8 +244,8 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
   429 and 5xx return a "not counted, try again" message; each refunds the message. With no key the route answers 503.
 - **[built] Replies are not streamed.** It keeps the caps and the tests simple, and a typical reply takes 3 to 10
   seconds.
-- **[built] Conversation sent to the model:** a system message (rules for the phase, bug report, failing test,
-  current files, latest test output) plus the last 10 turns, each clipped to 3,000 characters.
+- **[built] Conversation sent to the model:** a system message (rules, hint level, hypothesis state, bug report,
+  failing test, current files, latest test output) plus the last 10 turns, each clipped to 3,000 characters.
 
 ## 8. The mentor report
 
@@ -313,6 +346,18 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
 ---
 
 ## Changelog
+
+- **2026-10-22:** Docs refreshed after deploying `v2`: README rewritten for Rebase, decisions updated for the
+  drawer sidebar, the case table, the hint-only assistant, the clean chat log and the prerender limit.
+- **2026-10-22:** Assistant answers only what was asked; greetings get a code-free prompt; the chat log starts clean
+  each time the panel is opened (earlier messages are kept for the review).
+- **2026-10-22:** Lesson prerendering limited to the first two weeks, cutting a build's server output from about
+  234 MB to 87 MB.
+- **2026-10-21:** The assistant became hint-only with four escalating levels; every patch and long code block is
+  stripped on the server. "Ask for a patch" became "Check my hypothesis".
+- **2026-10-21:** The sidebar became a right-side drawer on all screen sizes. The Debug case list became a table with
+  custom dropdown filters, and "Ways to practice" was removed. The landing page gained a "How a debugging round
+  goes" section.
 
 - **2026-10-19:** Debug library grew from 26 to 35 cases modelled on reported interview bugs; all 35 now have an
   agent session, checked by a new test. Two symptoms rewritten as real reports. The home hero was cut to one
