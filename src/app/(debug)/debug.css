@@ -1184,3 +1184,163 @@
 .dl-select-list li[aria-selected="true"] {
   color: var(--accent-text);
 }
+
+/* ---------- report skeleton: mirrors the real report while the review is written ---------- */
+.rsk-status {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  margin: 8px 0 14px;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+}
+.rsk-spin {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--line-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: rsk-spin 0.9s linear infinite;
+}
+.rsk-title {
+  margin: 0;
+  font: 700 18px var(--display);
+}
+.rsk-sub {
+  margin: 2px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+.rsk-steps {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 26px;
+  padding: 0;
+  list-style: none;
+  font-size: 15px;
+  color: var(--muted);
+}
+.rsk-steps li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0.55;
+  animation: rsk-step 0.5s ease forwards;
+  animation-delay: calc(var(--i) * 4s + 0.3s);
+}
+.rsk-tick {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--line-strong);
+  border-radius: 50%;
+}
+.rsk-steps li:not(:last-child) .rsk-tick {
+  animation: rsk-tick 0.4s ease forwards;
+  animation-delay: calc(var(--i) * 4s + 4s);
+}
+@keyframes rsk-step {
+  to {
+    opacity: 1;
+    color: var(--text);
+  }
+}
+@keyframes rsk-tick {
+  to {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+}
+@keyframes rsk-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.rsk-bar,
+.rsk-pill,
+.rsk-diff i {
+  position: relative;
+  display: block;
+  height: 12px;
+  margin: 8px 0;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--text) 9%, transparent);
+  overflow: hidden;
+}
+.rsk-bar::after,
+.rsk-pill::after,
+.rsk-diff i::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--text) 14%, transparent),
+    transparent
+  );
+  animation: rsk-shimmer 1.6s ease-in-out infinite;
+}
+@keyframes rsk-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+.rsk-lead .rsk-bar {
+  height: 16px;
+}
+.rsk-pill {
+  width: 96px;
+  height: 24px;
+  border-radius: 999px;
+}
+.rsk .dbg-dim {
+  opacity: 0;
+  animation: rsk-in 0.5s ease forwards;
+  animation-delay: calc(var(--i) * 120ms + 0.2s);
+}
+@keyframes rsk-in {
+  to {
+    opacity: 1;
+  }
+}
+.rsk-diff {
+  padding: 12px 16px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--code-bg);
+}
+.rsk-diff span {
+  display: block;
+  padding: 0 6px;
+  border-radius: 4px;
+}
+.rsk-diff span.is-add {
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+}
+.rsk-cards {
+  display: grid;
+  gap: 12px;
+}
+.rsk-card {
+  padding: 14px 16px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+@media (prefers-reduced-motion: reduce) {
+  .rsk-spin,
+  .rsk-bar::after,
+  .rsk-pill::after,
+  .rsk-diff i::after {
+    animation: none;
+  }
+  .rsk-steps li,
+  .rsk .dbg-dim {
+    animation-duration: 0.01s;
+    animation-delay: 0s;
+  }
+}

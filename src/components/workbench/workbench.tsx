@@ -1,7 +1,15 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { useRouter } from "next/navigation";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type CSSProperties,
+} from "react";
+import { toggleTheme } from "@/components/theme-toggle";
 import type { WorkbenchScenario } from "@/lib/debug";
 import { runCode, runSuite, type SuiteResult } from "@/lib/debug-sandbox";
 import { recordSolve } from "@/lib/debug-store";
@@ -21,6 +29,7 @@ import {
 import { Diff, TestRun } from "../debug/results";
 import { ChatPanel } from "./chat-panel";
 import { FinishDialog } from "./finish-dialog";
+import { MoreMenu, RunSplit } from "./title-menus";
 import { Editor } from "./editor";
 import { Splitter } from "./splitter";
 import { Terminal } from "./terminal";
@@ -59,6 +68,7 @@ function useElapsed(started: number) {
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
 export function Workbench({ scenario }: { scenario: WorkbenchScenario }) {
+  const router = useRouter();
   const srcFiles = Object.keys(scenario.files);
   const draft = useDrafts()[scenario.id];
   const [edits, setEdits] = useState<Record<string, string> | null>(null);
@@ -241,52 +251,36 @@ export function Workbench({ scenario }: { scenario: WorkbenchScenario }) {
         </button>
         <button
           type="button"
-          className="wb-btn is-primary"
-          onClick={() => void run(false)}
-          disabled={!!running}
-          title="Run the failing test (Ctrl+Enter)"
-        >
-          Run failing test
-        </button>
-        <button
-          type="button"
-          className="wb-btn"
-          onClick={() => void run(true)}
-          disabled={!!running}
-          title="Run all tests (Ctrl+Shift+Enter)"
-        >
-          Run all tests
-        </button>
-        <button type="button" className="wb-btn" onClick={resetCase}>
-          {confirmReset ? "Click again to reset" : "Reset case"}
-        </button>
-        <button
-          type="button"
-          className="wb-btn is-icon"
-          onClick={toggleFullscreen}
-          aria-label="Toggle full screen"
-          title="Full screen"
-        >
-          ⤢
-        </button>
-        {hasReport && (
-          <Link className="wb-btn" href={`/debug/${scenario.id}/report`}>
-            View report
-          </Link>
-        )}
-        <button type="button" className="wb-btn" onClick={() => setFinishing(true)}>
-          Finish round
-        </button>
-        <button
-          type="button"
-          className="wb-btn"
+          className="wb-tool"
           aria-pressed={chatOpen}
           onClick={() => setChatOpen((o) => !o)}
           title="Show or hide the assistant"
         >
           Assistant
         </button>
-        <ThemeToggle />
+        <MoreMenu
+          items={[
+            {
+              label: confirmReset ? "Click again to reset" : "Reset case",
+              onSelect: resetCase,
+              keepOpen: !confirmReset,
+            },
+            { label: "Full screen", onSelect: toggleFullscreen },
+            ...(hasReport
+              ? [{ label: "View report", onSelect: () => router.push(`/debug/${scenario.id}/report`) }]
+              : []),
+            { label: "Switch theme", onSelect: toggleTheme },
+          ]}
+        />
+        <RunSplit disabled={!!running} onRun={() => void run(false)} onRunAll={() => void run(true)} />
+        <button
+          type="button"
+          className="wb-btn is-submit"
+          onClick={() => setFinishing(true)}
+          title="Submit your solution and get a review"
+        >
+          Submit
+        </button>
       </header>
 
       <div className="wb-mtabs" role="tablist" aria-label="Workbench views">
