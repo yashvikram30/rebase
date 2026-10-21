@@ -3,9 +3,7 @@
   "title": "Events that arrive late land in the wrong minute",
   "domain": "pipeline",
   "concept": "Event time versus processing time in windowed aggregation",
-  "concepts": [
-    "event-time-watermark"
-  ],
+  "concepts": ["event-time-watermark"],
   "difficulty": 3,
   "symptom": "Mobile clients upload their clicks in bursts when they get signal. The per-window dashboard shows a spike in whatever window the upload happened to arrive in, and gaps where the clicks really occurred.",
   "files": {

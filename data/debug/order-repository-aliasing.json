@@ -3,11 +3,8 @@
   "title": "A failed order update changes the saved order anyway",
   "domain": "oop",
   "concept": "Repositories must not hand out their own mutable state",
-  "concepts": [
-    "aliasing-mutable-state",
-    "defensive-copying"
-  ],
-  "difficulty": 3,
+  "concepts": ["aliasing-mutable-state", "defensive-copying"],
+  "difficulty": 2,
   "symptom": "OrderService.add_item rejects an item that pushes the order over the limit and raises InvalidOrder. But when you read the order back, the rejected item is in it, as if the update had half happened.",
   "files": {
     "models.py": "from dataclasses import dataclass, field\nfrom typing import List\n\n\n@dataclass\nclass LineItem:\n    sku: str\n    unit_price_cents: int\n    quantity: int = 1\n\n    @property\n    def total_cents(self):\n        return self.unit_price_cents * self.quantity\n\n\n@dataclass\nclass Order:\n    order_id: str\n    items: List[LineItem] = field(default_factory=list)\n    discount_cents: int = 0\n    status: str = \"open\"\n\n    @property\n    def subtotal_cents(self):\n        return sum(item.total_cents for item in self.items)\n\n    @property\n    def total_cents(self):\n        return self.subtotal_cents - self.discount_cents\n",

@@ -3,10 +3,8 @@
   "title": "Every player gets the same cards",
   "domain": "simulation",
   "concept": "Aliased mutable objects from list multiplication",
-  "concepts": [
-    "aliasing-mutable-state"
-  ],
-  "difficulty": 2,
+  "concepts": ["aliasing-mutable-state"],
+  "difficulty": 1,
   "symptom": "Dealing 2 cards each to 2 players prints [[9, 8, 7, 6], [9, 8, 7, 6]]. The deck does shrink by 4 as expected.",
   "files": {
     "cards.py": "def deal(deck, n_players, cards_each):\n    \"\"\"Deal cards_each cards to every player from the top (end) of the deck.\n\n    Dealt cards are removed from deck. Cards go round the table one at a time.\n    \"\"\"\n    hands = [[]] * n_players\n    for _ in range(cards_each):\n        for p in range(n_players):\n            hands[p].append(deck.pop())\n    return hands\n"

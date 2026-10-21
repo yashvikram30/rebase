@@ -1,0 +1,61 @@
+{
+  "id": "gradebook-three-bugs",
+  "title": "The gradebook gets three things wrong",
+  "domain": "snippet",
+  "concept": "Several unrelated bugs: empty input, inclusive boundaries and sort order with ties",
+  "concepts": ["boundary-conditions", "edge-case-testing"],
+  "difficulty": 1,
+  "symptom": "Three reports came in for the gradebook: an empty class crashes the report, a student with exactly 90 gets a B, and the 'top students' list shows the lowest scores.",
+  "files": {
+    "gradebook.py": "def average(scores):\n    return sum(scores) / len(scores)\n\n\ndef letter(avg):\n    if avg > 90:\n        return \"A\"\n    if avg > 80:\n        return \"B\"\n    if avg > 70:\n        return \"C\"\n    if avg > 60:\n        return \"D\"\n    return \"F\"\n\n\ndef top_n(students, n):\n    ranked = sorted(students.items(), key=lambda kv: kv[1])\n    return [name for name, _ in ranked[:n]]\n"
+  },
+  "failingTest": "import unittest\nfrom gradebook import average, letter, top_n\n\n\nclass Failing(unittest.TestCase):\n    def test_empty_class_average_is_zero(self):\n        self.assertEqual(average([]), 0)\n\n    def test_boundary_scores_get_the_higher_grade(self):\n        self.assertEqual(letter(90), \"A\")\n        self.assertEqual(letter(80), \"B\")\n        self.assertEqual(letter(70), \"C\")\n        self.assertEqual(letter(60), \"D\")\n\n    def test_top_students_are_the_highest(self):\n        scores = {\"ann\": 90, \"bo\": 70, \"cy\": 80}\n        self.assertEqual(top_n(scores, 2), [\"ann\", \"cy\"])\n",
+  "regressionTests": "import unittest\nfrom gradebook import average, letter, top_n\n\n\nclass Regression(unittest.TestCase):\n    def test_average(self):\n        self.assertEqual(average([80, 90, 100]), 90)\n\n    def test_just_below_a_boundary_stays_lower(self):\n        self.assertEqual(letter(89.9), \"B\")\n        self.assertEqual(letter(59.9), \"F\")\n        self.assertEqual(letter(95), \"A\")\n\n    def test_ties_are_listed_alphabetically(self):\n        scores = {\"b\": 70, \"a\": 70, \"c\": 50}\n        self.assertEqual(top_n(scores, 2), [\"a\", \"b\"])\n\n    def test_n_larger_than_the_class(self):\n        self.assertEqual(top_n({\"a\": 1}, 5), [\"a\"])\n",
+  "rootCause": "There are three independent bugs. average() divides by len() with no empty-list guard. letter() uses > where the boundaries are inclusive. top_n() sorts ascending, so it returns the lowest scores, and it never defines an order for ties.",
+  "correctFix": {
+    "gradebook.py": "def average(scores):\n    if not scores:\n        return 0\n    return sum(scores) / len(scores)\n\n\ndef letter(avg):\n    if avg >= 90:\n        return \"A\"\n    if avg >= 80:\n        return \"B\"\n    if avg >= 70:\n        return \"C\"\n    if avg >= 60:\n        return \"D\"\n    return \"F\"\n\n\ndef top_n(students, n):\n    ranked = sorted(students.items(), key=lambda kv: (-kv[1], kv[0]))\n    return [name for name, _ in ranked[:n]]\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "gradebook.py": "def average(scores):\n    if not scores:\n        return 0\n    return sum(scores) / len(scores)\n\n\ndef letter(avg):\n    if avg >= 90:\n        return \"A\"\n    if avg >= 80:\n        return \"B\"\n    if avg >= 70:\n        return \"C\"\n    if avg >= 60:\n        return \"D\"\n    return \"F\"\n\n\ndef top_n(students, n):\n    ranked = sorted(students.items(), key=lambda kv: kv[1], reverse=True)\n    return [name for name, _ in ranked[:n]]\n"
+      },
+      "whyWrong": "reverse=True fixes the direction, but sorted() is stable, so tied students come out in whatever order the dict happened to have instead of alphabetically."
+    }
+  ],
+  "transcript": {
+    "kind": "confident-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "Three tests fail in the gradebook. Fix them."
+      },
+      {
+        "role": "agent",
+        "text": "Three separate issues. average() needs an empty guard, letter() should use >=, and top_n() sorts the wrong way round, so I'll add reverse=True.",
+        "fix": {
+          "gradebook.py": "def average(scores):\n    if not scores:\n        return 0\n    return sum(scores) / len(scores)\n\n\ndef letter(avg):\n    if avg >= 90:\n        return \"A\"\n    if avg >= 80:\n        return \"B\"\n    if avg >= 70:\n        return \"C\"\n    if avg >= 60:\n        return \"D\"\n    return \"F\"\n\n\ndef top_n(students, n):\n    ranked = sorted(students.items(), key=lambda kv: kv[1], reverse=True)\n    return [name for name, _ in ranked[:n]]\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (3 tests)"
+      },
+      {
+        "role": "agent",
+        "text": "All three are fixed and the failing suite is green. Nothing else is affected."
+      }
+    ],
+    "verdict": "Every reported symptom is fixed, but top_n now returns tied students in dictionary order. 'Nothing else is affected' was never checked against the regression suite, which has a tie case."
+  },
+  "grading": [
+    {
+      "question": "Why did three tests fail at once?",
+      "ideal": "They are three independent bugs, not one cause. Each needed its own diagnosis."
+    },
+    {
+      "question": "Why is reverse=True not enough for top_n?",
+      "ideal": "Equal scores keep their original order, so the result depends on dict order instead of a rule such as alphabetical."
+    }
+  ]
+}

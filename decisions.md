@@ -104,6 +104,19 @@ synced for signed-in users.
 - **[built] Every case has a recorded agent session** for review mode. About a quarter are sound fixes (the agent
   runs both suites) and the rest stop at the first green test, so a reviewer cannot score well by always rejecting.
   A test checks that the agent's final patch passes both suites exactly when the session's kind is `correct`.
+- **[built] Multi-bug cases.** Seven cases (`*-three-bugs`) put three independent bugs in one small module, with
+  one failing test per bug, so the workbench shows "0 of 3 passed" and the candidate has to work through them one at
+  a time, as in the CoderPad rounds candidates describe (a codebase that starts with several failing tests, where
+  fixing one often exposes the next). The wrong fix for each fixes every failing test but breaks a regression test,
+  and an agent session that fixes only two of three and explains the third away is one of the recorded patterns.
+  The three-way check in `scripts/debug.test.ts` is unchanged, and each case was also checked to fail every one of
+  its three tests on the buggy code.
+- **[built] Difficulty rubric** (`difficulty` 1 to 3, shown as Easy, Medium, Hard). Easy: one idea, one or two small
+  files, the cause is findable by reading the code or the test. Medium: tracing state across files, domain
+  knowledge (timezones, rounding, pagination, caches) or several independent bugs. Hard: interleavings or timing
+  across components (races, deadlocks, rate limits, event time), where the obvious fix passes the visible test. The
+  42 cases are 16 easy, 21 medium and 5 hard; 15 were re-rated down in October 2026 (for example the string-flag,
+  late-binding and paginator cases to easy, and keyset pagination, LRU and the aliasing repository to medium).
 - **[built] Concept tags map to course days** (`src/data/debug-concepts.ts`). Each link names a slot
   (`main`, `engineering`, `dsa`). A test checks that every day exists and that the slot has a title. DSA links are
   dropped while `DSA_ENABLED` is false, and a concept left with no visible link is omitted, so no one is sent to a
@@ -348,6 +361,10 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
 ---
 
 ## Changelog
+
+- **2026-10-22:** Debug library grew from 35 to 42 cases: seven multi-bug cases (three failing tests each, found
+  by reviewing how the AI-enabled rounds present failing codebases). All 42 were re-rated against the rubric in
+  section 2: 16 easy, 21 medium, 5 hard.
 
 - **2026-10-22:** Workbench title bar reorganised: back link and title on the left; timer, Assistant toggle and a
   more menu (reset, full screen, view report, theme) in the middle; Run (with run-all behind its arrow) and Submit

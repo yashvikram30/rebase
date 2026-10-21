@@ -3,10 +3,7 @@
   "title": "One tenant's signups show up in another tenant's audit log",
   "domain": "oop",
   "concept": "Mutable class attributes are shared by every instance",
-  "concepts": [
-    "aliasing-mutable-state",
-    "python-defaults"
-  ],
+  "concepts": ["aliasing-mutable-state", "python-defaults"],
   "difficulty": 2,
   "symptom": "Each tenant has its own EventBus. But when acme signs a user up, globex's audit log records it too, and globex starts sending welcome emails it never turned on.",
   "files": {

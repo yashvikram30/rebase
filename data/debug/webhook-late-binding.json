@@ -3,11 +3,8 @@
   "title": "Every webhook goes to the last customer",
   "domain": "oop",
   "concept": "Closures capture variables, not values",
-  "concepts": [
-    "closures-late-binding",
-    "regression-testing"
-  ],
-  "difficulty": 2,
+  "concepts": ["closures-late-binding", "regression-testing"],
+  "difficulty": 1,
   "symptom": "Acme says it stopped receiving order webhooks this morning, and Globex is asking why it gets Acme's orders. Both were registered in the same batch; Globex was the last customer in it.",
   "files": {
     "hooks.py": "class Dispatcher:\n    \"\"\"Sends each customer's events to that customer's webhook URL.\"\"\"\n\n    def __init__(self, send):\n        self.send = send  # send(url, event): makes the HTTP request\n        self.handlers = {}\n\n    def register(self, customers):\n        \"\"\"Add webhooks for (customer_id, url) pairs. Called again whenever customers sign up.\"\"\"\n        for customer_id, url in customers:\n            self.handlers[customer_id] = lambda event: self.send(url, event)\n\n    def dispatch(self, customer_id, event):\n        self.handlers[customer_id](event)\n"

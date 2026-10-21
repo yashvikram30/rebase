@@ -3,10 +3,7 @@
   "title": "find_path returns the route backwards",
   "domain": "graph",
   "concept": "Parent-pointer path reconstruction",
-  "concepts": [
-    "shortest-path-bfs",
-    "path-reconstruction"
-  ],
+  "concepts": ["shortest-path-bfs", "path-reconstruction"],
   "difficulty": 2,
   "symptom": "The delivery robot is being sent routes that start at the destination, and the square it is standing on is missing from them. Unreachable destinations are handled correctly: the planner says there is no route.",
   "files": {

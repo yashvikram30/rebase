@@ -3,12 +3,7 @@
   "title": "has_path crashes on some mazes",
   "domain": "graph",
   "concept": "DFS needs a visited set on graphs with cycles",
-  "concepts": [
-    "graph-traversal",
-    "visited-set",
-    "recursion-call-stack",
-    "global-state"
-  ],
+  "concepts": ["graph-traversal", "visited-set", "recursion-call-stack", "global-state"],
   "difficulty": 1,
   "symptom": "has_path works on a few hand-made corridors, but on a 3x4 grid where the goal is walled off it dies with RecursionError instead of returning False.",
   "files": {

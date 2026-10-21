@@ -1,0 +1,61 @@
+{
+  "id": "csv-importer-three-bugs",
+  "title": "The CSV import mangles quoted names, headers and blank lines",
+  "domain": "pipeline",
+  "concept": "Hand-rolled CSV parsing: quoting, header normalisation and blank lines",
+  "concepts": ["edge-case-testing", "config-parsing"],
+  "difficulty": 1,
+  "symptom": "Importing the supplier file gives three problems: 'Smith, Jane' is split into two columns, the 'Name ' header with a trailing space can't be looked up as 'name', and the blank line at the end of the file becomes an empty record.",
+  "files": {
+    "importer.py": "def parse_header(line):\n    return [h for h in line.split(\",\")]\n\n\ndef parse_rows(text):\n    lines = text.split(\"\\n\")\n    header = parse_header(lines[0])\n    rows = []\n    for line in lines[1:]:\n        cells = line.split(\",\")\n        rows.append(dict(zip(header, cells)))\n    return rows\n"
+  },
+  "failingTest": "import unittest\nfrom importer import parse_rows\n\n\nclass Failing(unittest.TestCase):\n    def test_quoted_commas_stay_in_one_cell(self):\n        rows = parse_rows('name,city\\n\"Smith, Jane\",Oslo')\n        self.assertEqual(rows, [{\"name\": \"Smith, Jane\", \"city\": \"Oslo\"}])\n\n    def test_headers_are_trimmed_and_lowercased(self):\n        rows = parse_rows(\"Name ,City\\nAda,Rome\")\n        self.assertEqual(rows, [{\"name\": \"Ada\", \"city\": \"Rome\"}])\n\n    def test_a_trailing_blank_line_is_not_a_record(self):\n        rows = parse_rows(\"name\\nAda\\n\")\n        self.assertEqual(rows, [{\"name\": \"Ada\"}])\n",
+  "regressionTests": "import unittest\nfrom importer import parse_rows\n\n\nclass Regression(unittest.TestCase):\n    def test_plain_rows(self):\n        rows = parse_rows(\"a,b\\n1,2\\n3,4\")\n        self.assertEqual(rows, [{\"a\": \"1\", \"b\": \"2\"}, {\"a\": \"3\", \"b\": \"4\"}])\n\n    def test_whitespace_only_lines_are_skipped_too(self):\n        self.assertEqual(parse_rows(\"a\\nx\\n   \\ny\"), [{\"a\": \"x\"}, {\"a\": \"y\"}])\n\n    def test_empty_cells_are_kept(self):\n        self.assertEqual(parse_rows(\"a,b\\n1,\"), [{\"a\": \"1\", \"b\": \"\"}])\n",
+  "rootCause": "Three independent bugs from parsing CSV by hand. split(',') cannot see quotes, so a comma inside a quoted cell starts a new column. Header names are used as typed, with stray spaces and capitals. Nothing skips blank lines, so a trailing newline becomes a row with no data.",
+  "correctFix": {
+    "importer.py": "import csv\n\n\ndef parse_header(line):\n    return [h.strip().lower() for h in next(csv.reader([line]))]\n\n\ndef parse_rows(text):\n    lines = text.split(\"\\n\")\n    header = parse_header(lines[0])\n    rows = []\n    for line in lines[1:]:\n        if not line.strip():\n            continue\n        cells = next(csv.reader([line]))\n        rows.append(dict(zip(header, cells)))\n    return rows\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "importer.py": "import csv\n\n\ndef parse_header(line):\n    return [h.strip().lower() for h in next(csv.reader([line]))]\n\n\ndef parse_rows(text):\n    lines = text.split(\"\\n\")\n    header = parse_header(lines[0])\n    rows = []\n    for line in lines[1:]:\n        if not line:\n            continue\n        cells = next(csv.reader([line]))\n        rows.append(dict(zip(header, cells)))\n    return rows\n"
+      },
+      "whyWrong": "`if not line` only catches a completely empty line. A line holding spaces is still truthy, so it is parsed into a bogus record."
+    }
+  ],
+  "transcript": {
+    "kind": "subtle-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "Import is broken for the supplier file, three tests fail."
+      },
+      {
+        "role": "agent",
+        "text": "Switch to the csv module for quoting, normalise headers with strip().lower(), and skip empty lines.",
+        "fix": {
+          "importer.py": "import csv\n\n\ndef parse_header(line):\n    return [h.strip().lower() for h in next(csv.reader([line]))]\n\n\ndef parse_rows(text):\n    lines = text.split(\"\\n\")\n    header = parse_header(lines[0])\n    rows = []\n    for line in lines[1:]:\n        if not line:\n            continue\n        cells = next(csv.reader([line]))\n        rows.append(dict(zip(header, cells)))\n    return rows\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (3 tests)"
+      },
+      {
+        "role": "agent",
+        "text": "All three cases now pass, so the importer is fixed."
+      }
+    ],
+    "verdict": "Two of the three fixes are right, but the blank-line check treats only truly empty lines as blank. Files exported from spreadsheets often end with whitespace-only lines, which still become records."
+  },
+  "grading": [
+    {
+      "question": "Why is split(',') not a CSV parser?",
+      "ideal": "It ignores quoting, so commas inside quoted cells are treated as separators."
+    },
+    {
+      "question": "What is the difference between `not line` and `not line.strip()`?",
+      "ideal": "The first is only true for an empty string; the second is also true for a line of whitespace."
+    }
+  ]
+}

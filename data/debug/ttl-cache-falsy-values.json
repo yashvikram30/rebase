@@ -3,10 +3,7 @@
   "title": "The unread badge hits the database on every page",
   "domain": "build-optimize",
   "concept": "A falsy value is not the same as a missing one",
-  "concepts": [
-    "falsy-vs-missing",
-    "cache-eviction"
-  ],
+  "concepts": ["falsy-vs-missing", "cache-eviction"],
   "difficulty": 2,
   "symptom": "Users with unread messages are served from the cache, but users with zero unread cause a database query on every single page view, so most of your quiet accounts hammer the database.",
   "files": {

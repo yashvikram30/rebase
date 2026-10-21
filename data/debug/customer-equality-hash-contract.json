@@ -3,10 +3,7 @@
   "title": "The same customer gets two emails",
   "domain": "oop",
   "concept": "Objects that compare equal must have equal hashes",
-  "concepts": [
-    "equality-hashing",
-    "aliasing-mutable-state"
-  ],
+  "concepts": ["equality-hashing", "aliasing-mutable-state"],
   "difficulty": 2,
   "symptom": "Ada is on the newsletter as Ada@Example.com and on the promo list as ada@example.com. The mailer treats her as two people and sends two emails, and the directory registers her twice, even though customers == customers says they are equal.",
   "files": {

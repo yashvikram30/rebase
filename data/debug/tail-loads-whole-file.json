@@ -3,10 +3,8 @@
   "title": "tail runs out of memory on big logs",
   "domain": "build-optimize",
   "concept": "Streaming with a bounded buffer",
-  "concepts": [
-    "bounded-memory-streaming"
-  ],
-  "difficulty": 2,
+  "concepts": ["bounded-memory-streaming"],
+  "difficulty": 1,
   "symptom": "tail() returns the right lines, but on a 20 GB log the process is killed for memory. It only needs 10 lines.",
   "files": {
     "tail.py": "def tail(f, n):\n    \"\"\"Return the last n lines of the file object f as a list. Must not load the whole file.\"\"\"\n    return f.readlines()[-n:]\n",

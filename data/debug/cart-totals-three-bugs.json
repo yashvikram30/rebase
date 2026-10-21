@@ -1,0 +1,61 @@
+{
+  "id": "cart-totals-three-bugs",
+  "title": "Checkout totals are off in three ways",
+  "domain": "oop",
+  "concept": "Money in cents: rounding rule, inclusive threshold and the base a percentage is taken from",
+  "concepts": ["floating-point-money", "boundary-conditions"],
+  "difficulty": 2,
+  "symptom": "Support sent three tickets: an order of exactly $50.00 is still charged shipping, a 10% coupon doesn't reduce the tax, and tax on $10.00 comes out a cent short of what the finance team calculates.",
+  "files": {
+    "pricing.py": "TAX_BP = 825  # basis points: 8.25%\nFREE_SHIPPING_FROM = 5000  # cents\nSHIPPING = 599\n\n\nclass Line:\n    def __init__(self, name, unit_cents, qty):\n        self.name = name\n        self.unit_cents = unit_cents\n        self.qty = qty\n\n\ndef subtotal(lines):\n    return sum(l.unit_cents * l.qty for l in lines)\n\n\ndef discount(sub, percent):\n    return sub * percent // 100\n\n\ndef tax(amount_cents):\n    return amount_cents * TAX_BP // 10000\n\n\ndef shipping(sub):\n    return 0 if sub > FREE_SHIPPING_FROM else SHIPPING\n\n\ndef total(lines, percent_off=0):\n    sub = subtotal(lines)\n    taxable = sub - discount(sub, percent_off)\n    return sub - discount(sub, percent_off) + tax(sub) + shipping(sub)\n"
+  },
+  "failingTest": "import unittest\nfrom pricing import Line, shipping, tax, total\n\n\nclass Failing(unittest.TestCase):\n    def test_order_of_exactly_fifty_dollars_ships_free(self):\n        self.assertEqual(shipping(5000), 0)\n\n    def test_tax_is_charged_on_the_discounted_amount(self):\n        # 20000 less 10% is 18000; tax on that is 1485; shipping is free.\n        self.assertEqual(total([Line(\"desk\", 20000, 1)], percent_off=10), 19485)\n\n    def test_tax_rounds_half_up(self):\n        # 8.25% of 1000 is 82.5 cents, which rounds up to 83.\n        self.assertEqual(tax(1000), 83)\n",
+  "regressionTests": "import unittest\nfrom pricing import Line, discount, shipping, tax, total\n\n\nclass Regression(unittest.TestCase):\n    def test_small_order_pays_shipping(self):\n        self.assertEqual(shipping(4999), 599)\n        self.assertEqual(total([Line(\"pen\", 1000, 2)]), 2000 + 165 + 599)\n\n    def test_exact_tax_is_unchanged(self):\n        self.assertEqual(tax(2000), 165)\n\n    def test_rounds_down_below_half(self):\n        # 8.25% of 1010 is 83.325, which is 83, not 84.\n        self.assertEqual(tax(1010), 83)\n\n    def test_discount_floors_to_whole_cents(self):\n        self.assertEqual(discount(999, 10), 99)\n",
+  "rootCause": "Three independent bugs. shipping() uses > where the threshold is inclusive. total() takes tax on the pre-discount subtotal (it computes the discounted amount, then ignores it). tax() floors instead of rounding half up.",
+  "correctFix": {
+    "pricing.py": "TAX_BP = 825  # basis points: 8.25%\nFREE_SHIPPING_FROM = 5000  # cents\nSHIPPING = 599\n\n\nclass Line:\n    def __init__(self, name, unit_cents, qty):\n        self.name = name\n        self.unit_cents = unit_cents\n        self.qty = qty\n\n\ndef subtotal(lines):\n    return sum(l.unit_cents * l.qty for l in lines)\n\n\ndef discount(sub, percent):\n    return sub * percent // 100\n\n\ndef tax(amount_cents):\n    return (amount_cents * TAX_BP + 5000) // 10000\n\n\ndef shipping(sub):\n    return 0 if sub >= FREE_SHIPPING_FROM else SHIPPING\n\n\ndef total(lines, percent_off=0):\n    sub = subtotal(lines)\n    taxable = sub - discount(sub, percent_off)\n    return taxable + tax(taxable) + shipping(sub)\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "pricing.py": "TAX_BP = 825  # basis points: 8.25%\nFREE_SHIPPING_FROM = 5000  # cents\nSHIPPING = 599\n\n\nclass Line:\n    def __init__(self, name, unit_cents, qty):\n        self.name = name\n        self.unit_cents = unit_cents\n        self.qty = qty\n\n\ndef subtotal(lines):\n    return sum(l.unit_cents * l.qty for l in lines)\n\n\ndef discount(sub, percent):\n    return sub * percent // 100\n\n\ndef tax(amount_cents):\n    return -(-amount_cents * TAX_BP // 10000)\n\n\ndef shipping(sub):\n    return 0 if sub >= FREE_SHIPPING_FROM else SHIPPING\n\n\ndef total(lines, percent_off=0):\n    sub = subtotal(lines)\n    taxable = sub - discount(sub, percent_off)\n    return taxable + tax(taxable) + shipping(sub)\n"
+      },
+      "whyWrong": "Always rounding up fixes 82.5 but also turns 83.325 into 84. The rule is round half up, not ceiling."
+    }
+  ],
+  "transcript": {
+    "kind": "subtle-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "Fix the three failing checkout tests."
+      },
+      {
+        "role": "agent",
+        "text": "Shipping needs >=, tax should use the discounted amount, and the tax is short because integer division floors. I'll round up with a ceiling division.",
+        "fix": {
+          "pricing.py": "TAX_BP = 825  # basis points: 8.25%\nFREE_SHIPPING_FROM = 5000  # cents\nSHIPPING = 599\n\n\nclass Line:\n    def __init__(self, name, unit_cents, qty):\n        self.name = name\n        self.unit_cents = unit_cents\n        self.qty = qty\n\n\ndef subtotal(lines):\n    return sum(l.unit_cents * l.qty for l in lines)\n\n\ndef discount(sub, percent):\n    return sub * percent // 100\n\n\ndef tax(amount_cents):\n    return -(-amount_cents * TAX_BP // 10000)\n\n\ndef shipping(sub):\n    return 0 if sub >= FREE_SHIPPING_FROM else SHIPPING\n\n\ndef total(lines, percent_off=0):\n    sub = subtotal(lines)\n    taxable = sub - discount(sub, percent_off)\n    return taxable + tax(taxable) + shipping(sub)\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (3 tests)"
+      },
+      {
+        "role": "agent",
+        "text": "Fixed. Ceiling division is the safe choice for money because customers are never under-charged."
+      }
+    ],
+    "verdict": "The ceiling makes the reported case pass, but it over-charges whenever the fraction is below a half (1010 gives 84). The agent justified the choice instead of testing the other side of the rounding rule."
+  },
+  "grading": [
+    {
+      "question": "What is wrong with ceiling division for tax?",
+      "ideal": "It rounds every fraction up, so amounts below half a cent are over-charged. The required rule is round half up."
+    },
+    {
+      "question": "Why is integer cents safer than floats here?",
+      "ideal": "Floats cannot represent most decimal amounts exactly, so rounding behaves unpredictably."
+    }
+  ]
+}

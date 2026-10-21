@@ -3,10 +3,7 @@
   "title": "Two tickets about the same sales report",
   "domain": "pipeline",
   "concept": "Calendar days in the store's timezone, and signs on refunds",
-  "concepts": [
-    "timezones",
-    "edge-case-testing"
-  ],
+  "concepts": ["timezones", "edge-case-testing"],
   "difficulty": 2,
   "symptom": "Two tickets, both about the daily revenue report. One, from the Mumbai store: orders placed after midnight, until about 5:30 in the morning, show up under the previous day. Two, from finance: on a day with a refund, revenue goes up instead of down.",
   "files": {

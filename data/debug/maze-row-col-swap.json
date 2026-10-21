@@ -3,11 +3,7 @@
   "title": "Shortest path breaks on wide grids",
   "domain": "graph",
   "concept": "Row/column bounds mix-up (rows vs cols)",
-  "concepts": [
-    "grid-coordinates",
-    "shortest-path-bfs",
-    "edge-case-testing"
-  ],
+  "concepts": ["grid-coordinates", "shortest-path-bfs", "edge-case-testing"],
   "difficulty": 1,
   "symptom": "shortest_path_len is right on every square test grid. On a 2-row, 5-column grid it throws IndexError.",
   "files": {

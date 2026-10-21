@@ -3,10 +3,7 @@
   "title": "The download endpoint serves our secrets file",
   "domain": "os",
   "concept": "Path traversal: check where a path resolves, not what it contains",
-  "concepts": [
-    "path-traversal",
-    "edge-case-testing"
-  ],
+  "concepts": ["path-traversal", "edge-case-testing"],
   "difficulty": 2,
   "symptom": "Security report from a researcher: GET /files/..%2Fconfig%2Fsecrets.env returns our database password. Uploads live in uploads/, and the config directory sits next to it. Patch it before the disclosure date.",
   "files": {

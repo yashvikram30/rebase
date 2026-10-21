@@ -1,0 +1,61 @@
+{
+  "id": "role-permissions-three-bugs",
+  "title": "Role permissions loop, ignore denies and miss wildcards",
+  "domain": "oop",
+  "concept": "Inheritance graphs: cycle guards, deny-overrides-allow and pattern matching",
+  "concepts": ["recursion-call-stack", "edge-case-testing"],
+  "difficulty": 2,
+  "symptom": "Three tickets from the admin console: a misconfigured pair of roles that inherit from each other crashes the page with a RecursionError, a role that is explicitly denied 'posts:delete' can still delete, and granting 'posts:*' doesn't allow 'posts:edit'.",
+  "files": {
+    "perms.py": "class Roles:\n    def __init__(self):\n        self.parents = {}\n        self.allow = {}\n        self.deny = {}\n\n    def define(self, role, parents=(), allow=(), deny=()):\n        self.parents[role] = list(parents)\n        self.allow[role] = set(allow)\n        self.deny[role] = set(deny)\n\n    def _chain(self, role):\n        out = [role]\n        for p in self.parents.get(role, []):\n            out.extend(self._chain(p))\n        return out\n\n    def can(self, role, perm):\n        chain = self._chain(role)\n        return any(perm in self.allow[r] for r in chain)\n"
+  },
+  "failingTest": "import unittest\nfrom perms import Roles\n\n\nclass Failing(unittest.TestCase):\n    def test_roles_that_inherit_each_other_do_not_crash(self):\n        r = Roles()\n        r.define(\"a\", parents=[\"b\"], allow=[\"x\"])\n        r.define(\"b\", parents=[\"a\"])\n        self.assertTrue(r.can(\"b\", \"x\"))\n\n    def test_an_explicit_deny_beats_an_allow(self):\n        r = Roles()\n        r.define(\"staff\", allow=[\"posts:edit\", \"posts:delete\"])\n        r.define(\"intern\", parents=[\"staff\"], deny=[\"posts:delete\"])\n        self.assertTrue(r.can(\"intern\", \"posts:edit\"))\n        self.assertFalse(r.can(\"intern\", \"posts:delete\"))\n\n    def test_a_wildcard_grant_matches_the_whole_family(self):\n        r = Roles()\n        r.define(\"editor\", allow=[\"posts:*\"])\n        self.assertTrue(r.can(\"editor\", \"posts:edit\"))\n        self.assertFalse(r.can(\"editor\", \"users:edit\"))\n",
+  "regressionTests": "import unittest\nfrom perms import Roles\n\n\nclass Regression(unittest.TestCase):\n    def test_an_inherited_deny_still_blocks(self):\n        r = Roles()\n        r.define(\"base\", allow=[\"posts:delete\"], deny=[\"posts:delete\"])\n        r.define(\"lead\", parents=[\"base\"], allow=[\"posts:delete\"])\n        self.assertFalse(r.can(\"lead\", \"posts:delete\"))\n\n    def test_plain_inheritance(self):\n        r = Roles()\n        r.define(\"viewer\", allow=[\"posts:read\"])\n        r.define(\"editor\", parents=[\"viewer\"], allow=[\"posts:edit\"])\n        self.assertTrue(r.can(\"editor\", \"posts:read\"))\n        self.assertFalse(r.can(\"viewer\", \"posts:edit\"))\n\n    def test_unknown_permission_is_denied(self):\n        r = Roles()\n        r.define(\"viewer\", allow=[\"posts:read\"])\n        self.assertFalse(r.can(\"viewer\", \"billing:read\"))\n",
+  "rootCause": "Three independent bugs. _chain() follows parents with no record of where it has been, so a cycle recurses forever. can() only looks at allow sets, so deny rules are never consulted. Permissions are compared with plain membership, so a wildcard such as 'posts:*' never equals a concrete permission.",
+  "correctFix": {
+    "perms.py": "class Roles:\n    def __init__(self):\n        self.parents = {}\n        self.allow = {}\n        self.deny = {}\n\n    def define(self, role, parents=(), allow=(), deny=()):\n        self.parents[role] = list(parents)\n        self.allow[role] = set(allow)\n        self.deny[role] = set(deny)\n\n    def _chain(self, role, seen=None):\n        seen = set() if seen is None else seen\n        if role in seen:\n            return []\n        seen.add(role)\n        out = [role]\n        for p in self.parents.get(role, []):\n            out.extend(self._chain(p, seen))\n        return out\n\n    @staticmethod\n    def _matches(granted, perm):\n        return granted == perm or (granted.endswith(\":*\") and perm.startswith(granted[:-1]))\n\n    def can(self, role, perm):\n        chain = self._chain(role)\n        if any(self._matches(g, perm) for r in chain for g in self.deny.get(r, ())):\n            return False\n        return any(self._matches(g, perm) for r in chain for g in self.allow.get(r, ()))\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "perms.py": "class Roles:\n    def __init__(self):\n        self.parents = {}\n        self.allow = {}\n        self.deny = {}\n\n    def define(self, role, parents=(), allow=(), deny=()):\n        self.parents[role] = list(parents)\n        self.allow[role] = set(allow)\n        self.deny[role] = set(deny)\n\n    def _chain(self, role, seen=None):\n        seen = set() if seen is None else seen\n        if role in seen:\n            return []\n        seen.add(role)\n        out = [role]\n        for p in self.parents.get(role, []):\n            out.extend(self._chain(p, seen))\n        return out\n\n    @staticmethod\n    def _matches(granted, perm):\n        return granted == perm or (granted.endswith(\":*\") and perm.startswith(granted[:-1]))\n\n    def can(self, role, perm):\n        chain = self._chain(role)\n        if any(self._matches(g, perm) for g in self.deny.get(role, ())):\n            return False\n        return any(self._matches(g, perm) for r in chain for g in self.allow.get(r, ()))\n"
+      },
+      "whyWrong": "Checking denies only on the role being asked about misses denies inherited from a parent role, which must still apply."
+    }
+  ],
+  "transcript": {
+    "kind": "subtle-wrong",
+    "turns": [
+      {
+        "role": "user",
+        "text": "Three tests in the permissions module fail."
+      },
+      {
+        "role": "agent",
+        "text": "I'll add a seen set to _chain, match wildcards with a prefix check, and check deny rules on the role first.",
+        "fix": {
+          "perms.py": "class Roles:\n    def __init__(self):\n        self.parents = {}\n        self.allow = {}\n        self.deny = {}\n\n    def define(self, role, parents=(), allow=(), deny=()):\n        self.parents[role] = list(parents)\n        self.allow[role] = set(allow)\n        self.deny[role] = set(deny)\n\n    def _chain(self, role, seen=None):\n        seen = set() if seen is None else seen\n        if role in seen:\n            return []\n        seen.add(role)\n        out = [role]\n        for p in self.parents.get(role, []):\n            out.extend(self._chain(p, seen))\n        return out\n\n    @staticmethod\n    def _matches(granted, perm):\n        return granted == perm or (granted.endswith(\":*\") and perm.startswith(granted[:-1]))\n\n    def can(self, role, perm):\n        chain = self._chain(role)\n        if any(self._matches(g, perm) for g in self.deny.get(role, ())):\n            return False\n        return any(self._matches(g, perm) for r in chain for g in self.allow.get(r, ()))\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (3 tests)"
+      },
+      {
+        "role": "agent",
+        "text": "Everything passes. Denies take priority over allows, as intended."
+      }
+    ],
+    "verdict": "The deny check looks only at the asked role, so a deny inherited from a parent is ignored. The failing test only denies on the role itself, which hid this."
+  },
+  "grading": [
+    {
+      "question": "How do you stop a recursive walk of a graph from looping forever?",
+      "ideal": "Keep a set of visited nodes and stop when you reach one again."
+    },
+    {
+      "question": "Why must denies from parent roles still apply?",
+      "ideal": "Inheritance means a role gets everything its parents define, including their deny rules."
+    }
+  ]
+}

@@ -3,10 +3,7 @@
   "title": "Our client retries requests it should never retry",
   "domain": "network",
   "concept": "Retry policy: which errors are retryable, and when to stop sleeping",
-  "concepts": [
-    "retries-backoff",
-    "idempotency"
-  ],
+  "concepts": ["retries-backoff", "idempotency"],
   "difficulty": 2,
   "symptom": "A charge with a bad amount comes back 400, yet the payment service sends it three more times. And when the server is really down, the client waits one extra backoff before giving up. Two things are wrong.",
   "files": {

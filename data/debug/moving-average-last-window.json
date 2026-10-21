@@ -3,10 +3,7 @@
   "title": "Moving average is one value short",
   "domain": "snippet",
   "concept": "Off-by-one in range bound",
-  "concepts": [
-    "off-by-one",
-    "sliding-window"
-  ],
+  "concepts": ["off-by-one", "sliding-window"],
   "difficulty": 1,
   "symptom": "moving_average([1, 2, 3, 4], 2) returns [1.5, 2.5]. Expected three values.",
   "files": {

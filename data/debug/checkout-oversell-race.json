@@ -3,10 +3,7 @@
   "title": "Five buyers were charged for the last three mugs",
   "domain": "os",
   "concept": "Check-then-act across an await: reserve before you wait",
-  "concepts": [
-    "check-then-act-races",
-    "idempotency"
-  ],
+  "concepts": ["check-then-act-races", "idempotency"],
   "difficulty": 3,
   "symptom": "When five people check out at the same moment with only three mugs left, all five are charged. Only three orders can be filled, so two customers paid and got nothing.",
   "files": {

@@ -3,7 +3,7 @@
 Practice for AI-enabled engineering interviews, and a free 16-week course on how computers work, taught in Python. Rebase is one Next.js app with two products:
 
 - **Learn.** A 64-day course: each day has a short lesson, curated links, a small build, an engineering step and a check, plus revision cards, linked notes and a schedule that adapts when you fall behind.
-- **Debug.** 35 broken programs with a failing test. Fix them in an in-browser editor that runs Python, or read an agent's session and decide whether you would approve its patch. An assistant gives hints (never the fix), and a mentor report reviews how you worked at the end.
+- **Debug.** 42 broken programs with failing tests (16 easy, 21 medium, 5 hard). Seven of them break in three separate ways at once, so several tests fail for different reasons, as in a real round. Fix them in an in-browser editor that runs Python, or read an agent's session and decide whether you would approve its patch. An assistant gives hints (never the fix), and a mentor report reviews how you worked at the end.
 
 Progress, revision cards and notes live in your browser first, and sync to your account if you sign in.
 

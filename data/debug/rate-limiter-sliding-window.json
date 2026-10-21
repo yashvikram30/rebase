@@ -3,10 +3,7 @@
   "title": "The rate limiter is off by one at the window edge",
   "domain": "network",
   "concept": "Sliding-window rate limiting: window boundaries and durations",
-  "concepts": [
-    "rate-limiting",
-    "boundary-conditions"
-  ],
+  "concepts": ["rate-limiting", "boundary-conditions"],
   "difficulty": 3,
   "symptom": "A caller who used their 3 requests at t=0 is still blocked at t=10 on a 10-second window, and retry_after() returns numbers like 106 instead of 6. Two things are wrong.",
   "files": {

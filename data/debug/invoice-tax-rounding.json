@@ -3,11 +3,8 @@
   "title": "Invoices charge tax in whole dollars",
   "domain": "oop",
   "concept": "Money in floats, and rounding to the cent",
-  "concepts": [
-    "floating-point-money",
-    "boundary-conditions"
-  ],
-  "difficulty": 2,
+  "concepts": ["floating-point-money", "boundary-conditions"],
+  "difficulty": 1,
   "symptom": "Finance flagged it: a $19.99 mug was invoiced $2.00 in tax instead of $1.75, a total of $21.99 instead of $21.74. Small orders are worse; a $2 sticker sometimes shows no tax at all.",
   "files": {
     "money.py": "def format_money(amount):\n    \"\"\"Dollars with two decimals, e.g. $21.74.\"\"\"\n    return \"$%.2f\" % amount\n",
