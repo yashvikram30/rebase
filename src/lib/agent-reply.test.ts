@@ -36,6 +36,12 @@ describe("splitReply", () => {
 });
 
 describe("withholdPatches", () => {
+  it("also removes a long plain code block but keeps a short quoted line", () => {
+    const long = "```python\na\nb\nc\nd\ne\n```";
+    expect(withholdPatches(long, FILES).withheld).toBe(1);
+    expect(withholdPatches("```python\nx = 1\n```", FILES).withheld).toBe(0);
+  });
+
   it("withholds a patch whichever way the path was written", () => {
     const { reply, withheld } = withholdPatches("```python\npath=util.py\nreturn x\n```", FILES);
     expect(withheld).toBe(1);
@@ -46,7 +52,7 @@ describe("withholdPatches", () => {
     const { reply, withheld } = withholdPatches(`${REPLY}\n\n\`\`\`python\nprint(1)\n\`\`\``, FILES);
     expect(withheld).toBe(1);
     expect(reply).not.toContain("max(lo, min(x, hi))");
-    expect(reply).toContain("A patch was withheld");
+    expect(reply).toContain("Code withheld");
     expect(reply).toContain("print(1)");
   });
 });

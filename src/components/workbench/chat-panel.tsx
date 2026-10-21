@@ -16,7 +16,7 @@ type Props = {
   onApply: (file: string, code: string) => void;
 };
 
-/** The limited chat with the assistant: a few messages, no patch until you have said what you think is wrong. */
+/** The limited chat with the assistant: a few messages, hints only, never the fix. */
 export function ChatPanel({ scenarioId, files, testOutput, onApply }: Props) {
   const chat = useChats()[scenarioId];
   const round = chat?.round;
@@ -62,7 +62,7 @@ export function ChatPanel({ scenarioId, files, testOutput, onApply }: Props) {
   }
 
   async function send(phase: "explore" | "fix") {
-    const text = draft.trim() || (phase === "fix" ? "Please propose the smallest fix." : "");
+    const text = draft.trim() || (phase === "fix" ? "Is my hypothesis right?" : "");
     const why = phase === "fix" ? hypothesis.trim() : undefined;
     if (!text || !round || !live || busy) return;
     const at = nowMs();
@@ -157,7 +157,7 @@ export function ChatPanel({ scenarioId, files, testOutput, onApply }: Props) {
       <div className="wb-chat-log" role="log">
         {messages.length === 0 && (
           <p className="wb-hint">
-            Describe what you see, or ask what a line does. Say what you think is wrong to unlock a patch.
+            Describe what you see, or ask what a line does. The assistant gives hints, not fixes, and each question gets a little more specific.
           </p>
         )}
         {messages.map((m, i) => (
@@ -242,7 +242,7 @@ export function ChatPanel({ scenarioId, files, testOutput, onApply }: Props) {
             </button>
           </div>
           <details className="wb-fix">
-            <summary>Ask for a patch</summary>
+            <summary>Check my hypothesis</summary>
             <label>
               What do you think is wrong, and why?
               <textarea
@@ -259,7 +259,7 @@ export function ChatPanel({ scenarioId, files, testOutput, onApply }: Props) {
               disabled={busy || hypothesis.trim().length < MIN_HYPOTHESIS}
               onClick={() => void send("fix")}
             >
-              Ask for a patch
+              Check my hypothesis
             </button>
             {hypothesis.trim().length < MIN_HYPOTHESIS && (
               <p className="wb-hint">Write a sentence or two first.</p>
