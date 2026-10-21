@@ -1,32 +1,20 @@
-# Daybook
+# Rebase
 
-A free, 16-week computer science self-study plan, taught in Python. Each day has a short lesson, curated links, a small build, a check-your-understanding step, and a place to write your own notes. Progress, revision cards and notes live in your browser, and sync to your account if you sign in.
+Practice for AI-enabled engineering interviews, and a free 16-week course on how computers work, taught in Python. Rebase is one Next.js app with two products:
 
-[![Daybook promo preview](docs/promo.gif)](video/renders/video.mp4)
+- **Learn.** A 64-day course: each day has a short lesson, curated links, a small build, an engineering step and a check, plus revision cards, linked notes and a schedule that adapts when you fall behind.
+- **Debug.** 35 broken programs with a failing test. Fix them in an in-browser editor that runs Python, or read an agent's session and decide whether you would approve its patch. An assistant gives hints (never the fix), and a mentor report reviews how you worked at the end.
 
-_Click the preview to open the full 23-second promo video ([video/renders/video.mp4](video/renders/video.mp4))._
+Progress, revision cards and notes live in your browser first, and sync to your account if you sign in.
 
-## Screenshots
+## Debug
 
-![Landing page with the seven-layer course stack](docs/home.jpg)
-
-![A day page with Learn, Build, Engineering and Check steps](docs/day.jpg)
-
-## What is in it
-
-- **Part 0: Python foundations.** Four weeks for people new to programming: variables, strings, functions, lists, dictionaries, files, errors, classes, testing and git.
-- **The 16-week plan**, four days a week, in seven phases:
-  1. Architecture (weeks 1-2)
-  2. Operating systems (3-4)
-  3. Networking (5-6)
-  4. Databases (7-8)
-  5. Distributed systems (9-10)
-  6. Software engineering (11)
-  7. Machine learning and generative AI (12-16)
-- **Every day** has Learn, Build, DSA, Engineering and Check steps, with notes written in plain language and a reading list.
-- **Revision lab.** Spaced-repetition cards and questions for each pair of weeks.
-- **Second brain.** Your own Markdown notes with `[[wiki links]]` to other notes and to any day, `#tags`, backlinks, tasks, and export.
-- **Schedule and streaks**, so you can see whether you are on track.
+- **Cases** is a table you can search and filter by topic, difficulty and status, with solved progress for Easy, Medium and Hard.
+- **Workbench:** a CodeMirror editor, a test runner (the failing test and a hidden regression suite), a terminal and a diff of your changes. Python runs in the browser, so nothing you write runs on the server.
+- **Review mode:** read what an agent did, run its patch against both suites, then approve or request changes. The answer is revealed afterwards.
+- **Assistant:** a limited chat (12 messages and 45 minutes a round). It answers only what you ask, uses only that case's code and test output, and gets slightly more specific each time you ask for help, but never writes the fix. Greetings get a short reply with no code. Each time you open the panel the log starts clean; earlier messages are kept for the review.
+- **Mentor report:** after you finish a round, a reviewer reads the chat, the timeline and what you changed and writes feedback.
+- **Random draw:** a case with its title and topic hidden until you finish.
 
 ## Run it locally
 
@@ -38,17 +26,27 @@ cp .env.example .env.local   # then fill it in (see below)
 npm run dev                  # http://localhost:3000
 ```
 
-The course content works without any configuration. Signing in and cross-device sync need the environment variables below.
+The course content works without any configuration. Signing in, sync and the Debug assistant need the environment variables below.
 
-| Variable                               | Used for                                                              |
-| -------------------------------------- | --------------------------------------------------------------------- |
-| `MONGODB_URI`, `MONGODB_DB`            | Storing synced progress and notes (MongoDB Atlas)                     |
-| `AUTH_SECRET`                          | Auth.js session signing (`openssl rand -base64 33`)                   |
-| `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` | Google sign-in. The redirect URI is `<site>/api/auth/callback/google` |
-| `AUTH_URL`                             | Only when not hosting on Vercel: the public URL                       |
-| `ANALYTICS_OWNER_EMAIL`                | Google email(s) allowed to open `/analytics` (comma-separated)        |
+| Variable                               | Used for                                                                             |
+| -------------------------------------- | ------------------------------------------------------------------------------------ |
+| `MONGODB_URI`, `MONGODB_DB`            | Synced progress and notes, assistant limits and analytics (MongoDB Atlas)            |
+| `AUTH_SECRET`                          | Auth.js session signing and the assistant's round token (`openssl rand -base64 33`)  |
+| `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` | Google sign-in. The redirect URI is `<site>/api/auth/callback/google`                |
+| `AUTH_URL`                             | Only when not hosting on Vercel: the public URL                                      |
+| `ANALYTICS_OWNER_EMAIL`                | Google email(s) allowed to open `/analytics` (comma-separated)                       |
+| `TOKEN_API_KEY`                        | The assistant's model gateway (Token Harbor, OpenAI-compatible)                      |
+| `TOKEN_BASE_URL`, `TOKEN_MODEL`        | Optional. Default `https://tokenharbor.ai/v1` and `deepseek-v4.1-flash:free`         |
+| `TOKEN_REVIEW_MODEL`                   | Optional. The model for the mentor report                                            |
+| `DEBUG_DAILY_TOKEN_BUDGET`             | Optional. Tokens the assistant may use per UTC day, across everyone (default 400000) |
 
-If `mongodb+srv://` fails locally with `querySrv EREFUSED`, your network's DNS is refusing SRV lookups. Switch to a public DNS server, or use Atlas's standard `mongodb://` connection string.
+Both `AUTH_SECRET` and `TOKEN_API_KEY` must be set for the assistant. Without them the chat says "Agent chat is not configured." On a host such as Vercel, set the variables for the right environment and redeploy, since changes only apply to new deployments.
+
+If `mongodb+srv://` fails locally with `querySrv EREFUSED`, your network's DNS is refusing SRV lookups. Switch to a public DNS server (8.8.8.8 or 1.1.1.1), or use Atlas's standard `mongodb://` connection string. The assistant needs MongoDB for its message limits, so it shows "temporarily unavailable" while this is broken.
+
+## Deploying
+
+The app deploys to Vercel from `main`. Only the first two weeks of lesson pages are prerendered (`PRERENDER_WEEKS` in `src/lib/day-steps.ts`); later days render on first visit and are cached. This keeps a build's output near 90 MB instead of about 230 MB, which matters because Vercel keeps every deployment. Set a short Deployment Retention in the project settings too.
 
 ## Analytics
 
@@ -57,7 +55,6 @@ If `mongodb+srv://` fails locally with `querySrv EREFUSED`, your network's DNS i
 - Views are sent from the browser to `/api/track` and stored in a `visits` collection in the same MongoDB database, then expire after about 13 months. No third party is involved.
 - Recorded per view: path, referrer host (first page of a session), country and city from Vercel's IP headers, browser, OS, device type, and the account when signed in. IP addresses and query strings are not stored.
 - Skipped: bots, Do Not Track and Global Privacy Control, the owner's own signed-in visits (stored but hidden), and `next dev` (set `ANALYTICS_TRACK_DEV=1` to include it).
-- Set `ANALYTICS_OWNER_EMAIL` in the host's environment variables too, not just `.env.local`.
 
 ## Scripts
 
@@ -70,13 +67,16 @@ If `mongodb+srv://` fails locally with `querySrv EREFUSED`, your network's DNS i
 | `npm test`           | Vitest                                                    |
 | `npm run data:build` | regenerate `src/data/curriculum.json` from `data/legacy/` |
 
-## Where the content lives
+## Where things live
 
-- `data/notes/<day>.md`: the lesson text for each day (`w3d2` is week 3, day 2; `f2d1` is foundations week 2, day 1). Sections start with `@@ learn`, `@@ build`, `@@ dsa`, `@@ engineering` and `@@ check`, and each may end with a `# Further reading` list.
+- `data/notes/<day>.md`: the lesson text for each day (`w3d2` is week 3, day 2; `f2d1` is foundations week 2, day 1). Sections start with `@@ learn`, `@@ build`, `@@ dsa`, `@@ engineering` and `@@ check`.
 - `data/legacy/*.js`: the plan's structure, links and exercises. After editing, run `npm run data:build`.
-- `src/data/foundations.ts`: Part 0 days and their links.
+- `data/debug/`: the Debug cases. The answer key never leaves the server.
 - `src/data/revision/`: revision questions and cards.
+- `src/app/(learn)`, `(debug)`, `(workbench)`, `(account)`, `(platform)`: one route group per area, so each brings its own shell.
+- `src/lib/debug-agent.ts`: the assistant's prompt and hint ladder. `src/lib/agent-reply.ts` strips fixes from replies.
+- `decisions.md`: why things are the way they are, with a changelog. Update it when a decision changes.
 
 ## Built with
 
-Next.js (App Router) and React, Auth.js, MongoDB, and Vitest. Notes, progress and review state are stored in `localStorage` first and synced per user.
+Next.js 16 (App Router, Cache Components) and React, Auth.js, MongoDB, CodeMirror 6, Pyodide for in-browser Python, and Vitest. Notes, progress and review state are stored in `localStorage` first and synced per user.
