@@ -21,6 +21,10 @@ export function ChatPanel({ scenarioId, files, testOutput, onApply }: Props) {
   const chat = useChats()[scenarioId];
   const round = chat?.round;
   const messages = chat?.messages ?? [];
+  // Only this visit's messages are shown. Earlier ones stay stored for the end-of-round review and still count
+  // towards the hint level, but reopening the assistant starts with a clean log.
+  const [openedAt] = useState(nowMs);
+  const shown = messages.filter((m) => m.at >= openedAt);
   const editable = Object.keys(files);
   const now = useNowSeconds();
 
@@ -32,7 +36,7 @@ export function ChatPanel({ scenarioId, files, testOutput, onApply }: Props) {
 
   useEffect(() => {
     end.current?.scrollIntoView({ block: "end" });
-  }, [messages.length, busy]);
+  }, [shown.length, busy]);
 
   const left = round ? round.cap - round.used : 0;
   const ended = !!round && now > 0 && round.exp <= now * 1000;
@@ -155,12 +159,12 @@ export function ChatPanel({ scenarioId, files, testOutput, onApply }: Props) {
       </div>
 
       <div className="wb-chat-log" role="log">
-        {messages.length === 0 && (
+        {shown.length === 0 && (
           <p className="wb-hint">
             Describe what you see, or ask what a line does. The assistant gives hints, not fixes, and each question gets a little more specific.
           </p>
         )}
-        {messages.map((m, i) => (
+        {shown.map((m, i) => (
           <div key={m.at + ":" + i} className={`wb-msg is-${m.role}`}>
             <p className="wb-msg-who">{m.role === "user" ? "You" : "Assistant"}</p>
             {m.role === "user" ? (
