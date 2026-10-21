@@ -7,6 +7,10 @@ Practice for AI-enabled engineering interviews, and a free 16-week course on how
 
 Progress, revision cards and notes live in your browser first, and sync to your account if you sign in.
 
+[![Rebase promo preview](docs/promo.gif)](video/renders/video.mp4)
+
+_Click the preview to open the full 26-second promo ([video/renders/video.mp4](video/renders/video.mp4))._
+
 ## Debug
 
 - **Cases** is a table you can search and filter by topic, difficulty and status, with solved progress for Easy, Medium and Hard.
@@ -40,7 +44,7 @@ The course content works without any configuration. Signing in, sync and the Deb
 | `TOKEN_REVIEW_MODEL`                   | Optional. The model for the mentor report                                            |
 | `DEBUG_DAILY_TOKEN_BUDGET`             | Optional. Tokens the assistant may use per UTC day, across everyone (default 400000) |
 
-Both `AUTH_SECRET` and `TOKEN_API_KEY` must be set for the assistant. Without them the chat says "Agent chat is not configured." On a host such as Vercel, set the variables for the right environment and redeploy, since changes only apply to new deployments.
+Of the `TOKEN_*` variables only `TOKEN_API_KEY` is needed; the rest have defaults. `AUTH_SECRET` and `TOKEN_API_KEY` must both be set for the assistant. Without them the chat says "Agent chat is not configured." On a host such as Vercel, set the variables for the right environment and redeploy, since changes only apply to new deployments.
 
 If `mongodb+srv://` fails locally with `querySrv EREFUSED`, your network's DNS is refusing SRV lookups. Switch to a public DNS server (8.8.8.8 or 1.1.1.1), or use Atlas's standard `mongodb://` connection string. The assistant needs MongoDB for its message limits, so it shows "temporarily unavailable" while this is broken.
 
