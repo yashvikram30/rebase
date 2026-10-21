@@ -3,10 +3,13 @@ import { AccountMenu } from "./account-menu";
 import { Brand } from "./brand";
 import { Icon } from "./icons";
 
-/** The slim top bar shown only on narrow screens, where the sidebar hides behind the menu button. */
+/** The slim top bar: the sidebar lives in a drawer that opens from the menu button on the right. */
 export function MobileBar({ navOpen, onMenu }: { navOpen: boolean; onMenu: () => void }) {
   return (
     <header className="top">
+      <Brand href="/" />
+      <span className="grow" />
+      <AccountMenu />
       <button
         className="icon-btn menu-btn"
         type="button"
@@ -17,9 +20,6 @@ export function MobileBar({ navOpen, onMenu }: { navOpen: boolean; onMenu: () =>
       >
         {Icon.menu}
       </button>
-      <Brand href="/" />
-      <span className="grow" />
-      <AccountMenu />
     </header>
   );
 }

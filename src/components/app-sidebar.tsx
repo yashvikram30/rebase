@@ -40,7 +40,7 @@ export const isCoursePath = (pathname: string) =>
 
 /**
  * The app's one navigation surface: both products and their pages, the course outline when you are in the
- * course, and search, theme and account at the bottom. On phones it slides in from the menu button.
+ * course, and search, theme and account at the bottom. It slides in from the right, opened by the top bar's menu button.
  */
 export function AppSidebar({
   open,

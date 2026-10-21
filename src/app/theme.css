@@ -2395,3 +2395,85 @@ main.auth {
     gap: 0;
   }
 }
+
+/* ---------- sidebar is a drawer on every screen size, opened from the top bar's menu button ---------- */
+:root {
+  --top: 56px;
+}
+.top {
+  display: flex;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  height: var(--top);
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 2px solid var(--line);
+}
+.top .grow {
+  flex: 1;
+}
+.menu-btn {
+  display: grid;
+}
+.layout,
+.shell[data-bare] .layout,
+.layout:has(.brain) {
+  grid-template-columns: minmax(0, 1fr) var(--tocw);
+}
+.shell[data-bare] .layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+main {
+  margin: 0 auto;
+  width: 100%;
+}
+.nav.sb {
+  position: fixed;
+  z-index: 40;
+  right: 0;
+  left: auto;
+  top: var(--top);
+  bottom: 0;
+  width: min(300px, 86vw);
+  height: auto;
+  background: var(--bg);
+  border-right: 0;
+  border-left: 2px solid var(--line);
+  transform: translateX(102%);
+  transition: transform 0.35s var(--ease-apple);
+}
+.nav.sb.open {
+  transform: none;
+  box-shadow: 0 0 40px rgb(0 0 0 / 0.25);
+}
+.sb-brand {
+  display: none;
+}
+.scrim {
+  display: block;
+  position: fixed;
+  inset: var(--top) 0 0 0;
+  z-index: 35;
+  background: rgb(10 14 20 / 0.45);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.35s var(--ease-apple), visibility 0.35s;
+}
+.scrim.open {
+  opacity: 1;
+  visibility: visible;
+}
+.shell[data-focus="on"] .top {
+  display: none;
+}
+@media (max-width: 900px) {
+  .layout,
+  .layout:has(.brain) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
