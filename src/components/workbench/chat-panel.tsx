@@ -4,7 +4,7 @@ import { MIN_HYPOTHESIS } from "@/lib/agent-constants";
 import { splitReply } from "@/lib/agent-reply";
 import { recordEvent, updateChat, useChats } from "@/lib/workbench-store";
 import { Diff } from "../debug/results";
-import { useNowSeconds } from "./use-now";
+import { useNowSeconds, useOpenedAt } from "./use-now";
 
 /** The wall clock, read outside the component so event handlers can stamp their messages. */
 const nowMs = () => Date.now();
@@ -23,7 +23,7 @@ export function ChatPanel({ scenarioId, files, testOutput, onApply }: Props) {
   const messages = chat?.messages ?? [];
   // Only this visit's messages are shown. Earlier ones stay stored for the end-of-round review and still count
   // towards the hint level, but reopening the assistant starts with a clean log.
-  const [openedAt] = useState(nowMs);
+  const openedAt = useOpenedAt();
   const shown = messages.filter((m) => m.at >= openedAt);
   const editable = Object.keys(files);
   const now = useNowSeconds();
