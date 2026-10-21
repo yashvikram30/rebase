@@ -138,6 +138,13 @@ describe("POST /api/debug/agent", () => {
     expect(upstream.mock.calls[0][1].body).toContain(hypothesis);
   });
 
+  it("sends no code to the model when the candidate only says hello", async () => {
+    await run(post({ ...base(), messages: [{ role: "user", content: "hey" }] }));
+    const body = upstream.mock.calls[0][1].body as string;
+    expect(body).toContain("what they want help with");
+    expect(body).not.toContain("Failing test");
+  });
+
   it("never lets a patch through, with or without a hypothesis", async () => {
     upstream.mockResolvedValue(modelReply("Here:\n```python path=util.py\nreturn x\n```"));
     const { reply } = await (await run(post(base()))).json();
