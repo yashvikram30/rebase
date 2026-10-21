@@ -138,10 +138,10 @@ describe("POST /api/debug/agent", () => {
     expect(upstream.mock.calls[0][1].body).toContain(hypothesis);
   });
 
-  it("withholds a patch before the candidate has a hypothesis", async () => {
+  it("never lets a patch through, with or without a hypothesis", async () => {
     upstream.mockResolvedValue(modelReply("Here:\n```python path=util.py\nreturn x\n```"));
     const { reply } = await (await run(post(base()))).json();
-    expect(reply).toContain("A patch was withheld");
+    expect(reply).toContain("Code withheld");
     expect(reply).not.toContain("return x");
   });
 

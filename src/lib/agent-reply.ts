@@ -47,16 +47,21 @@ export function splitReply(reply: string, editable: readonly string[]): ReplyPar
   return parts;
 }
 
-/** Before the candidate has a hypothesis the agent must not hand over a patch; any that slip through are removed. */
+const WITHHELD = "[Code withheld: the assistant gives hints, not fixes.]";
+/** A quoted snippet this long or shorter is fine; anything longer is likely a rewrite of their code. */
+const MAX_SNIPPET_LINES = 4;
+
+/** The assistant gives hints, never fixes: patches and any code block longer than a short snippet are removed. */
 export function withholdPatches(
   reply: string,
   editable: readonly string[],
 ): { reply: string; withheld: number } {
   let withheld = 0;
   const out = reply.replace(FENCE, (block, _lang: string, info: string, body: string) => {
-    if (!patchOf(info, body, editable)) return block;
+    const long = body.replace(/\n+$/, "").split("\n").length > MAX_SNIPPET_LINES;
+    if (!patchOf(info, body, editable) && !long) return block;
     withheld++;
-    return "[A patch was withheld. State your hypothesis first, then ask for a patch.]";
+    return WITHHELD;
   });
   return { reply: out, withheld };
 }

@@ -4,13 +4,14 @@ import { notFound } from "next/navigation";
 import { BehindBanner } from "@/components/behind-banner";
 import { DayShortcuts } from "@/components/day-shortcuts";
 import { DayStatus, DayWhen, StepList } from "@/components/day-steps";
+import { PRERENDER_WEEKS } from "@/lib/day-steps";
 import { getCurriculum } from "@/lib/curriculum";
 import { dayHref, type Day } from "@/lib/curriculum-types";
 import { findDay, stepInfo } from "@/lib/day-data";
 
 export async function generateStaticParams() {
   const c = await getCurriculum();
-  return c.weeks.flatMap((w) => w.days.map((d) => ({ n: String(w.number), d: String(d.numberInWeek) })));
+  return c.weeks.slice(0, PRERENDER_WEEKS).flatMap((w) => w.days.map((d) => ({ n: String(w.number), d: String(d.numberInWeek) })));
 }
 
 export async function generateMetadata({ params }: PageProps<"/day/[n]/[d]">): Promise<Metadata> {

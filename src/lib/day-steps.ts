@@ -25,3 +25,10 @@ export const STEPS: readonly (typeof ALL_STEPS)[number][] = ALL_STEPS.filter(
 );
 export const isStep = (s: string): s is StepSlug => STEPS.some((x) => x.slug === s);
 export const stepHref = (week: number, day: number, slug: StepSlug) => `/day/${week}/${day}/${slug}`;
+
+/**
+ * Lesson pages are prerendered only for the first weeks, where new visitors land. The rest render on first
+ * visit and are then cached, which keeps each deployment's build output small (every day page is ~170 KB of HTML
+ * plus its RSC payloads, and Vercel keeps a copy for every deployment).
+ */
+export const PRERENDER_WEEKS = 2;

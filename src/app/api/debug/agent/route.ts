@@ -138,9 +138,8 @@ export async function POST(req: Request) {
     data?.usage?.total_tokens ?? Math.ceil((JSON.stringify(messages).length + content.length) / 4);
   await addTokens(day, spent).catch((e) => console.error("agent token count failed", e));
 
-  // Before a hypothesis exists the agent must not hand over a patch, whatever the model decided to do.
-  const allowed =
-    body.phase === "explore" ? withholdPatches(content, Object.keys(scenario.files)).reply : content;
+  // The assistant only ever hints: whatever the model decided to do, no patch or long code reaches the page.
+  const allowed = withholdPatches(content, Object.keys(scenario.files)).reply;
   const { text: reply, cut } = clampReply(
     allowed.trim(),
     LLM_LIMITS.chatChars,

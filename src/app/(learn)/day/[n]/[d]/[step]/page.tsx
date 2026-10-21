@@ -9,11 +9,11 @@ import { dayHref, type Item } from "@/lib/curriculum-types";
 import { Markdown } from "@/lib/markdown";
 import { dedupeRefs, getNotes } from "@/lib/day-notes";
 import { findDay, itemsFor, stepInfo } from "@/lib/day-data";
-import { isStep, STEPS, stepHref } from "@/lib/day-steps";
+import { isStep, PRERENDER_WEEKS, STEPS, stepHref } from "@/lib/day-steps";
 
 export async function generateStaticParams() {
   const c = await getCurriculum();
-  return c.weeks.flatMap((w) =>
+  return c.weeks.slice(0, PRERENDER_WEEKS).flatMap((w) =>
     w.days.flatMap((d) =>
       STEPS.map((s) => ({ n: String(w.number), d: String(d.numberInWeek), step: s.slug })),
     ),
