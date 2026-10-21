@@ -72,6 +72,25 @@ export default async function PlatformHome() {
         </div>
       </section>
 
+      <section className="plt-how">
+        <div className="plt-wrap">
+          <h2>How a debugging round goes</h2>
+          <ol className="plt-steps">
+            {[
+              ["Reproduce", "Run the failing test and read what it says before you touch anything."],
+              ["Say what is wrong", "Write your hypothesis. The assistant stays silent on fixes until you do."],
+              ["Make the smallest fix", "Change as little as you can, then run the hidden suite to check you broke nothing."],
+            ].map(([name, text], i) => (
+              <li key={name}>
+                <span className="plt-step-n">{i + 1}</span>
+                <b>{name}</b>
+                <p>{text}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
       <section className="plt-row">
         <div className="plt-wrap plt-row-grid">
           <div className="plt-copy">

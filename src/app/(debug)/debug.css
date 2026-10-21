@@ -917,3 +917,234 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* ---------- case list: a LeetCode-style table ---------- */
+.dl-stats {
+  display: grid;
+  grid-template-columns: 1.3fr repeat(3, 1fr);
+  gap: 12px;
+  margin: 28px 0 20px;
+}
+.dl-total,
+.dl-stat {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+}
+.dl-total b {
+  font: 800 34px/1 var(--display);
+}
+.dl-total span,
+.dl-stat span {
+  font-size: 13px;
+  color: var(--muted);
+}
+.dl-stat b {
+  font: 800 20px/1.1 var(--display);
+}
+.dl-stat small {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.dl-stat i {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 4px;
+  background: currentColor;
+}
+.lv1 {
+  color: #1fa87a;
+}
+.lv2 {
+  color: #e0a21b;
+}
+.lv3 {
+  color: #e5484d;
+}
+.dl-stat span,
+.dl-stat b {
+  color: inherit;
+}
+.dl-stat small {
+  color: var(--muted);
+}
+.dl-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.dl-bar input,
+.dl-bar select {
+  height: 40px;
+  padding: 0 12px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font: 500 14px var(--sans);
+}
+.dl-bar input {
+  flex: 1 1 200px;
+  min-width: 160px;
+  max-width: 320px;
+}
+.dl-gap {
+  flex: 1;
+}
+.dl-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 16px;
+  border: 2px solid var(--line-strong);
+  border-radius: 10px;
+  color: var(--text);
+  font: 700 14px var(--sans);
+  text-decoration: none;
+}
+.dl-btn:hover {
+  background: var(--bg-hover);
+  text-decoration: none;
+}
+.dl-btn.primary {
+  background: var(--hot);
+  border-color: var(--accent-edge);
+  color: var(--on-hot);
+}
+.dl-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.dl-table th {
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--line);
+  color: var(--muted);
+  font: 600 13px var(--sans);
+  text-align: left;
+}
+.dl-table td {
+  padding: 13px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.dl-table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--panel) 55%, transparent);
+}
+.dl-table tbody tr:hover {
+  background: var(--bg-hover);
+}
+.c-status {
+  width: 64px;
+}
+.c-level {
+  width: 120px;
+  font-weight: 700;
+}
+.c-act {
+  width: 170px;
+  text-align: right;
+}
+.c-act a,
+.c-act span {
+  margin-left: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.c-act a:hover {
+  color: var(--text);
+}
+.c-topic {
+  width: 210px;
+  color: var(--muted);
+}
+.c-title a {
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+.c-title a:hover {
+  color: var(--accent-text);
+}
+.c-title em {
+  color: var(--muted);
+  font-style: normal;
+  font-weight: 500;
+}
+.c-title small {
+  display: none;
+  margin-top: 2px;
+  color: var(--muted);
+}
+.dl-dot {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--line-strong);
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 800;
+}
+.dl-dot.is-done {
+  border-color: #1fa87a;
+  background: #1fa87a;
+  color: #fff;
+}
+.dl-empty {
+  padding: 32px 0;
+  text-align: center;
+  color: var(--muted);
+}
+.dl-empty button {
+  border: 0;
+  background: none;
+  color: var(--accent-text);
+  font: 700 15px var(--sans);
+  text-decoration: underline;
+  cursor: pointer;
+}
+@media (max-width: 760px) {
+  .dl-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .c-topic,
+  .c-act,
+  .dl-table th.c-topic,
+  .dl-table th.c-act {
+    display: none;
+  }
+  .c-title small {
+    display: block;
+  }
+  .c-level {
+    width: 84px;
+  }
+  .c-status {
+    width: 44px;
+  }
+}
+.dl .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.dl-bar input,
+.dl-bar select {
+  display: inline-block;
+  width: auto;
+  margin: 0;
+}

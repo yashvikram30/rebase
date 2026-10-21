@@ -14,103 +14,155 @@ type Item = {
   reviewable: boolean;
 };
 
-function Level({ n }: { n: number }) {
-  return (
-    <span className="dbg-level" role="img" aria-label={`Difficulty ${n} of 3`}>
-      {[1, 2, 3].map((i) => (
-        <i key={i} className={i <= n ? "on" : undefined} />
-      ))}
-    </span>
-  );
-}
+const LEVELS = ["Easy", "Medium", "Hard"] as const;
 
 export function DebugList({ scenarios, labels }: { scenarios: Item[]; labels: Record<string, string> }) {
   const { reviews, solves } = useDebug();
   const chats = useChats();
-  const [filter, setFilter] = useState("all");
+  const [query, setQuery] = useState("");
+  const [topic, setTopic] = useState("all");
+  const [level, setLevel] = useState("all");
+  const [status, setStatus] = useState("all");
 
   const domains = [...new Set(scenarios.map((s) => s.domain))];
-  const shown = filter === "all" ? scenarios : scenarios.filter((s) => s.domain === filter);
+  const q = query.trim().toLowerCase();
+  const shown = scenarios.filter(
+    (s) =>
+      (topic === "all" || s.domain === topic) &&
+      (level === "all" || s.difficulty === Number(level)) &&
+      (status === "all" || (status === "solved") === !!solves[s.id]) &&
+      (!q || s.title.toLowerCase().includes(q) || s.symptom.toLowerCase().includes(q)),
+  );
   const next = scenarios.find((s) => !solves[s.id]);
   const solved = scenarios.filter((s) => solves[s.id]).length;
+  const filtered = topic !== "all" || level !== "all" || status !== "all" || q !== "";
 
   return (
-    <>
-      <section className="dbg-next" aria-labelledby="dbg-next-h">
-        <h2 id="dbg-next-h">Next case</h2>
-        {next ? (
-          <div className="dbg-fail">
-            <p className="dbg-fail-name">
-              <span aria-hidden="true">✗</span>
-              <code>{next.failing}</code>
-            </p>
-            <p className="dbg-fail-title">{next.title}</p>
-            <p className="dbg-fail-text">{next.symptom}</p>
-            <div className="dbg-fail-actions">
-              <Link className="dbg-btn" href={`/debug/${next.id}`}>
-                Open in workbench
-              </Link>
-              {next.reviewable && (
-                <Link className="dbg-link" href={`/debug/${next.id}/review`}>
-                  Review the agent&apos;s session instead
-                </Link>
-              )}
+    <section className="dl" aria-label="Cases">
+      <div className="dl-stats">
+        <div className="dl-total">
+          <b>{solved}</b>
+          <span>/ {scenarios.length} solved</span>
+        </div>
+        {LEVELS.map((name, i) => {
+          const all = scenarios.filter((s) => s.difficulty === i + 1);
+          const done = all.filter((s) => solves[s.id]).length;
+          return (
+            <div key={name} className={"dl-stat lv" + (i + 1)}>
+              <span>{name}</span>
+              <b>
+                {done}
+                <small>/{all.length}</small>
+              </b>
+              <i style={{ width: `${all.length ? (done / all.length) * 100 : 0}%` }} />
             </div>
-          </div>
-        ) : (
-          <p className="dbg-muted">You have solved every case. More are on the way.</p>
-        )}
-      </section>
+          );
+        })}
+      </div>
 
-      <section className="dbg-cases" aria-labelledby="dbg-cases-h">
-        <div className="dbg-cases-head">
-          <h2 id="dbg-cases-h">All cases</h2>
-          <p className="dbg-muted">
-            {solved} of {scenarios.length} solved
-          </p>
-        </div>
-        <div className="dbg-filter" role="group" aria-label="Filter by topic">
-          {["all", ...domains].map((d) => (
-            <button key={d} type="button" aria-pressed={filter === d} onClick={() => setFilter(d)}>
-              {d === "all" ? "All" : (labels[d] ?? d)}
-              <span>{d === "all" ? scenarios.length : scenarios.filter((s) => s.domain === d).length}</span>
-            </button>
+      <div className="dl-bar">
+        <input
+          type="search"
+          placeholder="Search cases"
+          aria-label="Search cases"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <select aria-label="Topic" value={topic} onChange={(e) => setTopic(e.target.value)}>
+          <option value="all">All topics</option>
+          {domains.map((d) => (
+            <option key={d} value={d}>
+              {labels[d] ?? d}
+            </option>
           ))}
-        </div>
-        <ul className="dbg-rows">
+        </select>
+        <select aria-label="Difficulty" value={level} onChange={(e) => setLevel(e.target.value)}>
+          <option value="all">Any difficulty</option>
+          {LEVELS.map((name, i) => (
+            <option key={name} value={i + 1}>
+              {name}
+            </option>
+          ))}
+        </select>
+        <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="all">Any status</option>
+          <option value="todo">Not solved</option>
+          <option value="solved">Solved</option>
+        </select>
+        <span className="dl-gap" />
+        {next && (
+          <Link className="dl-btn primary" href={`/debug/${next.id}`}>
+            Next case
+          </Link>
+        )}
+        <Link className="dl-btn" href="/debug/random">
+          Random
+        </Link>
+      </div>
+
+      <table className="dl-table">
+        <thead>
+          <tr>
+            <th className="c-status">Status</th>
+            <th>Title</th>
+            <th className="c-topic">Topic</th>
+            <th className="c-level">Difficulty</th>
+            <th className="c-act">
+              <span className="sr-only">Actions</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
           {shown.map((s) => {
             const done = solves[s.id];
             const review = reviews[s.id];
             return (
-              <li key={s.id} className="dbg-row is-link">
-                <span
-                  className={"dbg-status" + (done ? " is-right" : "")}
-                  role="img"
-                  aria-label={done ? "Solved" : "Not solved yet"}
-                >
-                  {done ? "✓" : ""}
-                </span>
-                <div className="dbg-row-main">
-                  <p className="dbg-row-title">
-                    <Link href={`/debug/${s.id}`}>{s.title}</Link>
-                  </p>
-                  <p className="dbg-row-text">{s.symptom}</p>
-                  <p className="dbg-row-meta">
-                    <span>{labels[s.domain] ?? s.domain}</span>
-                    {s.reviewable && (
-                      <Link href={`/debug/${s.id}/review`}>Review the agent&apos;s session</Link>
-                    )}
-                    {chats[s.id]?.report && <Link href={`/debug/${s.id}/report`}>View your review</Link>}
-                    {review && <span>{review.correct ? "Reviewed: right call" : "Reviewed: missed it"}</span>}
-                  </p>
-                </div>
-                <Level n={s.difficulty} />
-                <p className="dbg-row-act">{done ? "Open again" : "Open"}</p>
-              </li>
+              <tr key={s.id}>
+                <td className="c-status">
+                  <span
+                    className={"dl-dot" + (done ? " is-done" : "")}
+                    role="img"
+                    aria-label={done ? "Solved" : "Not solved yet"}
+                  >
+                    {done ? "✓" : ""}
+                  </span>
+                </td>
+                <td className="c-title">
+                  <Link href={`/debug/${s.id}`} title={s.symptom}>
+                    <em>{scenarios.indexOf(s) + 1}.</em> {s.title}
+                  </Link>
+                  <small>{labels[s.domain] ?? s.domain}</small>
+                </td>
+                <td className="c-topic">{labels[s.domain] ?? s.domain}</td>
+                <td className={"c-level lv" + s.difficulty}>{LEVELS[s.difficulty - 1]}</td>
+                <td className="c-act">
+                  {s.reviewable && <Link href={`/debug/${s.id}/review`}>Review agent</Link>}
+                  {chats[s.id]?.report && <Link href={`/debug/${s.id}/report`}>Your review</Link>}
+                  {review && <span>{review.correct ? "Right call" : "Missed it"}</span>}
+                </td>
+              </tr>
             );
           })}
-        </ul>
-      </section>
-    </>
+        </tbody>
+      </table>
+      {shown.length === 0 && (
+        <p className="dl-empty">
+          No cases match.{" "}
+          {filtered && (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery("");
+                setTopic("all");
+                setLevel("all");
+                setStatus("all");
+              }}
+            >
+              Clear filters
+            </button>
+          )}
+        </p>
+      )}
+    </section>
   );
 }

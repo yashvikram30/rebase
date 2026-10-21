@@ -414,16 +414,24 @@
   font: 13px var(--font-mono, monospace);
   color: var(--muted);
 }
+.plt-tabs {
+  overflow: hidden;
+}
 .plt-tabs span {
+  min-width: 0;
   padding: 7px 12px;
   border-radius: 6px 6px 0 0;
   white-space: nowrap;
+}
+.plt-tabs span:nth-child(3) {
+  display: none;
 }
 .plt-tabs .on {
   background: var(--bg);
   color: var(--text);
 }
 .plt-tabs .plt-run {
+  flex-shrink: 0;
   margin: 0 0 6px auto;
   padding: 3px 10px;
   border-radius: 6px;
@@ -663,5 +671,54 @@
 @media (max-width: 480px) {
   .plt-foot-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* How a round goes: three numbered steps between the proof strip and the first feature */
+.plt-how {
+  padding: 72px 0 24px;
+}
+.plt-how h2 {
+  max-width: 1040px;
+  margin: 0 auto;
+}
+.plt-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  max-width: 1040px;
+  margin: 36px auto 0;
+  padding: 0;
+  list-style: none;
+}
+.plt-steps li {
+  padding: 22px;
+  border: 2px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel);
+}
+.plt-steps b {
+  display: block;
+  margin-top: 14px;
+  font-size: 18px;
+}
+.plt-steps p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.plt-step-n {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--hot);
+  color: var(--on-hot);
+  font: 800 15px var(--display);
+}
+@media (max-width: 760px) {
+  .plt-steps {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

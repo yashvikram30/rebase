@@ -52,8 +52,8 @@ export default function DebugPage() {
     <article className="dbg">
       <h1>Debug</h1>
       <p className="lead">
-        Interviewers hand you broken code and a failing test, then watch how you work. Practice the part they
-        grade: reproduce it, form a hypothesis, make the smallest fix, and check you broke nothing else.
+        Broken code and a failing test, like an AI-enabled interview round. Reproduce it, say what you think is
+        wrong, make the smallest fix, and check you broke nothing else.
       </p>
       <Suspense fallback={<div aria-busy="true" />}>
         <DebugList scenarios={scenarios} labels={DOMAIN_LABEL} />
