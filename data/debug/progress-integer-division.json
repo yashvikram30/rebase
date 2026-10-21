@@ -3,10 +3,7 @@
   "title": "The progress ring is stuck at 0%",
   "domain": "snippet",
   "concept": "Integer division before scaling",
-  "concepts": [
-    "integer-division",
-    "boundary-conditions"
-  ],
+  "concepts": ["integer-division", "boundary-conditions"],
   "difficulty": 1,
   "symptom": "Learners say the progress ring shows 0% for the whole course and then jumps to 100% on the last day. Three days into a four-day week, it should read 75%.",
   "files": {

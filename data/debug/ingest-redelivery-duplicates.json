@@ -3,10 +3,7 @@
   "title": "Every retried batch doubles our click counts",
   "domain": "pipeline",
   "concept": "Idempotent ingestion: dedupe on the event's identity, not its contents",
-  "concepts": [
-    "idempotency",
-    "retries-backoff"
-  ],
+  "concepts": ["idempotency", "retries-backoff"],
   "difficulty": 2,
   "symptom": "Our queue delivers each message at least once, so after a consumer restart whole batches arrive again. Dashboards show doubled click and purchase counts after every deploy.",
   "files": {

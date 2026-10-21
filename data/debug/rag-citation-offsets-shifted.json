@@ -3,11 +3,8 @@
   "title": "Highlighted citations are a few characters off",
   "domain": "rag",
   "concept": "Offsets must survive text normalisation",
-  "concepts": [
-    "citation-offsets",
-    "off-by-one"
-  ],
-  "difficulty": 3,
+  "concepts": ["citation-offsets", "off-by-one"],
+  "difficulty": 2,
   "symptom": "The assistant answers correctly, but the cited passage that the UI highlights in the source document starts a few characters too early, so the highlight cuts off the first words of the quote.",
   "files": {
     "chunker.py": "from dataclasses import dataclass\n\n\n@dataclass(frozen=True)\nclass Chunk:\n    doc_id: str\n    start: int  # where text[0] is in the original document\n    text: str\n\n\ndef chunk_by_paragraph(doc_id, text):\n    \"\"\"One chunk per blank-line-separated paragraph, with surrounding whitespace trimmed.\"\"\"\n    chunks = []\n    position = 0\n    for raw in text.split(\"\\n\\n\"):\n        trimmed = raw.strip()\n        if trimmed:\n            chunks.append(Chunk(doc_id, position, trimmed))\n        position += len(raw) + 2\n    return chunks\n",

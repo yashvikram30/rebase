@@ -3,10 +3,7 @@
   "title": "New carts start with old items",
   "domain": "oop",
   "concept": "Mutable default argument is shared across calls",
-  "concepts": [
-    "aliasing-mutable-state",
-    "python-defaults"
-  ],
+  "concepts": ["aliasing-mutable-state", "python-defaults"],
   "difficulty": 1,
   "symptom": "Create a Cart, add an item, then create a second Cart. The second one already has 1 item.",
   "files": {

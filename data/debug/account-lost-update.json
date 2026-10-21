@@ -3,10 +3,7 @@
   "title": "Two simultaneous withdrawals leave the wrong balance",
   "domain": "dbms",
   "concept": "Lost update: read-modify-write needs optimistic locking and a retry",
-  "concepts": [
-    "lost-update",
-    "check-then-act-races"
-  ],
+  "concepts": ["lost-update", "check-then-act-races"],
   "difficulty": 3,
   "symptom": "Withdrawing 30 and 50 from a balance of 100 at the same time should leave 20. It leaves 70 or 50, as if one of the withdrawals never happened.",
   "files": {

@@ -3,9 +3,7 @@
   "title": "The books report gets slower with every book we add",
   "domain": "dbms",
   "concept": "N+1 queries: fetch related rows in one batch",
-  "concepts": [
-    "n-plus-one-queries"
-  ],
+  "concepts": ["n-plus-one-queries"],
   "difficulty": 2,
   "symptom": "A report of 30 books by 6 authors makes 31 database queries. At 10,000 books it makes 10,001 and the report times out. The output is correct; only the number of queries is wrong.",
   "files": {

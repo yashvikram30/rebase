@@ -1,0 +1,61 @@
+{
+  "id": "url-router-three-bugs",
+  "title": "The router matches the wrong routes",
+  "domain": "network",
+  "concept": "Pattern matching: segment boundaries, normalising input and route precedence",
+  "concepts": ["boundary-conditions", "regression-testing"],
+  "difficulty": 2,
+  "symptom": "Three bugs from the API team: /users/1/posts is served by the single-user handler, /users/1/ returns 404 while /users/1 works, and /users/me hits the user-by-id handler with id='me' because that route was registered first.",
+  "files": {
+    "router.py": "import re\n\n\nclass Router:\n    def __init__(self):\n        self.routes = []\n\n    def add(self, pattern, handler):\n        regex = re.sub(r\"<(\\w+)>\", r\"(?P<\\1>.+)\", pattern)\n        self.routes.append((re.compile(\"^\" + regex + \"$\"), handler))\n\n    def match(self, path):\n        for regex, handler in self.routes:\n            m = regex.match(path)\n            if m:\n                return handler, m.groupdict()\n        return None\n"
+  },
+  "failingTest": "import unittest\nfrom router import Router\n\n\ndef make():\n    r = Router()\n    r.add(\"/users/<id>\", \"user\")\n    r.add(\"/users/me\", \"me\")\n    r.add(\"/users/<id>/posts\", \"posts\")\n    r.add(\"/\", \"home\")\n    return r\n\n\nclass Failing(unittest.TestCase):\n    def test_a_parameter_does_not_swallow_slashes(self):\n        handler, params = make().match(\"/users/1/posts\")\n        self.assertEqual((handler, params), (\"posts\", {\"id\": \"1\"}))\n\n    def test_a_trailing_slash_is_ignored(self):\n        self.assertEqual(make().match(\"/users/1/\"), (\"user\", {\"id\": \"1\"}))\n\n    def test_a_fixed_route_beats_a_parameter_route(self):\n        self.assertEqual(make().match(\"/users/me\"), (\"me\", {}))\n",
+  "regressionTests": "import unittest\nfrom router import Router\n\n\ndef make():\n    r = Router()\n    r.add(\"/users/<id>\", \"user\")\n    r.add(\"/\", \"home\")\n    return r\n\n\nclass Regression(unittest.TestCase):\n    def test_root_still_matches(self):\n        self.assertEqual(make().match(\"/\"), (\"home\", {}))\n\n    def test_unknown_paths_return_none(self):\n        self.assertIsNone(make().match(\"/nope\"))\n\n    def test_parameters_are_captured(self):\n        self.assertEqual(make().match(\"/users/42\"), (\"user\", {\"id\": \"42\"}))\n",
+  "rootCause": "Three independent bugs. The parameter pattern is .+, which matches slashes, so a parameter can swallow several segments; it must stop at the next slash. Paths are not normalised, so a trailing slash never matches. Routes are tried in registration order, so a parameter route shadows a fixed route added after it.",
+  "correctFix": {
+    "router.py": "import re\n\n\nclass Router:\n    def __init__(self):\n        self.routes = []\n\n    def add(self, pattern, handler):\n        regex = re.sub(r\"<(\\w+)>\", r\"(?P<\\1>[^/]+)\", pattern)\n        self.routes.append((re.compile(\"^\" + regex + \"$\"), handler, \"<\" in pattern))\n\n    def match(self, path):\n        if len(path) > 1:\n            path = path.rstrip(\"/\")\n        for dynamic in (False, True):\n            for regex, handler, is_dynamic in self.routes:\n                if is_dynamic != dynamic:\n                    continue\n                m = regex.match(path)\n                if m:\n                    return handler, m.groupdict()\n        return None\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "router.py": "import re\n\n\nclass Router:\n    def __init__(self):\n        self.routes = []\n\n    def add(self, pattern, handler):\n        regex = re.sub(r\"<(\\w+)>\", r\"(?P<\\1>[^/]+)\", pattern)\n        self.routes.append((re.compile(\"^\" + regex + \"$\"), handler, \"<\" in pattern))\n\n    def match(self, path):\n        path = path.rstrip(\"/\")\n        for dynamic in (False, True):\n            for regex, handler, is_dynamic in self.routes:\n                if is_dynamic != dynamic:\n                    continue\n                m = regex.match(path)\n                if m:\n                    return handler, m.groupdict()\n        return None\n"
+      },
+      "whyWrong": "Stripping every trailing slash turns the root path '/' into the empty string, so the home route no longer matches."
+    }
+  ],
+  "transcript": {
+    "kind": "correct",
+    "turns": [
+      {
+        "role": "user",
+        "text": "Routing is wrong in three ways. Can you fix it?"
+      },
+      {
+        "role": "agent",
+        "text": "Parameters should stop at a slash ([^/]+), I'll strip a trailing slash but keep '/' itself, and try fixed routes before parameter routes. Running both suites after.",
+        "fix": {
+          "router.py": "import re\n\n\nclass Router:\n    def __init__(self):\n        self.routes = []\n\n    def add(self, pattern, handler):\n        regex = re.sub(r\"<(\\w+)>\", r\"(?P<\\1>[^/]+)\", pattern)\n        self.routes.append((re.compile(\"^\" + regex + \"$\"), handler, \"<\" in pattern))\n\n    def match(self, path):\n        if len(path) > 1:\n            path = path.rstrip(\"/\")\n        for dynamic in (False, True):\n            for regex, handler, is_dynamic in self.routes:\n                if is_dynamic != dynamic:\n                    continue\n                m = regex.match(path)\n                if m:\n                    return handler, m.groupdict()\n        return None\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (3 tests)\ntest_regression: OK (3 tests)"
+      },
+      {
+        "role": "agent",
+        "text": "Both pass. The root route still works because I only strip when the path is longer than one character."
+      }
+    ],
+    "verdict": "A sound fix with the edge case handled on purpose: the root path is kept, and both suites were run."
+  },
+  "grading": [
+    {
+      "question": "Why must a path parameter stop at '/'?",
+      "ideal": "Otherwise it matches across segments, so /users/1/posts also matches /users/<id>."
+    },
+    {
+      "question": "What breaks if you rstrip('/') without a length check?",
+      "ideal": "The root path '/' becomes empty and no longer matches the home route."
+    }
+  ]
+}

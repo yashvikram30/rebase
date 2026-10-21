@@ -3,10 +3,7 @@
   "title": "The nightly purge leaves expired sessions behind",
   "domain": "snippet",
   "concept": "Changing a list while iterating over it",
-  "concepts": [
-    "mutation-during-iteration",
-    "aliasing-mutable-state"
-  ],
+  "concepts": ["mutation-during-iteration", "aliasing-mutable-state"],
   "difficulty": 1,
   "symptom": "The nightly purge logged 'removed 2 sessions', but 3 had expired, and one of them can still log in. It only seems to happen when several sessions expired together.",
   "files": {

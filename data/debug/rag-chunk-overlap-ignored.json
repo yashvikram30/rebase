@@ -3,9 +3,7 @@
   "title": "The assistant cannot find a policy sentence that is clearly in the docs",
   "domain": "rag",
   "concept": "Chunking with overlap: step by size minus overlap",
-  "concepts": [
-    "chunking-overlap"
-  ],
+  "concepts": ["chunking-overlap"],
   "difficulty": 2,
   "symptom": "Asked 'how many days do I have to return something?', the assistant says it does not know, even though the policy text says 'within thirty days of purchase'. Searching for that exact phrase returns nothing useful.",
   "files": {

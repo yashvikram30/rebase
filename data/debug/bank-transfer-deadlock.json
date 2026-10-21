@@ -3,10 +3,7 @@
   "title": "Two transfers in opposite directions hang forever",
   "domain": "os",
   "concept": "Deadlock: acquire locks in one global order",
-  "concepts": [
-    "deadlock-lock-ordering",
-    "check-then-act-races"
-  ],
+  "concepts": ["deadlock-lock-ordering", "check-then-act-races"],
   "difficulty": 3,
   "symptom": "A transfer from Alice to Bob works. So does one from Bob to Alice. But when both happen at the same time, neither finishes and the test run ends with Deadlock.",
   "files": {

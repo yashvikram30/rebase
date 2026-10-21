@@ -3,9 +3,7 @@
   "title": "clamp always returns the lower bound",
   "domain": "snippet",
   "concept": "Swapped min/max nesting",
-  "concepts": [
-    "boundary-conditions"
-  ],
+  "concepts": ["boundary-conditions"],
   "difficulty": 1,
   "symptom": "clamp(5, 0, 10) returns 0.",
   "files": {

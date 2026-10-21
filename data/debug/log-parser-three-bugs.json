@@ -1,0 +1,61 @@
+{
+  "id": "log-parser-three-bugs",
+  "title": "The log summary loses text, levels and the last second",
+  "domain": "pipeline",
+  "concept": "Parsing with split(): a limit on splits, normalising keys before counting and inclusive range ends",
+  "concepts": ["edge-case-testing", "regression-testing"],
+  "difficulty": 2,
+  "symptom": "The on-call dashboard built from our logs has three problems: error messages show only their first word, 'error' and 'ERROR' are counted as different levels, and an entry stamped at exactly the end of a window is missing from it.",
+  "files": {
+    "logs.py": "from collections import Counter\n\n\ndef parse(line):\n    parts = line.split()\n    return {\"ts\": parts[0] + \" \" + parts[1], \"level\": parts[2], \"message\": parts[3]}\n\n\ndef parse_all(lines):\n    return [parse(line) for line in lines if line.strip()]\n\n\ndef count_levels(lines):\n    return dict(Counter(r[\"level\"] for r in parse_all(lines)))\n\n\ndef between(records, start, end):\n    return [r for r in records if start <= r[\"ts\"] < end]\n"
+  },
+  "failingTest": "import unittest\nfrom logs import between, count_levels, parse\n\n\nclass Failing(unittest.TestCase):\n    def test_message_keeps_all_its_words(self):\n        r = parse(\"2024-01-05 12:00:01 ERROR payment failed: card declined\")\n        self.assertEqual(r[\"message\"], \"payment failed: card declined\")\n\n    def test_levels_are_counted_case_insensitively(self):\n        lines = [\"2024-01-05 12:00:01 error a\", \"2024-01-05 12:00:02 ERROR b\"]\n        self.assertEqual(count_levels(lines), {\"ERROR\": 2})\n\n    def test_end_of_the_window_is_inclusive(self):\n        recs = [\n            {\"ts\": \"2024-01-05 12:00:00\", \"level\": \"INFO\", \"message\": \"a\"},\n            {\"ts\": \"2024-01-05 12:00:05\", \"level\": \"INFO\", \"message\": \"b\"},\n        ]\n        got = between(recs, \"2024-01-05 12:00:00\", \"2024-01-05 12:00:05\")\n        self.assertEqual([r[\"message\"] for r in got], [\"a\", \"b\"])\n",
+  "regressionTests": "import unittest\nfrom logs import between, parse, parse_all\n\n\nclass Regression(unittest.TestCase):\n    def test_parse_fields(self):\n        r = parse(\"2024-01-05 12:00:01 WARN disk almost full\")\n        self.assertEqual((r[\"ts\"], r[\"level\"]), (\"2024-01-05 12:00:01\", \"WARN\"))\n\n    def test_blank_lines_are_skipped(self):\n        self.assertEqual(len(parse_all([\"\", \"   \", \"2024-01-05 12:00:01 INFO ok\"])), 1)\n\n    def test_a_window_can_span_midnight(self):\n        recs = [\n            {\"ts\": \"2024-01-05 23:59:50\", \"level\": \"INFO\", \"message\": \"late\"},\n            {\"ts\": \"2024-01-06 00:00:10\", \"level\": \"INFO\", \"message\": \"early\"},\n            {\"ts\": \"2024-01-06 00:05:00\", \"level\": \"INFO\", \"message\": \"after\"},\n        ]\n        got = between(recs, \"2024-01-05 23:59:00\", \"2024-01-06 00:00:30\")\n        self.assertEqual([r[\"message\"] for r in got], [\"late\", \"early\"])\n",
+  "rootCause": "Three independent bugs in the parser. split() with no limit throws away everything after the fourth token, so the message is cut to one word. Levels are used as they appear instead of being normalised, so 'error' and 'ERROR' are different keys. between() uses < for the end, so the final second is excluded.",
+  "correctFix": {
+    "logs.py": "from collections import Counter\n\n\ndef parse(line):\n    ts_date, ts_time, level, message = line.strip().split(\" \", 3)\n    return {\"ts\": ts_date + \" \" + ts_time, \"level\": level.upper(), \"message\": message}\n\n\ndef parse_all(lines):\n    return [parse(line) for line in lines if line.strip()]\n\n\ndef count_levels(lines):\n    return dict(Counter(r[\"level\"] for r in parse_all(lines)))\n\n\ndef between(records, start, end):\n    return [r for r in records if start <= r[\"ts\"] <= end]\n"
+  },
+  "wrongFixes": [
+    {
+      "fix": {
+        "logs.py": "from collections import Counter\n\n\ndef parse(line):\n    ts_date, ts_time, level, message = line.strip().split(\" \", 3)\n    return {\"ts\": ts_date + \" \" + ts_time, \"level\": level.upper(), \"message\": message}\n\n\ndef parse_all(lines):\n    return [parse(line) for line in lines if line.strip()]\n\n\ndef count_levels(lines):\n    return dict(Counter(r[\"level\"] for r in parse_all(lines)))\n\n\ndef between(records, start, end):\n    return [r for r in records if start[11:] <= r[\"ts\"][11:] <= end[11:]]\n"
+      },
+      "whyWrong": "Comparing only the time of day makes the window work within one day, but a window that crosses midnight now matches nothing."
+    }
+  ],
+  "transcript": {
+    "kind": "correct",
+    "turns": [
+      {
+        "role": "user",
+        "text": "Three tests in the log parser are failing."
+      },
+      {
+        "role": "agent",
+        "text": "Three causes: split() has no maxsplit so the message loses words, levels aren't normalised, and between() excludes the end. I'll fix all three and run both suites.",
+        "fix": {
+          "logs.py": "from collections import Counter\n\n\ndef parse(line):\n    ts_date, ts_time, level, message = line.strip().split(\" \", 3)\n    return {\"ts\": ts_date + \" \" + ts_time, \"level\": level.upper(), \"message\": message}\n\n\ndef parse_all(lines):\n    return [parse(line) for line in lines if line.strip()]\n\n\ndef count_levels(lines):\n    return dict(Counter(r[\"level\"] for r in parse_all(lines)))\n\n\ndef between(records, start, end):\n    return [r for r in records if start <= r[\"ts\"] <= end]\n"
+        }
+      },
+      {
+        "role": "tool",
+        "text": "test_failing: OK (3 tests)\ntest_regression: OK (3 tests)"
+      },
+      {
+        "role": "agent",
+        "text": "Both suites pass. I kept parse_all() skipping blank lines and the date part of the timestamp in the comparison."
+      }
+    ],
+    "verdict": "A sound fix. The agent found three separate causes, changed only what each needed, and ran the regression suite as well as the failing one."
+  },
+  "grading": [
+    {
+      "question": "What does split(' ', 3) do differently from split()?",
+      "ideal": "It splits at most three times, so the fourth piece keeps the rest of the line, spaces included."
+    },
+    {
+      "question": "Why not compare only the time of day in between()?",
+      "ideal": "A window that crosses midnight would break, because the later time of day is smaller."
+    }
+  ]
+}

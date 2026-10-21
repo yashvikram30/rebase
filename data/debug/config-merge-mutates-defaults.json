@@ -3,11 +3,7 @@
   "title": "A job's config overrides leak into every job after it",
   "domain": "pipeline",
   "concept": "Merging onto shared defaults without copying them",
-  "concepts": [
-    "aliasing-mutable-state",
-    "defensive-copying",
-    "python-defaults"
-  ],
+  "concepts": ["aliasing-mutable-state", "defensive-copying", "python-defaults"],
   "difficulty": 2,
   "symptom": "The nightly export job overrides batch_size to 50. After that, the hourly job, which overrides nothing, also runs with batches of 50, and its retry attempts change too when nightly raises them.",
   "files": {

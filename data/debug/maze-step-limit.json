@@ -3,10 +3,7 @@
   "title": "The route planner gives up on an empty room",
   "domain": "graph",
   "concept": "A step limit hiding a missing visited set",
-  "concepts": [
-    "visited-set",
-    "graph-traversal"
-  ],
+  "concepts": ["visited-set", "graph-traversal"],
   "difficulty": 2,
   "symptom": "The route planner handles our small hand-drawn mazes, but on a plain 6 by 6 room with no walls at all it gives up with SearchLimitExceeded. A teammate wants to raise MAX_STEPS and move on. Is that the right fix?",
   "files": {

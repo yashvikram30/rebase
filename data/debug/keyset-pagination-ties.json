@@ -3,11 +3,8 @@
   "title": "The nightly export is missing a few rows",
   "domain": "dbms",
   "concept": "Keyset pagination on a key that is not unique",
-  "concepts": [
-    "keyset-pagination",
-    "boundary-conditions"
-  ],
-  "difficulty": 3,
+  "concepts": ["keyset-pagination", "boundary-conditions"],
+  "difficulty": 2,
   "symptom": "The nightly export of the events table comes up a few rows short. It is never many, and only on busy days; quiet days export perfectly. The export walks the same paginated API our customers use, and some of them have reported gaps too.",
   "files": {
     "db.py": "class EventTable:\n    \"\"\"An in-memory stand-in for the events table: id is unique, created_at is not.\"\"\"\n\n    def __init__(self, rows):\n        self.rows = [dict(r) for r in rows]\n        self.queries = 0\n\n    def page_after(self, created_after, limit):\n        \"\"\"SELECT * FROM events WHERE created_at > ? ORDER BY created_at LIMIT ?\"\"\"\n        self.queries += 1\n        hits = [r for r in self.rows if created_after is None or r[\"created_at\"] > created_after]\n        hits.sort(key=lambda r: r[\"created_at\"])\n        return hits[:limit]\n",

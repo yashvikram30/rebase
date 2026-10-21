@@ -3,11 +3,8 @@
   "title": "An AI-written paginator hides the last page",
   "domain": "agent-review",
   "concept": "Reviewing an AI fix: ceiling division and its edge cases",
-  "concepts": [
-    "off-by-one",
-    "boundary-conditions"
-  ],
-  "difficulty": 2,
+  "concepts": ["off-by-one", "boundary-conditions"],
+  "difficulty": 1,
   "symptom": "An assistant wrote the pagination helper. Lists whose length is not a multiple of the page size report one page too few, so the last few items can never be reached through the API.",
   "files": {
     "pagination.py": "def total_pages(item_count, per_page):\n    \"\"\"How many pages are needed to show item_count items.\"\"\"\n    return item_count // per_page\n\n\ndef page_items(items, page, per_page):\n    \"\"\"The items on a 1-based page; an empty list for a page that does not exist.\"\"\"\n    if page < 1 or page > total_pages(len(items), per_page):\n        return []\n    start = (page - 1) * per_page\n    return items[start : start + per_page]\n",

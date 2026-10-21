@@ -3,10 +3,7 @@
   "title": "Turning the beta off turned it on for everyone",
   "domain": "pipeline",
   "concept": "Parsing booleans from configuration strings",
-  "concepts": [
-    "config-parsing",
-    "falsy-vs-missing"
-  ],
+  "concepts": ["config-parsing", "falsy-vs-missing"],
   "difficulty": 1,
   "symptom": "We set BETA_CHECKOUT=false in production to switch the beta checkout off, and every customer got the beta. Staging, where the variable is not set at all, behaves correctly.",
   "files": {

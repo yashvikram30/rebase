@@ -3,11 +3,8 @@
   "title": "LRU cache evicts the key I just read",
   "domain": "build-optimize",
   "concept": "LRU recency must update on every access",
-  "concepts": [
-    "lru-cache",
-    "cache-eviction"
-  ],
-  "difficulty": 3,
+  "concepts": ["lru-cache", "cache-eviction"],
+  "difficulty": 2,
   "symptom": "Our profile cache keeps evicting the hottest users: a profile read a second ago is dropped, while profiles nobody has touched in minutes survive. With capacity 2: put a, put b, get a, put c drops a.",
   "files": {
     "lru.py": "from collections import OrderedDict\n\n\nclass LRUCache:\n    def __init__(self, capacity):\n        self.capacity = capacity\n        self.data = OrderedDict()\n\n    def get(self, key):\n        if key not in self.data:\n            return None\n        return self.data[key]\n\n    def put(self, key, value):\n        self.data[key] = value\n        if len(self.data) > self.capacity:\n            self.data.popitem(last=False)\n"
