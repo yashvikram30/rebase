@@ -299,28 +299,6 @@
   font: 600 14px var(--sans);
 }
 
-.dbg-modes dl {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 0 32px;
-  margin: 0;
-}
-.dbg-modes dl > div {
-  padding-top: 14px;
-  border-top: 2px solid var(--line);
-}
-.dbg-modes dl > div.is-ready {
-  border-top-color: var(--text);
-}
-.dbg-modes dt {
-  font-weight: 650;
-}
-.dbg-modes dd {
-  margin: 4px 0 0;
-  font-size: 15px;
-  line-height: 1.55;
-  color: var(--muted);
-}
 .dbg-state {
   display: flex;
   align-items: center;
@@ -735,10 +713,6 @@
   .shell[data-product="debug"][data-bare] main {
     padding: 32px 16px 72px;
   }
-  .dbg-modes dl {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 20px;
-  }
   .dbg-row {
     grid-template-columns: 28px minmax(0, 1fr);
     padding: 16px 4px;
@@ -911,11 +885,6 @@
 }
 .dbg-random p {
   margin: 0;
-}
-.dbg-modes dt a {
-  color: var(--text);
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 
 /* ---------- case list: a LeetCode-style table ---------- */
@@ -1147,4 +1116,71 @@
   display: inline-block;
   width: auto;
   margin: 0;
+}
+
+/* Custom dropdown: matches the cards, borders and accent used across the site */
+.dl-select {
+  position: relative;
+}
+.dl-select-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 12px 0 14px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font: 600 14px var(--sans);
+  cursor: pointer;
+}
+.dl-select-btn:hover,
+.dl-select-btn[aria-expanded="true"] {
+  border-color: var(--line-strong);
+}
+.dl-select-btn.is-set {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+.dl-select-btn svg {
+  color: var(--muted);
+  transition: transform 0.2s var(--ease-out);
+}
+.dl-select-btn[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+.dl-select-list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 100%;
+  width: max-content;
+  max-height: 320px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border: 2px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--bg);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.3);
+}
+.dl-select-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font: 600 14px var(--sans);
+  cursor: pointer;
+}
+.dl-select-list li.is-active {
+  background: var(--bg-hover);
+}
+.dl-select-list li[aria-selected="true"] {
+  color: var(--accent-text);
 }

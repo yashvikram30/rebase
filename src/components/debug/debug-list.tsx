@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDebug } from "@/lib/debug-store";
 import { useChats } from "@/lib/workbench-store";
 
@@ -15,6 +15,93 @@ type Item = {
 };
 
 const LEVELS = ["Easy", "Medium", "Hard"] as const;
+
+type Option = { value: string; label: string };
+
+/** A dropdown styled like the rest of the site: a button that opens a listbox, with arrow-key support. */
+function Select({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: Option[];
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const root = useRef<HTMLDivElement>(null);
+  const current = options.find((o) => o.value === value) ?? options[0];
+
+  useEffect(() => {
+    if (!open) return;
+    const off = (e: MouseEvent) => {
+      if (!root.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", off);
+    return () => document.removeEventListener("mousedown", off);
+  }, [open]);
+
+  function openList() {
+    setActive(Math.max(0, options.findIndex((o) => o.value === value)));
+    setOpen(true);
+  }
+  function pick(v: string) {
+    onChange(v);
+    setOpen(false);
+  }
+  function onKey(e: React.KeyboardEvent) {
+    if (e.key === "Escape" && open) {
+      e.preventDefault();
+      e.stopPropagation();
+      setOpen(false);
+    } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!open) return openList();
+      setActive((a) => (a + (e.key === "ArrowDown" ? 1 : -1) + options.length) % options.length);
+    } else if ((e.key === "Enter" || e.key === " ") && open) {
+      e.preventDefault();
+      pick(options[active].value);
+    }
+  }
+
+  return (
+    <div className="dl-select" ref={root} onKeyDown={onKey}>
+      <button
+        type="button"
+        className={"dl-select-btn" + (value !== options[0].value ? " is-set" : "")}
+        aria-label={label}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => (open ? setOpen(false) : openList())}
+      >
+        <span>{current.label}</span>
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+          <path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {open && (
+        <ul className="dl-select-list" role="listbox" aria-label={label}>
+          {options.map((o, i) => (
+            <li
+              key={o.value}
+              role="option"
+              aria-selected={o.value === value}
+              className={i === active ? "is-active" : undefined}
+              onMouseEnter={() => setActive(i)}
+              onClick={() => pick(o.value)}
+            >
+              <span>{o.label}</span>
+              {o.value === value && <b aria-hidden="true">✓</b>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export function DebugList({ scenarios, labels }: { scenarios: Item[]; labels: Record<string, string> }) {
   const { reviews, solves } = useDebug();
@@ -68,27 +155,31 @@ export function DebugList({ scenarios, labels }: { scenarios: Item[]; labels: Re
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <select aria-label="Topic" value={topic} onChange={(e) => setTopic(e.target.value)}>
-          <option value="all">All topics</option>
-          {domains.map((d) => (
-            <option key={d} value={d}>
-              {labels[d] ?? d}
-            </option>
-          ))}
-        </select>
-        <select aria-label="Difficulty" value={level} onChange={(e) => setLevel(e.target.value)}>
-          <option value="all">Any difficulty</option>
-          {LEVELS.map((name, i) => (
-            <option key={name} value={i + 1}>
-              {name}
-            </option>
-          ))}
-        </select>
-        <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="all">Any status</option>
-          <option value="todo">Not solved</option>
-          <option value="solved">Solved</option>
-        </select>
+        <Select
+          label="Topic"
+          value={topic}
+          onChange={setTopic}
+          options={[{ value: "all", label: "All topics" }, ...domains.map((d) => ({ value: d, label: labels[d] ?? d }))]}
+        />
+        <Select
+          label="Difficulty"
+          value={level}
+          onChange={setLevel}
+          options={[
+            { value: "all", label: "Any difficulty" },
+            ...LEVELS.map((name, i) => ({ value: String(i + 1), label: name })),
+          ]}
+        />
+        <Select
+          label="Status"
+          value={status}
+          onChange={setStatus}
+          options={[
+            { value: "all", label: "Any status" },
+            { value: "todo", label: "Not solved" },
+            { value: "solved", label: "Solved" },
+          ]}
+        />
         <span className="dl-gap" />
         {next && (
           <Link className="dl-btn primary" href={`/debug/${next.id}`}>
