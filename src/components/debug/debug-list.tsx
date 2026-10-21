@@ -45,7 +45,12 @@ function Select({
   }, [open]);
 
   function openList() {
-    setActive(Math.max(0, options.findIndex((o) => o.value === value)));
+    setActive(
+      Math.max(
+        0,
+        options.findIndex((o) => o.value === value),
+      ),
+    );
     setOpen(true);
   }
   function pick(v: string) {
@@ -79,7 +84,14 @@ function Select({
       >
         <span>{current.label}</span>
         <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
-          <path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M2.5 4.5 6 8l3.5-3.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       </button>
       {open && (
@@ -159,7 +171,10 @@ export function DebugList({ scenarios, labels }: { scenarios: Item[]; labels: Re
           label="Topic"
           value={topic}
           onChange={setTopic}
-          options={[{ value: "all", label: "All topics" }, ...domains.map((d) => ({ value: d, label: labels[d] ?? d }))]}
+          options={[
+            { value: "all", label: "All topics" },
+            ...domains.map((d) => ({ value: d, label: labels[d] ?? d })),
+          ]}
         />
         <Select
           label="Difficulty"

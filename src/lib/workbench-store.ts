@@ -87,6 +87,8 @@ export type Chat = {
   started: number;
   /** The mentor report, once the round has been finished. */
   report?: StoredReport;
+  /** A review being written (or that failed), so the report page can show progress or an error. */
+  review?: { at: number; explanation: string; error?: string };
 };
 export type Chats = Record<string, Chat>;
 
@@ -131,9 +133,19 @@ export function normalizeChats(raw: unknown): Chats {
       Array.isArray(rep.course)
         ? rep
         : undefined;
+    const rv = c.review;
+    const review =
+      rv && Number.isFinite(rv.at) && typeof rv.explanation === "string"
+        ? {
+            at: rv.at,
+            explanation: rv.explanation.slice(0, 1500),
+            ...(typeof rv.error === "string" ? { error: rv.error.slice(0, 300) } : {}),
+          }
+        : undefined;
     out[id] = {
       ...(round ? { round } : {}),
       ...(report ? { report } : {}),
+      ...(review ? { review } : {}),
       messages,
       events,
       started: c.started!,

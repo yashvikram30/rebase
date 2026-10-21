@@ -117,3 +117,20 @@ describe("resetChatLog", () => {
     expect(getChat("never-opened")).toBeUndefined();
   });
 });
+
+describe("normalizeChats review state", () => {
+  const base = { started: 1, messages: [], events: [] };
+
+  it("keeps a pending review and its error", () => {
+    const out = normalizeChats({
+      a: { ...base, review: { at: 5, explanation: "why", error: "nope" } },
+      b: { ...base, review: { at: 6, explanation: "why" } },
+    });
+    expect(out.a.review).toEqual({ at: 5, explanation: "why", error: "nope" });
+    expect(out.b.review).toEqual({ at: 6, explanation: "why" });
+  });
+
+  it("drops a malformed review", () => {
+    expect(normalizeChats({ a: { ...base, review: { at: "x", explanation: 3 } } }).a.review).toBeUndefined();
+  });
+});

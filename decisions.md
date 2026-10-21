@@ -349,6 +349,13 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
 
 ## Changelog
 
+- **2026-10-22:** Workbench title bar reorganised: back link and title on the left; timer, Assistant toggle and a
+  more menu (reset, full screen, view report, theme) in the middle; Run (with run-all behind its arrow) and Submit
+  on the right, Submit the most prominent. "Finish round" became Submit.
+- **2026-10-22:** Submitting no longer waits in the dialog. `requestReview` (`src/lib/review-request.ts`) records a
+  pending `review` on the chat, the page goes straight to the report, and `ReportSkeleton` mirrors the real report
+  (real section titles, the six rating areas, a step list) until the report arrives or fails with a retry.
+
 - **2026-10-22:** Docs refreshed after deploying `v2`: README rewritten for Rebase, decisions updated for the
   drawer sidebar, the case table, the hint-only assistant, the clean chat log and the prerender limit.
 - **2026-10-22:** Opening a case now resets the assistant conversation (log and model history); the round budget

@@ -5,7 +5,10 @@ import { revealAnswer } from "@/app/(debug)/debug/actions";
 import type { AnswerKey } from "@/lib/debug";
 import { DIMENSIONS, type Rating, type Suggestion } from "@/lib/debug-report-types";
 import { describeEvent } from "@/lib/debug-session";
+import { requestReview } from "@/lib/review-request";
+import { useNowSeconds } from "@/components/workbench/use-now";
 import { useChats, useDrafts } from "@/lib/workbench-store";
+import { ReportSkeleton } from "./report-skeleton";
 import { Diff } from "./results";
 
 const RATING: Record<Rating, { label: string; glyph: string }> = {
@@ -39,6 +42,34 @@ export function ReportClient({
   const draft = useDrafts()[id];
   const [key, setKey] = useState<AnswerKey | null>(null);
   const stored = chat?.report;
+  const now = useNowSeconds();
+  const pending = chat?.review;
+  // A request that is still "loading" long after it started was lost (the tab closed mid-request).
+  const lost = !!pending && !pending.error && now > 0 && now * 1000 - pending.at > 150_000;
+
+  if (!stored && pending && !pending.error && !lost) return <ReportSkeleton />;
+
+  if (!stored && pending) {
+    const retry = () =>
+      void requestReview(
+        id,
+        Object.fromEntries(Object.keys(original).map((f) => [f, draft?.files[f] ?? original[f]])),
+        pending.explanation,
+      );
+    return (
+      <>
+        <p className="lead">{pending.error ?? "The review took too long and was lost."}</p>
+        <p className="dbg-report-actions">
+          <button type="button" className="dbg-btn" onClick={retry}>
+            Try again
+          </button>
+          <Link className="dbg-link" href={`/debug/${id}`}>
+            Open the workbench
+          </Link>
+        </p>
+      </>
+    );
+  }
 
   if (!stored) {
     return (
@@ -207,11 +238,8 @@ export function ReportClient({
       </section>
 
       <p className="dbg-report-actions">
-        <Link className="dbg-btn" href={`/debug/${id}`}>
-          Back to the workbench
-        </Link>
-        <Link className="dbg-link" href="/debug">
-          All scenarios
+        <Link className="dbg-btn" href="/debug">
+          All cases
         </Link>
       </p>
     </div>

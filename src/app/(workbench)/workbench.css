@@ -588,7 +588,9 @@ a.wb-btn {
     grid-template-rows: auto auto minmax(0, 1fr) auto;
   }
   .wb-title h1,
-  .wb-title .wb-btn:not(.is-primary) {
+  .wb-title .wb-tool,
+  .wb-title .wb-more,
+  .wb-title .wb-clock {
     display: none;
   }
   .wb-mtabs {
@@ -631,9 +633,6 @@ a.wb-btn {
   .wb-app[data-view="chat"] .wb-main {
     display: none;
   }
-  .wb-title .wb-btn[aria-pressed] {
-    display: none;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -654,4 +653,111 @@ button.wb-clock {
 }
 button.wb-clock:hover {
   background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+/* ---------- title bar: tools are quiet, Run is strong, Submit is the strongest ---------- */
+.wb-tool {
+  flex: none;
+  min-height: 34px;
+  padding: 0 12px;
+  font: 600 13px var(--sans);
+  color: var(--muted);
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.wb-tool:hover {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+.wb-tool[aria-pressed="true"] {
+  color: var(--text);
+  border-color: var(--line-strong);
+  background: var(--panel);
+}
+.wb-tool.is-icon {
+  width: 34px;
+  padding: 0;
+  font-size: 20px;
+  line-height: 1;
+}
+.wb-more,
+.wb-split-btn {
+  position: relative;
+  display: flex;
+  flex: none;
+}
+.wb-split-btn .wb-btn.is-run:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  padding: 0 16px;
+}
+.wb-split-btn .wb-btn.is-caret {
+  width: 30px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  margin-left: -2px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.wb-btn.is-run {
+  min-height: 38px;
+  font-size: 14px;
+  color: var(--accent-text);
+  background: var(--accent-soft);
+  border-color: var(--accent-edge);
+  box-shadow: 0 2px 0 var(--accent-edge);
+}
+.wb-btn.is-run:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 22%, var(--bg));
+}
+.wb-btn.is-submit {
+  min-height: 42px;
+  padding: 0 24px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--on-hot);
+  background: var(--hot);
+  border-color: var(--accent-edge);
+  box-shadow: 0 3px 0 var(--accent-edge);
+}
+.wb-btn.is-submit:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+.wb-pop {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 230px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border: 2px solid var(--line-strong);
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgb(0 0 0 / 0.3);
+}
+.wb-pop.is-right {
+  left: auto;
+  right: 0;
+}
+.wb-pop button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 9px 12px;
+  font: 600 13px var(--sans);
+  color: var(--text);
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.wb-pop button:hover {
+  background: var(--bg-hover);
 }

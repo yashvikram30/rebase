@@ -125,8 +125,8 @@ export function ChatPanel({ scenarioId, files, testOutput, onApply }: Props) {
         <div className="wb-chat-intro">
           <h2>Assistant</h2>
           <p>
-            Ask for hints while you debug. You get a few messages, and the assistant will not write a fix
-            until you have said what you think is wrong.
+            Ask for hints while you debug. You get a few messages, and the assistant only gives hints, never
+            the fix.
           </p>
           <p className="wb-hint">
             Messages and your code are sent to a third-party AI service. Free models may keep what you send.
@@ -157,7 +157,8 @@ export function ChatPanel({ scenarioId, files, testOutput, onApply }: Props) {
       <div className="wb-chat-log" role="log">
         {messages.length === 0 && (
           <p className="wb-hint">
-            Describe what you see, or ask what a line does. The assistant gives hints, not fixes, and each question gets a little more specific.
+            Describe what you see, or ask what a line does. The assistant gives hints, not fixes, and each
+            question gets a little more specific.
           </p>
         )}
         {messages.map((m, i) => (
