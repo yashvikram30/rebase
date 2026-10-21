@@ -87,13 +87,31 @@ export type Chat = {
   started: number;
   /** The mentor report, once the round has been finished. */
   report?: StoredReport;
+  /** Earlier reports for this case, newest first, kept when a new review replaces `report`. */
+  history?: StoredReport[];
   /** A review being written (or that failed), so the report page can show progress or an error. */
   review?: { at: number; explanation: string; error?: string };
 };
 export type Chats = Record<string, Chat>;
 
 const MAX_MESSAGES = 60;
+export const MAX_HISTORY = 20;
 const MAX_TEXT = 4000;
+
+/** Light check only: the report came from our own server. A malformed one is dropped, not shown. */
+function cleanReport(rep: StoredReport | null | undefined): StoredReport | undefined {
+  return rep &&
+    Number.isFinite(rep.at) &&
+    typeof rep.report?.summary === "string" &&
+    rep.report.dimensions &&
+    Array.isArray(rep.course)
+    ? rep
+    : undefined;
+}
+
+/** Every review of a case, newest first. */
+export const allReports = (c: Chat | undefined): StoredReport[] =>
+  c?.report ? [c.report, ...(c.history ?? [])] : [];
 
 export function normalizeChats(raw: unknown): Chats {
   const out: Chats = {};
@@ -123,16 +141,11 @@ export function normalizeChats(raw: unknown): Chats {
     const events = (c.events as DebugEvent[]).filter(
       (e) => !!e && typeof e.type === "string" && Number.isFinite(e.at),
     );
-    // Light check only: the report came from our own server. A malformed one is dropped, not shown.
-    const rep = c.report;
-    const report =
-      rep &&
-      Number.isFinite(rep.at) &&
-      typeof rep.report?.summary === "string" &&
-      rep.report.dimensions &&
-      Array.isArray(rep.course)
-        ? rep
-        : undefined;
+    const report = cleanReport(c.report);
+    const history = (Array.isArray(c.history) ? c.history : [])
+      .map(cleanReport)
+      .filter((r): r is StoredReport => !!r)
+      .slice(0, MAX_HISTORY);
     const rv = c.review;
     const review =
       rv && Number.isFinite(rv.at) && typeof rv.explanation === "string"
@@ -145,6 +158,7 @@ export function normalizeChats(raw: unknown): Chats {
     out[id] = {
       ...(round ? { round } : {}),
       ...(report ? { report } : {}),
+      ...(history.length > 0 ? { history } : {}),
       ...(review ? { review } : {}),
       messages,
       events,

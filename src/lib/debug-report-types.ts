@@ -36,4 +36,6 @@ export type StoredReport = {
   report: Report;
   course: CourseRec[];
   explanation: string;
+  /** The code as it stood when this review was written, so an older review still shows its own changes. */
+  files?: Record<string, string>;
 };

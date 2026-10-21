@@ -1,5 +1,5 @@
 import type { StoredReport } from "./debug-report-types";
-import { getChat, recordEvent, updateChat } from "./workbench-store";
+import { getChat, MAX_HISTORY, recordEvent, updateChat } from "./workbench-store";
 
 const inflight = new Set<string>();
 
@@ -44,10 +44,13 @@ export async function requestReview(scenarioId: string, files: Record<string, st
       report: data.report,
       course: data.course ?? [],
       explanation: text,
+      files,
     };
     updateChat(scenarioId, ({ review: _done, ...c }) => {
       void _done;
-      return { ...c, report: stored };
+      // A new review does not replace the last one: that one moves into the history.
+      const history = c.report ? [c.report, ...(c.history ?? [])].slice(0, MAX_HISTORY) : c.history;
+      return { ...c, report: stored, ...(history ? { history } : {}) };
     });
   } catch {
     fail("Could not reach the server. Check your connection and try again.");

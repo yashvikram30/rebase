@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useDebug } from "@/lib/debug-store";
-import { useChats } from "@/lib/workbench-store";
+import { allReports, useChats } from "@/lib/workbench-store";
 
 type Item = {
   id: string;
@@ -213,6 +213,7 @@ export function DebugList({ scenarios, labels }: { scenarios: Item[]; labels: Re
             <th>Title</th>
             <th className="c-topic">Topic</th>
             <th className="c-level">Difficulty</th>
+            <th className="c-review">Review</th>
             <th className="c-act">
               <span className="sr-only">Actions</span>
             </th>
@@ -241,10 +242,25 @@ export function DebugList({ scenarios, labels }: { scenarios: Item[]; labels: Re
                 </td>
                 <td className="c-topic">{labels[s.domain] ?? s.domain}</td>
                 <td className={"c-level lv" + s.difficulty}>{LEVELS[s.difficulty - 1]}</td>
-                <td className="c-act">
-                  {s.reviewable && <Link href={`/debug/${s.id}/review`}>Review agent</Link>}
-                  {chats[s.id]?.report && <Link href={`/debug/${s.id}/report`}>Your review</Link>}
+                <td className="c-review">
+                  {chats[s.id]?.report && (
+                    <Link href={`/debug/${s.id}/reviews`}>
+                      Your review
+                      {allReports(chats[s.id]).length > 1 ? `s (${allReports(chats[s.id]).length})` : ""}
+                    </Link>
+                  )}
                   {review && <span>{review.correct ? "Right call" : "Missed it"}</span>}
+                  {!chats[s.id]?.report && !review && <span className="c-none">None</span>}
+                </td>
+                <td className="c-act">
+                  <Link className="dl-btn" href={`/debug/${s.id}`}>
+                    {done ? "Revisit" : "Solve"}
+                  </Link>
+                  {s.reviewable && (
+                    <Link className="dl-btn primary" href={`/debug/${s.id}/review`}>
+                      Review agent
+                    </Link>
+                  )}
                 </td>
               </tr>
             );

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  allReports,
   DEFAULT_LAYOUT,
   getChat,
   normalizeChats,
@@ -132,5 +133,26 @@ describe("normalizeChats review state", () => {
 
   it("drops a malformed review", () => {
     expect(normalizeChats({ a: { ...base, review: { at: "x", explanation: 3 } } }).a.review).toBeUndefined();
+  });
+});
+
+describe("review history", () => {
+  const base = { started: 1, messages: [], events: [] };
+  const rep = (at: number) => ({
+    at,
+    source: "mentor",
+    report: { summary: `s${at}`, dimensions: {}, strengths: [], improvements: [], aiUsage: {}, revisit: [] },
+    course: [],
+    explanation: "why",
+  });
+
+  it("keeps older reports, drops malformed ones, and lists newest first", () => {
+    const out = normalizeChats({ a: { ...base, report: rep(3), history: [rep(2), { at: 1 }, rep(0)] } });
+    expect(out.a.history?.map((r) => r.at)).toEqual([2, 0]);
+    expect(allReports(out.a).map((r) => r.at)).toEqual([3, 2, 0]);
+  });
+
+  it("lists nothing for a case without a report", () => {
+    expect(allReports(undefined)).toEqual([]);
   });
 });

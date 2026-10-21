@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ReportClient } from "@/components/debug/report-client";
+import { Suspense } from "react";
+import { ReportAt } from "@/components/debug/report-at";
+import { ReportSkeleton } from "@/components/debug/report-skeleton";
 import { allScenarios, DOMAIN_LABEL, getScenario } from "@/lib/debug";
 import "../../../debug.css";
 
@@ -23,11 +25,13 @@ export default async function ReportPage({ params }: PageProps<"/debug/[id]/repo
         <span>Your review</span>
       </nav>
       <h1>{scenario.title}</h1>
-      <ReportClient
-        id={scenario.id}
-        original={scenario.files}
-        topic={{ domain: DOMAIN_LABEL[scenario.domain], concept: scenario.concept }}
-      />
+      <Suspense fallback={<ReportSkeleton />}>
+        <ReportAt
+          id={scenario.id}
+          original={scenario.files}
+          topic={{ domain: DOMAIN_LABEL[scenario.domain], concept: scenario.concept }}
+        />
+      </Suspense>
     </article>
   );
 }

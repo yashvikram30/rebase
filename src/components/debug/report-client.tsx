@@ -7,7 +7,7 @@ import { DIMENSIONS, type Rating, type Suggestion } from "@/lib/debug-report-typ
 import { describeEvent } from "@/lib/debug-session";
 import { requestReview } from "@/lib/review-request";
 import { useNowSeconds } from "@/components/workbench/use-now";
-import { useChats, useDrafts } from "@/lib/workbench-store";
+import { allReports, useChats, useDrafts } from "@/lib/workbench-store";
 import { ReportSkeleton } from "./report-skeleton";
 import { Diff } from "./results";
 
@@ -33,17 +33,22 @@ export function ReportClient({
   id,
   original,
   topic,
+  at,
 }: {
   id: string;
+  /** Which review to show, by its timestamp. The newest one when left out. */
+  at?: number;
   original: Record<string, string>;
   topic: { domain: string; concept: string };
 }) {
   const chat = useChats()[id];
   const draft = useDrafts()[id];
   const [key, setKey] = useState<AnswerKey | null>(null);
-  const stored = chat?.report;
+  const reports = allReports(chat);
+  const stored = at === undefined ? chat?.report : reports.find((r) => r.at === at);
+  const isLatest = !!stored && stored === chat?.report;
   const now = useNowSeconds();
-  const pending = chat?.review;
+  const pending = at === undefined ? chat?.review : undefined;
   // A request that is still "loading" long after it started was lost (the tab closed mid-request).
   const lost = !!pending && !pending.error && now > 0 && now * 1000 - pending.at > 150_000;
 
@@ -74,18 +79,27 @@ export function ReportClient({
   if (!stored) {
     return (
       <>
-        <p className="lead">There is no review for this case yet.</p>
-        <p>
+        <p className="lead">
+          {at === undefined ? "There is no review for this case yet." : "That review is not on this device."}
+        </p>
+        <p className="dbg-report-actions">
           <Link className="dbg-btn" href={`/debug/${id}`}>
             Open the workbench
           </Link>
+          {reports.length > 0 && (
+            <Link className="dbg-link" href={`/debug/${id}/reviews`}>
+              All reviews for this case
+            </Link>
+          )}
         </p>
       </>
     );
   }
 
   const { report, course } = stored;
-  const files = Object.fromEntries(Object.keys(original).map((f) => [f, draft?.files[f] ?? original[f]]));
+  const files = Object.fromEntries(
+    Object.keys(original).map((f) => [f, stored.files?.[f] ?? draft?.files[f] ?? original[f]]),
+  );
   const changed = Object.keys(original).filter((f) => files[f] !== original[f]);
 
   return (
@@ -224,23 +238,30 @@ export function ReportClient({
         )}
       </section>
 
-      <section aria-labelledby="rep-time">
-        <details className="dbg-timeline">
-          <summary id="rep-time">Timeline ({chat.events.length} events)</summary>
-          <ol>
-            {chat.events.map((e, i) => (
-              <li key={i}>
-                <time>{clock(e.at - chat.started)}</time> {describeEvent(e)}
-              </li>
-            ))}
-          </ol>
-        </details>
-      </section>
+      {isLatest && (
+        <section aria-labelledby="rep-time">
+          <details className="dbg-timeline">
+            <summary id="rep-time">Timeline ({chat.events.length} events)</summary>
+            <ol>
+              {chat.events.map((e, i) => (
+                <li key={i}>
+                  <time>{clock(e.at - chat.started)}</time> {describeEvent(e)}
+                </li>
+              ))}
+            </ol>
+          </details>
+        </section>
+      )}
 
       <p className="dbg-report-actions">
         <Link className="dbg-btn" href="/debug">
           All cases
         </Link>
+        {reports.length > 1 && (
+          <Link className="dbg-link" href={`/debug/${id}/reviews`}>
+            All reviews for this case ({reports.length})
+          </Link>
+        )}
       </p>
     </div>
   );
