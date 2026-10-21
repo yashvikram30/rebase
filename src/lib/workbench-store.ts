@@ -157,6 +157,16 @@ export function recordEvent(id: string, event: DebugEvent) {
   updateChat(id, (c) => ({ ...c, events: addEvent(c.events, event) }));
 }
 
+/**
+ * Starts a fresh conversation for a case: the visible log and the history sent to the model are emptied.
+ * The round (so the message budget cannot be refilled by reopening), the event timeline and the report are
+ * kept, because the end-of-round review reads the timeline, not this log.
+ */
+export function resetChatLog(id: string) {
+  const c = chats.get()[id];
+  if (c && c.messages.length > 0) updateChat(id, (x) => ({ ...x, messages: [] }));
+}
+
 export function clearChat(id: string) {
   const { [id]: _removed, ...rest } = chats.get();
   void _removed;

@@ -16,7 +16,7 @@ _Click the preview to open the full 26-second promo ([video/renders/video.mp4](v
 - **Cases** is a table you can search and filter by topic, difficulty and status, with solved progress for Easy, Medium and Hard.
 - **Workbench:** a CodeMirror editor, a test runner (the failing test and a hidden regression suite), a terminal and a diff of your changes. Python runs in the browser, so nothing you write runs on the server.
 - **Review mode:** read what an agent did, run its patch against both suites, then approve or request changes. The answer is revealed afterwards.
-- **Assistant:** a limited chat (12 messages and 45 minutes a round). It answers only what you ask, uses only that case's code and test output, and gets slightly more specific each time you ask for help, but never writes the fix. Greetings get a short reply with no code. Each time you open the panel the log starts clean; earlier messages are kept for the review.
+- **Assistant:** a limited chat (12 messages and 45 minutes a round). It answers only what you ask, uses only that case's code and test output, and gets slightly more specific each time you ask for help, but never writes the fix. Greetings get a short reply with no code. Each time you open a case the conversation starts fresh, for you and for the assistant (the hint level resets too). The message budget of the round and the timeline used for the review are kept.
 - **Mentor report:** after you finish a round, a reviewer reads the chat, the timeline and what you changed and writes feedback.
 - **Random draw:** a case with its title and topic hidden until you finish.
 

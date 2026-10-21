@@ -231,9 +231,11 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
   - _Server:_ `withholdPatches` removes every patch block and every fenced block longer than 4 lines from every
     reply, in both phases. The prompt layer can be talked around, which is acceptable for self-practice; the server
     layer is what guarantees no fix reaches the page. The Apply patch UI remains for older recorded sessions.
-- **[built] The chat log starts clean each time the panel is opened.** `ChatPanel` shows only messages stamped after
-  it mounted. Earlier messages stay in the store for the end-of-round review and still count towards the hint level
-  and the history sent to the model.
+- **[built] Opening a case starts a fresh conversation.** `Workbench` calls `resetChatLog` in a layout effect on
+  mount, which empties the stored `messages`, so the log on screen and the history sent to the model both start
+  empty (and the hint level restarts at 1). The round (token, cap, used), the event timeline and the report are
+  kept: reopening must not refill the message budget, and the mentor report reads the timeline, not the message
+  log. Closing and reopening the Assistant panel inside one visit keeps that visit's conversation.
 - **[built] Fixed reply caps** (`src/lib/llm-limits.ts`, constants, not settings, never read from a request): chat
   1,000 tokens and 4,000 characters; the reviewer 4,000 tokens and 16,000 characters. **Measured:** the gateway
   applies `max_tokens` to the visible answer only, and thinking can exceed it (one reply used 1,268 tokens against
@@ -349,8 +351,10 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
 
 - **2026-10-22:** Docs refreshed after deploying `v2`: README rewritten for Rebase, decisions updated for the
   drawer sidebar, the case table, the hint-only assistant, the clean chat log and the prerender limit.
+- **2026-10-22:** Opening a case now resets the assistant conversation (log and model history); the round budget
+  and the review timeline are kept. Replaces the display-only filter.
 - **2026-10-22:** Assistant answers only what was asked; greetings get a code-free prompt; the chat log starts clean
-  each time the panel is opened (earlier messages are kept for the review).
+  each time the panel is opened.
 - **2026-10-22:** Lesson prerendering limited to the first two weeks, cutting a build's server output from about
   234 MB to 87 MB.
 - **2026-10-21:** The assistant became hint-only with four escalating levels; every patch and long code block is

@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_LAYOUT, normalizeChats, normalizeDrafts, normalizeLayout } from "./workbench-store";
+import {
+  DEFAULT_LAYOUT,
+  getChat,
+  normalizeChats,
+  normalizeDrafts,
+  normalizeLayout,
+  recordEvent,
+  resetChatLog,
+  updateChat,
+} from "./workbench-store";
 
 describe("normalizeDrafts", () => {
   it("keeps a well-formed draft", () => {
@@ -79,5 +88,32 @@ describe("normalizeChats", () => {
     const out = normalizeChats({ a: { ...chat, messages } });
     expect(out.a.messages).toHaveLength(60);
     expect(out.a.messages[0].content).toHaveLength(4000);
+  });
+});
+
+describe("resetChatLog", () => {
+  it("empties the messages but keeps the round, the timeline and the report data", () => {
+    const round = { token: "t", exp: 9_999_999_999_999, cap: 12, used: 3 };
+    updateChat("case-a", (c) => ({
+      ...c,
+      round,
+      messages: [
+        { role: "user", content: "hint?", at: 1 },
+        { role: "assistant", content: "look at the test", at: 2 },
+      ],
+    }));
+    recordEvent("case-a", { at: 1, type: "chat-user", phase: "explore", text: "hint?" });
+
+    resetChatLog("case-a");
+
+    const chat = getChat("case-a");
+    expect(chat?.messages).toEqual([]);
+    expect(chat?.round).toEqual(round);
+    expect(chat?.events.some((e) => e.type === "chat-user")).toBe(true);
+  });
+
+  it("does nothing for a case with no chat", () => {
+    resetChatLog("never-opened");
+    expect(getChat("never-opened")).toBeUndefined();
   });
 });
