@@ -45,6 +45,8 @@ export async function requestReview(scenarioId: string, files: Record<string, st
       course: data.course ?? [],
       explanation: text,
       files,
+      events: chat?.events ?? [],
+      started: chat?.started ?? now(),
     };
     updateChat(scenarioId, ({ review: _done, ...c }) => {
       void _done;

@@ -185,12 +185,21 @@ export function recordEvent(id: string, event: DebugEvent) {
 
 /**
  * Starts a fresh conversation for a case: the visible log and the history sent to the model are emptied.
- * The round (so the message budget cannot be refilled by reopening), the event timeline and the report are
- * kept, because the end-of-round review reads the timeline, not this log.
+ * The round (so the message budget cannot be refilled by reopening) and the reports are kept. The timeline is
+ * restarted separately, by `restartTimeline`.
  */
 export function resetChatLog(id: string) {
   const c = chats.get()[id];
   if (c && c.messages.length > 0) updateChat(id, (x) => ({ ...x, messages: [] }));
+}
+
+/**
+ * Starts a fresh timeline for a case, with an "open" entry, so the next review looks only at what happens from
+ * here: called when the case is opened and when it is reset. Earlier reviews keep their own timeline.
+ */
+export function restartTimeline(id: string) {
+  const at = Date.now();
+  updateChat(id, (c) => ({ ...c, events: [{ at, type: "open" }], started: at }));
 }
 
 export function clearChat(id: string) {

@@ -16,8 +16,8 @@ import { recordSolve } from "@/lib/debug-store";
 import { diffStats, lineDiff } from "@/lib/line-diff";
 import {
   clearDraft,
-  getChat,
   resetChatLog,
+  restartTimeline,
   recordEvent,
   useChats,
   saveDraft,
@@ -110,14 +110,11 @@ export function Workbench({ scenario }: { scenario: WorkbenchScenario }) {
     ? [results.failing.output, results.regression?.output].filter(Boolean).join("\n")
     : "";
 
-  // The first time a case is opened, the timeline starts.
-  // Opening a case starts a fresh conversation with the assistant (before paint, so old messages never flash).
+  // Opening a case starts a fresh conversation with the assistant and a fresh timeline, so a review only looks at
+  // this visit (before paint, so old messages never flash).
   useLayoutEffect(() => {
     resetChatLog(scenario.id);
-  }, [scenario.id]);
-
-  useEffect(() => {
-    if (!getChat(scenario.id)?.events.length) recordEvent(scenario.id, { at: Date.now(), type: "open" });
+    restartTimeline(scenario.id);
   }, [scenario.id]);
 
   // Save the draft shortly after the last keystroke.
@@ -193,6 +190,7 @@ export function Workbench({ scenario }: { scenario: WorkbenchScenario }) {
     setResults(null);
     setSavedAt(null);
     setResetAt(Date.now());
+    restartTimeline(scenario.id);
     setConfirmReset(false);
   }
 

@@ -249,6 +249,11 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
   empty (and the hint level restarts at 1). The round (token, cap, used), the event timeline and the report are
   kept: reopening must not refill the message budget, and the mentor report reads the timeline, not the message
   log. Closing and reopening the Assistant panel inside one visit keeps that visit's conversation.
+- **[built] The review reads only the current visit.** `restartTimeline` (`src/lib/workbench-store.ts`) empties the
+  event timeline and sets `started` to now, with a fresh "open" entry, when a case is opened and when it is reset.
+  The mentor report is built from that timeline, so messages, edits and runs from before the reset or the last
+  visit are never analysed. Each stored review keeps the `events` and `started` it was written from, so its
+  timeline on the report page survives later visits.
 - **[built] Fixed reply caps** (`src/lib/llm-limits.ts`, constants, not settings, never read from a request): chat
   1,000 tokens and 4,000 characters; the reviewer 4,000 tokens and 16,000 characters. **Measured:** the gateway
   applies `max_tokens` to the visible answer only, and thinking can exceed it (one reply used 1,268 tokens against
@@ -361,6 +366,11 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
 ---
 
 ## Changelog
+
+- **2026-10-22:** The mentor review now analyses only the current visit: opening a case or resetting it restarts the
+  timeline, and each stored review keeps its own. The report page is now structured: a summary card (rating counts
+  and a stat strip), a sticky jump bar, numbered sections, rating pills, course links in the same block style as the
+  course day lists, and a collapsible timeline.
 
 - **2026-10-22:** Debug library grew from 35 to 42 cases: seven multi-bug cases (three failing tests each, found
   by reviewing how the AI-enabled rounds present failing codebases). All 42 were re-rated against the rubric in

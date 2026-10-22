@@ -8,6 +8,7 @@ import {
   normalizeLayout,
   recordEvent,
   resetChatLog,
+  restartTimeline,
   updateChat,
 } from "./workbench-store";
 
@@ -116,6 +117,23 @@ describe("resetChatLog", () => {
   it("does nothing for a case with no chat", () => {
     resetChatLog("never-opened");
     expect(getChat("never-opened")).toBeUndefined();
+  });
+});
+
+describe("restartTimeline", () => {
+  it("drops earlier events and starts again from an open entry, keeping the reports", () => {
+    const rep = { at: 5, source: "basic", report: { summary: "s", dimensions: {} }, course: [] };
+    updateChat("case-b", (c) => ({ ...c, started: 1, report: rep as never }));
+    recordEvent("case-b", { at: 2, type: "chat-user", phase: "explore", text: "old question" });
+
+    restartTimeline("case-b");
+
+    const chat = getChat("case-b");
+    expect(chat?.events).toHaveLength(1);
+    expect(chat?.events[0].type).toBe("open");
+    expect(chat?.started).toBe(chat?.events[0].at);
+    expect(chat?.started).toBeGreaterThan(1);
+    expect(chat?.report).toBe(rep);
   });
 });
 

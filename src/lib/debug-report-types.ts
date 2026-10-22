@@ -1,3 +1,5 @@
+import type { DebugEvent } from "./debug-session";
+
 /** What the mentor report says, shared by the server that builds it and the page that shows it. */
 export type Rating = "strong" | "fair" | "weak" | "not shown";
 
@@ -38,4 +40,7 @@ export type StoredReport = {
   explanation: string;
   /** The code as it stood when this review was written, so an older review still shows its own changes. */
   files?: Record<string, string>;
+  /** What the review was written from: the timeline of that visit and when it began. Older reviews have none. */
+  events?: DebugEvent[];
+  started?: number;
 };
