@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
 import { toDateString } from "@/lib/striver-schedule";
 import {
   checkAndLevelMissedReviews,
@@ -23,6 +24,7 @@ type TopicGroup = {
 
 export function StriverClient({ problems }: { problems: StriverProblem[] }) {
   const store = useStriver();
+  const { data: session } = useSession();
   const [todayStr, setTodayStr] = useState("");
   const [query, setQuery] = useState("");
   const [topicFilter, setTopicFilter] = useState("all");
@@ -54,12 +56,15 @@ export function StriverClient({ problems }: { problems: StriverProblem[] }) {
     }
   }, []);
 
-  // Update emailInput if store changes
+  // Update emailInput if store changes, or auto-populate from authenticated session
   useEffect(() => {
-    if (store.email && !emailInput) {
+    if (session?.user?.email && !store.email) {
+      setUserEmail(session.user.email);
+      setEmailInput(session.user.email);
+    } else if (store.email && !emailInput) {
       setEmailInput(store.email);
     }
-  }, [store.email, emailInput]);
+  }, [session?.user?.email, store.email, emailInput]);
 
   // Review status lookup for each problem: earliest active review
   const nextReviewByProblem = useMemo(() => {
