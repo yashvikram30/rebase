@@ -3,6 +3,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AppSidebar } from "./app-sidebar";
 import { MobileBar } from "./mobile-bar";
+import { DebugGuideButton } from "./debug/debug-guide-dialog";
 import type { ProductId } from "@/lib/products";
 
 /**
@@ -13,11 +14,13 @@ export function BareShell({
   product,
   wide = false,
   className,
+  actions,
   children,
 }: {
   product?: ProductId;
   wide?: boolean;
   className?: string;
+  actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -44,7 +47,11 @@ export function BareShell({
       <a className="skip" href="#main">
         Skip to content
       </a>
-      <MobileBar navOpen={navOpen} onMenu={() => setNavOpen((v) => !v)} />
+      <MobileBar
+        navOpen={navOpen}
+        onMenu={() => setNavOpen((v) => !v)}
+        actions={actions ?? (product === "debug" ? <DebugGuideButton /> : null)}
+      />
       <div className="layout">
         <AppSidebar open={navOpen} onNavigate={() => setNavOpen(false)} />
         <main id="main" tabIndex={-1}>

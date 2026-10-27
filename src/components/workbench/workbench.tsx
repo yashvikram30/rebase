@@ -27,6 +27,7 @@ import {
   type Layout,
 } from "@/lib/workbench-store";
 import { Diff, TestRun } from "../debug/results";
+import { DebugGuideDialog } from "../debug/debug-guide-dialog";
 import { ChatPanel } from "./chat-panel";
 import { FinishDialog } from "./finish-dialog";
 import { MoreMenu, RunSplit } from "./title-menus";
@@ -98,6 +99,7 @@ export function Workbench({ scenario }: { scenario: WorkbenchScenario }) {
   const layout = live ?? stored;
   const [chatOpen, setChatOpen] = useState(true);
   const [finishing, setFinishing] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
   const hasReport = !!useChats()[scenario.id]?.report;
   const logged = useRef<Record<string, string>>({});
 
@@ -264,6 +266,7 @@ export function Workbench({ scenario }: { scenario: WorkbenchScenario }) {
               keepOpen: !confirmReset,
             },
             { label: "Full screen", onSelect: toggleFullscreen },
+            { label: "Interview guide", onSelect: () => setGuideOpen(true) },
             ...(hasReport
               ? [{ label: "View report", onSelect: () => router.push(`/debug/${scenario.id}/report`) }]
               : []),
@@ -482,6 +485,8 @@ export function Workbench({ scenario }: { scenario: WorkbenchScenario }) {
       {finishing && (
         <FinishDialog scenarioId={scenario.id} files={files} onClose={() => setFinishing(false)} />
       )}
+
+      {guideOpen && <DebugGuideDialog open={guideOpen} onClose={() => setGuideOpen(false)} />}
 
       <footer className="wb-status">
         <span>{status}</span>

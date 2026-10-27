@@ -1,0 +1,393 @@
+/* The interview guide: a button in the top bar and a dialog with four sections. Uses the Debug tokens
+   from debug.css, which the dialog inherits from .shell[data-product="debug"] or .wb. */
+
+/* ---------- top bar button ---------- */
+.dbg-guide-top-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  font: 600 13px var(--sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.dbg-guide-top-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--line-strong);
+}
+.dbg-guide-top-icon {
+  flex: none;
+  color: var(--accent);
+}
+@media (max-width: 560px) {
+  .dbg-guide-top-btn {
+    width: 36px;
+    padding: 0;
+    justify-content: center;
+  }
+  .dbg-guide-top-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* ---------- dialog frame ---------- */
+.dbg-guide-dlg {
+  width: min(820px, calc(100vw - 32px));
+  height: min(760px, calc(100dvh - 48px));
+  max-width: none;
+  max-height: none;
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.4);
+  overflow: hidden;
+}
+.dbg-guide-dlg::backdrop {
+  background: rgb(10 14 20 / 0.6);
+}
+.dbg-g-wrap {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  height: 100%;
+}
+
+.dbg-g-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px 16px;
+}
+.dbg-g-eyebrow {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font: 600 12px var(--sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.dbg-g-head h2 {
+  margin: 0;
+  font: 700 1.35rem/1.25 var(--dbg-display, var(--sans));
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.dbg-g-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.dbg-g-close:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+/* ---------- tabs ---------- */
+.dbg-g-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.dbg-g-tabs::-webkit-scrollbar {
+  display: none;
+}
+.dbg-g-tabs button {
+  flex: none;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--muted);
+  font: 600 14px var(--sans);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.dbg-g-tabs button:hover {
+  color: var(--text);
+}
+.dbg-g-tabs button.is-active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+/* ---------- body ---------- */
+.dbg-g-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 22px 24px 28px;
+  background: var(--bg);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.dbg-g-body h4 {
+  margin: 0;
+  font: 650 15px/1.35 var(--sans);
+}
+.dbg-g-body p {
+  margin: 0;
+}
+.dbg-g-body .dbg-g-lead {
+  max-width: 62ch;
+  margin-bottom: 20px;
+  color: var(--muted);
+}
+.dbg-g-body .dbg-g-sub {
+  margin: 28px 0 6px;
+}
+.dbg-g-body .dbg-g-muted {
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.dbg-g-body .dbg-g-note {
+  margin-top: 20px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  background: var(--panel);
+  font-size: 14px;
+}
+
+/* approach: numbered steps */
+.dbg-g-steps {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dbg-g-steps > li {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.dbg-g-num {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 700 14px var(--mono);
+}
+.dbg-g-steps p {
+  margin-top: 4px;
+  font-size: 14px;
+}
+.dbg-g-steps ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.dbg-g-steps ul li + li {
+  margin-top: 2px;
+}
+.dbg-g-steps .dbg-g-why {
+  margin-top: 10px;
+  color: var(--muted);
+}
+.dbg-g-why b {
+  color: var(--text);
+}
+
+/* assistant: prompt comparison and hint ladder */
+.dbg-g-compare {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.dbg-g-card {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-top-width: 3px;
+  border-radius: 10px;
+  background: var(--panel);
+}
+.dbg-g-card.is-weak {
+  border-top-color: var(--bad);
+}
+.dbg-g-card.is-strong {
+  border-top-color: var(--ok);
+}
+.dbg-g-card blockquote {
+  margin: 12px 0 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 14px;
+}
+.dbg-g-card blockquote:first-of-type {
+  margin-top: 10px;
+}
+.dbg-g-card p {
+  color: var(--muted);
+  font-size: 13.5px;
+}
+.dbg-g-ladder,
+.dbg-g-time {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dbg-g-ladder li,
+.dbg-g-time li {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 14px;
+  align-items: baseline;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  font-size: 14px;
+}
+.dbg-g-ladder li span,
+.dbg-g-time li span {
+  color: var(--muted);
+  font: 600 13px var(--mono);
+}
+
+/* grading: definition list */
+.dbg-g-dims {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.dbg-g-dims > div {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.dbg-g-dims dt {
+  font: 650 15px/1.35 var(--sans);
+}
+.dbg-g-dims dd {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* interview: habits */
+.dbg-g-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14.5px;
+}
+
+/* ---------- footer ---------- */
+.dbg-g-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 24px;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+}
+.dbg-g-foot p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.dbg-g-done {
+  flex: none;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 650 14px var(--sans);
+  cursor: pointer;
+}
+.dbg-g-done:hover {
+  filter: brightness(1.08);
+}
+
+/* ---------- narrow screens ---------- */
+@media (max-width: 720px) {
+  .dbg-g-compare,
+  .dbg-g-dims {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dbg-g-ladder li,
+  .dbg-g-time li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+}
+@media (max-width: 560px) {
+  .dbg-guide-dlg {
+    width: 100vw;
+    height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+  .dbg-g-head {
+    padding: 16px 16px 12px;
+  }
+  .dbg-g-head h2 {
+    font-size: 1.15rem;
+  }
+  .dbg-g-tabs {
+    padding: 0 8px;
+  }
+  .dbg-g-body {
+    padding: 16px 16px 24px;
+  }
+  .dbg-g-steps > li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .dbg-g-foot {
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  }
+  .dbg-g-foot p {
+    display: none;
+  }
+  .dbg-g-done {
+    width: 100%;
+  }
+}
+@media (max-height: 520px) {
+  .dbg-guide-dlg {
+    height: 100dvh;
+    border-radius: 0;
+  }
+}
