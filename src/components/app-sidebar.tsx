@@ -29,6 +29,12 @@ const SECTIONS: { name: string; links: SideLink[] }[] = [
       { href: "/debug/random", label: "Random round" },
     ],
   },
+  {
+    name: "Practice",
+    links: [
+      { href: "/striver", label: "Striver 180" },
+    ],
+  },
 ];
 
 const under = (pathname: string, p: string) =>

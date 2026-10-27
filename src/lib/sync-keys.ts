@@ -8,6 +8,7 @@ export const SYNC_KEYS = [
   "csplan.revise",
   "csplan.debug",
   "csplan.debug.drafts",
+  "csplan.striver",
 ] as const;
 export type SyncKey = (typeof SYNC_KEYS)[number];
 

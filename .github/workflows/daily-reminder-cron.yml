@@ -1,0 +1,23 @@
+name: Daily DSA Revision Cron
+
+on:
+  schedule:
+    # Runs daily at 08:00 UTC
+    - cron: '0 8 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  trigger-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Reminders Endpoint
+        env:
+          APP_URL: ${{ secrets.APP_URL || 'https://rebase.dev' }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -n "$CRON_SECRET" ]; then
+            curl -f -X GET "$APP_URL/api/cron/reminders" \
+              -H "Authorization: Bearer $CRON_SECRET"
+          else
+            echo "CRON_SECRET not set in GitHub repository secrets. Skipping remote curl."
+          fi
