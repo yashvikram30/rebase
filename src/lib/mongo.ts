@@ -1,8 +1,12 @@
 import { MongoClient, type Collection } from "mongodb";
 import type { Visit } from "./analytics";
 
-/** One row per user per synced store: { uid, key, value (JSON text), updated }. */
-export type SyncRow = { uid: string; key: string; value: string; updated: number };
+/**
+ * One row per user per synced store: { uid, key, value (JSON text), updated }.
+ * `email` is the account's address, taken from the session (never from the client) on the Striver row so the
+ * daily reminder cron knows where to send.
+ */
+export type SyncRow = { uid: string; key: string; value: string; updated: number; email?: string };
 
 declare global {
   var _mongo: Promise<MongoClient> | undefined;

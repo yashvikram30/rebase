@@ -183,6 +183,48 @@ export default async function PlatformHome() {
         </div>
       </section>
 
+      <section className="plt-row">
+        <div className="plt-wrap plt-row-grid">
+          <div className="plt-copy">
+            <h2>Never forget a DSA pattern you already solved.</h2>
+            <p>
+              Work through Striver&apos;s 180-problem sheet and mark each one by how it went. Rebase schedules the
+              reviews for you and emails you each morning with what to redo.
+            </p>
+            <ul>
+              <li>Needed a hint? Review in 7 and 28 days. Struggled? 7, 14 and 28.</li>
+              <li>Miss a day and the review moves to your quietest day this week.</li>
+              <li>The reminder goes to your account email, so you sign in to use it.</li>
+            </ul>
+            <p>
+              <Link className="plt-link" href="/striver">
+                Open the Striver sheet
+              </Link>
+            </p>
+          </div>
+          <div className="plt-mock plt-sheet" aria-hidden="true">
+            <div className="plt-mock-bar">
+              <b>Due for review</b>
+              <span>3 today</span>
+            </div>
+            {[
+              ["red", "Kadane's Algorithm", "Day 14 check"],
+              ["yellow", "Two Sum", "Day 7 check"],
+              ["yellow", "Merge Intervals", "Day 28 retention"],
+            ].map(([tone, name, when]) => (
+              <div key={name} className="plt-day-row">
+                <span className={"plt-sheet-dot is-" + tone} />
+                <span>
+                  <b>{name}</b>
+                  <small>{when}</small>
+                </span>
+                <span className="plt-count">Solve</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="plt-map">
         <div className="plt-wrap">
           <h2>Seven layers, each built on the one below.</h2>
@@ -233,6 +275,10 @@ export default async function PlatformHome() {
             <h2>Debug</h2>
             <Link href="/debug">All cases</Link>
             <Link href="/debug/random">Random round</Link>
+          </nav>
+          <nav aria-label="Practice">
+            <h2>Practice</h2>
+            <Link href="/striver">Striver 180 sheet</Link>
           </nav>
           <nav aria-label="Account and project">
             <h2>Rebase</h2>

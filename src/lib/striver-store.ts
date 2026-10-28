@@ -1,76 +1,14 @@
 "use client";
 import { createLocalStore, useLocalStore } from "./local-store";
+import { normalizeStriver } from "./striver-normalize";
 import {
   rescheduleMissedReviews,
   toDateString,
   updateReviewsOnStatusChange,
 } from "./striver-schedule";
-import type {
-  ProblemProgress,
-  ProblemStatus,
-  ScheduledReview,
-  StriverStoreState,
-} from "./striver-types";
+import type { ProblemStatus, StriverStoreState } from "./striver-types";
 
-const EMPTY: StriverStoreState = {
-  statuses: {},
-  reviews: [],
-  email: undefined,
-};
-
-export function normalizeStriver(raw: unknown): StriverStoreState {
-  const r = (raw && typeof raw === "object" ? raw : {}) as {
-    statuses?: unknown;
-    reviews?: unknown;
-    email?: unknown;
-  };
-
-  const statuses: Record<number, ProblemProgress> = {};
-  if (r.statuses && typeof r.statuses === "object") {
-    for (const [idStr, val] of Object.entries(r.statuses)) {
-      const pid = Number(idStr);
-      const v = val as Partial<ProblemProgress> | null;
-      if (
-        Number.isInteger(pid) &&
-        v &&
-        ["unattempted", "green", "yellow", "red"].includes(v.status as string)
-      ) {
-        statuses[pid] = {
-          status: v.status as ProblemStatus,
-          updatedAt: typeof v.updatedAt === "number" ? v.updatedAt : Date.now(),
-          notes: typeof v.notes === "string" ? v.notes.slice(0, 4000) : undefined,
-        };
-      }
-    }
-  }
-
-  const reviews: ScheduledReview[] = [];
-  if (Array.isArray(r.reviews)) {
-    for (const item of r.reviews) {
-      if (
-        item &&
-        typeof item.problemId === "number" &&
-        ["yellow", "red"].includes(item.status) &&
-        typeof item.dueDate === "string" &&
-        typeof item.stage === "number"
-      ) {
-        reviews.push({
-          problemId: item.problemId,
-          status: item.status,
-          stage: item.stage,
-          dueDate: item.dueDate,
-          scheduledFor: item.scheduledFor || item.dueDate,
-          completed: item.completed === true,
-          completedAt: typeof item.completedAt === "number" ? item.completedAt : undefined,
-        });
-      }
-    }
-  }
-
-  const email = typeof r.email === "string" && r.email.includes("@") ? r.email : undefined;
-
-  return { statuses, reviews, email };
-}
+const EMPTY: StriverStoreState = { statuses: {}, reviews: [], reminders: true };
 
 const store = createLocalStore<StriverStoreState>("csplan.striver", EMPTY, normalizeStriver);
 export const useStriver = () => useLocalStore(store);
@@ -85,6 +23,11 @@ export function setProblemStatus(
   const cur = store.get();
   const now = Date.now();
   const todayStr = toDateString(new Date(now));
+
+  // Clicking the status a problem already has must not restart its schedule, unless a review is due.
+  const sameStatus = (cur.statuses[problemId]?.status ?? "unattempted") === status;
+  const reviewDue = cur.reviews.some((r) => r.problemId === problemId && !r.completed && r.dueDate <= todayStr);
+  if (sameStatus && !reviewDue && notes === undefined) return;
 
   // Update status record
   const statuses = {
@@ -137,9 +80,8 @@ export function saveProblemNotes(problemId: number, notes: string) {
   }
 }
 
-export function setUserEmail(email: string) {
-  const cur = store.get();
-  store.set({ ...cur, email });
+export function setReminders(reminders: boolean) {
+  store.set({ ...store.get(), reminders });
 }
 
 /**

@@ -33,7 +33,7 @@ export function createScheduleForProblem(
   fromDate: Date = new Date(),
 ): ScheduledReview[] {
   const intervals = status === "yellow" ? YELLOW_INTERVALS_DAYS : RED_INTERVALS_DAYS;
-  const now = fromDate;
+  const now = new Date(fromDate.getTime());
   now.setHours(0, 0, 0, 0);
 
   return intervals.map((days, stage) => {
@@ -146,7 +146,7 @@ export function rescheduleMissedReviews(
 }
 
 /**
- * Returns all active reviews due on or before targetDateStr.
+ * Returns all active reviews due exactly on targetDateStr.
  */
 export function getDueReviews(
   reviews: ScheduledReview[],

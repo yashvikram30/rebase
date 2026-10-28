@@ -616,7 +616,7 @@
 }
 .plt-foot-grid {
   display: grid;
-  grid-template-columns: 2fr repeat(3, 1fr);
+  grid-template-columns: 2fr repeat(4, 1fr);
   gap: 32px;
 }
 .plt-foot-brand {
@@ -722,3 +722,13 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Striver sheet teaser */
+.plt-sheet-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--line-strong);
+}
+.plt-sheet-dot.is-yellow { background: #e2a70c; }
+.plt-sheet-dot.is-red { background: #e0483f; }

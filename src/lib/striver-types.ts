@@ -33,7 +33,8 @@ export type ScheduledReview = {
 export type StriverStoreState = {
   statuses: Record<number, ProblemProgress>;
   reviews: ScheduledReview[];
-  email?: string;
+  /** Daily revision email to the signed-in account's address. On unless the user turns it off. */
+  reminders: boolean;
 };
 
 export const YELLOW_INTERVALS_DAYS = [7, 28] as const;

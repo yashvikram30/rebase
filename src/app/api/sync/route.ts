@@ -49,7 +49,12 @@ export async function PUT(req: Request) {
   try {
     const col = await syncRows();
     if (value === null) await col.deleteOne({ uid, key });
-    else await col.updateOne({ uid, key }, { $set: { value, updated: Date.now() } }, { upsert: true });
+    else {
+      const set: { value: string; updated: number; email?: string } = { value, updated: Date.now() };
+      // The reminder cron emails the account address, so it comes from the session, not from the stored value.
+      if (key === "csplan.striver" && session?.user?.email) set.email = session.user.email;
+      await col.updateOne({ uid, key }, { $set: set }, { upsert: true });
+    }
     return Response.json({ ok: true }, { headers: noStore });
   } catch (e) {
     console.error("sync PUT failed", e);

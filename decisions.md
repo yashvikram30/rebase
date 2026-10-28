@@ -363,9 +363,32 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
   No billing or payment code is planned yet.
 - **[open] Streaming replies** and a server-side sandbox for real concurrency or network scenarios.
 
+## 13. Striver 180 sheet and revision reminders
+
+- **[built] `/striver` is for signed-in users only.** The page reads the session on the server (inside `Suspense`, as
+  Cache Components requires) and redirects guests to `/signin?next=/striver`. The reminder goes to the account's
+  address, so there is no guest mode.
+- **[built] The recipient is never taken from the client.** `/api/sync` records the session email on the
+  `csplan.striver` row when it saves it; the daily cron emails only `row.email`. The earlier design (an editable email
+  field kept in the synced value, plus `uid.includes("@")`, which never matches ids like `google:123`) is gone.
+  - The user's only control is an on/off switch (`reminders` in the store, default on).
+  - `POST /api/striver/test-reminder` sends a sample digest to the session email only. It replaced a `POST` on the
+    cron route that accepted any address and that the page could not call in production (no cron secret).
+- **[built] One scheduler.** Vercel Cron (`vercel.json`, 08:00 UTC, sends `Authorization: Bearer $CRON_SECRET`) calls
+  `GET /api/cron/reminders`. The GitHub Actions workflow that also fired at 08:00 UTC was removed: it sent every user
+  two emails a day.
+- **[built] `normalizeStriver` lives in `lib/striver-normalize.ts`**, not the `"use client"` store: a server route
+  importing a function from a client module receives a reference stub, not the function.
+- **[open] The cron uses the UTC date, the browser uses its local date,** so a due review can show a few hours
+  earlier or later than the email. Storing the user's timezone on the row would fix it.
+
 ---
 
 ## Changelog
+
+- **2026-10-28:** Striver: sign-in required, reminders go to the session email via the sync row, test-send moved to
+  its own authenticated route, duplicate GitHub cron removed, page redesigned, and Striver added to the landing
+  page and top bar.
 
 - **2026-10-22:** The mentor review now analyses only the current visit: opening a case or resetting it restarts the
   timeline, and each stored review keeps its own. The report page is now structured: a summary card (rating counts

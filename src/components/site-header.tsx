@@ -11,6 +11,7 @@ export function SiteHeader() {
       <nav aria-label="Main">
         <Link href="/plan">Course</Link>
         <Link href="/debug">Debug cases</Link>
+        <Link href="/striver">Striver 180</Link>
       </nav>
       <span className="grow" />
       <ThemeToggle />
