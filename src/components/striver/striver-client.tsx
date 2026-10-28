@@ -10,18 +10,11 @@ import {
   useStriver,
 } from "@/lib/striver-store";
 import type { ProblemStatus, StriverProblem } from "@/lib/striver-types";
+import { TopicMenu } from "./topic-menu";
 
 type SubtopicGroup = { subtopic: string; problems: StriverProblem[] };
 type TopicGroup = { topic: string; subtopics: SubtopicGroup[]; totalCount: number };
 type Next = { dueDate: string; stage: number; isOverdue: boolean; isDueToday: boolean };
-
-const STATUS_FILTERS: { value: ProblemStatus | "due"; label: string }[] = [
-  { value: "due", label: "Due today" },
-  { value: "green", label: "Mastered" },
-  { value: "yellow", label: "Needed a hint" },
-  { value: "red", label: "Struggled" },
-  { value: "unattempted", label: "Not started" },
-];
 
 const pct = (n: number, total: number) => (total ? (n / total) * 100 : 0);
 
@@ -99,14 +92,11 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
       const status = store.statuses[p.id]?.status ?? "unattempted";
       if (q && !`${p.label} ${p.topic} ${p.subtopic}`.toLowerCase().includes(q)) continue;
       if (topicFilter !== "all" && p.topic !== topicFilter) continue;
-      if (statusFilter === "due") {
-        const n = nextReviewByProblem.get(p.id);
-        if (!n || !(n.isDueToday || n.isOverdue)) continue;
-      } else if (statusFilter !== "all" && status !== statusFilter) continue;
+      if (statusFilter !== "all" && status !== statusFilter) continue;
       set.add(p.id);
     }
     return set;
-  }, [problems, query, topicFilter, statusFilter, store.statuses, nextReviewByProblem]);
+  }, [problems, query, topicFilter, statusFilter, store.statuses]);
 
   // While searching or filtering, every group with a match is open; otherwise the user's own toggles apply.
   const topicOpen = (t: string) => filtering || (expandedTopics[t] ?? t === topicGroups[0]?.topic);
@@ -115,6 +105,11 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
   function expandAll() {
     setExpandedTopics(Object.fromEntries(topicGroups.map((g) => [g.topic, true])));
     setCollapsedSubtopics({});
+  }
+
+  const allOpen = topicGroups.every((g) => topicOpen(g.topic));
+  function collapseAll() {
+    setExpandedTopics(Object.fromEntries(topicGroups.map((g) => [g.topic, false])));
   }
 
   async function sendTest() {
@@ -198,6 +193,33 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
           <i className="dot-yellow" style={{ width: `${pct(counts.yellow, counts.total)}%` }} />
           <i className="dot-red" style={{ width: `${pct(counts.red, counts.total)}%` }} />
         </div>
+        <div className="striver-reminder">
+          <p>
+            <b>Daily email</b>{" "}
+            <span>
+              {store.reminders ? "to " : "paused for "}
+              {email}
+            </span>
+          </p>
+          <div className="striver-reminder-actions">
+            <button type="button" className="striver-linkbtn" disabled={testState.busy} onClick={sendTest}>
+              {testState.busy ? "Sending…" : "Send a test"}
+            </button>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={store.reminders}
+              aria-label="Daily email reminder"
+              className={"striver-switch" + (store.reminders ? " is-on" : "")}
+              onClick={() => setReminders(!store.reminders)}
+            >
+              <i />
+            </button>
+          </div>
+          <p className="striver-reminder-msg" role="status">
+            {testState.msg}
+          </p>
+        </div>
       </section>
 
       {dueProblems.length > 0 && (
@@ -255,69 +277,21 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
         </section>
       )}
 
-      <section className="striver-reminder" aria-labelledby="striver-rem-h">
-        <div className="striver-reminder-copy">
-          <h2 id="striver-rem-h">Daily email reminder</h2>
-          <p>
-            {store.reminders ? "Sent each morning to " : "Paused. It would go to "}
-            <b>{email}</b> when reviews are due.
-          </p>
-        </div>
-        <div className="striver-reminder-actions">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={store.reminders}
-            aria-label="Daily email reminder"
-            className={"striver-switch" + (store.reminders ? " is-on" : "")}
-            onClick={() => setReminders(!store.reminders)}
-          >
-            <i />
-          </button>
-          <button type="button" className="striver-btn" disabled={testState.busy} onClick={sendTest}>
-            {testState.busy ? "Sending…" : "Send me a test"}
-          </button>
-        </div>
-        <p className="striver-reminder-msg" role="status">
-          {testState.msg}
-        </p>
-      </section>
-
       <div className="striver-bar">
         <input
           type="search"
           className="striver-search"
-          placeholder={`Search ${problems.length} problems, topics, patterns…`}
+          placeholder={`Search ${problems.length} problems…`}
           aria-label="Search problems"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <select
-          className="striver-select"
+        <TopicMenu
           value={topicFilter}
-          onChange={(e) => setTopicFilter(e.target.value)}
-          aria-label="Filter by topic"
-        >
-          <option value="all">All topics</option>
-          {topicGroups.map((g) => (
-            <option key={g.topic} value={g.topic}>
-              {g.topic} ({g.totalCount})
-            </option>
-          ))}
-        </select>
-        <select
-          className="striver-select"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          aria-label="Filter by status"
-        >
-          <option value="all">Any status</option>
-          {STATUS_FILTERS.map((f) => (
-            <option key={f.value} value={f.value}>
-              {f.label}
-            </option>
-          ))}
-        </select>
+          total={problems.length}
+          options={topicGroups.map((g) => ({ value: g.topic, label: g.topic, count: g.totalCount }))}
+          onChange={setTopicFilter}
+        />
         {filtering ? (
           <button
             type="button"
@@ -328,23 +302,12 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
               setStatusFilter("all");
             }}
           >
-            Clear filters
+            Clear
           </button>
         ) : (
-          <>
-            <button type="button" className="striver-btn" onClick={expandAll}>
-              Expand all
-            </button>
-            <button
-              type="button"
-              className="striver-btn"
-              onClick={() => {
-                setExpandedTopics(Object.fromEntries(topicGroups.map((g) => [g.topic, false])));
-              }}
-            >
-              Collapse all
-            </button>
-          </>
+          <button type="button" className="striver-btn" onClick={allOpen ? collapseAll : expandAll}>
+            {allOpen ? "Collapse all" : "Expand all"}
+          </button>
         )}
       </div>
 
