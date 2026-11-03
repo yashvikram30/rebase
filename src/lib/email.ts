@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import type { StriverProblem } from "./striver-types";
+import { RED_INTERVALS_DAYS, YELLOW_INTERVALS_DAYS, type StriverProblem } from "./striver-types";
 
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -70,8 +70,11 @@ export async function sendRevisionEmail({
   const font = "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
   const display = "'Bricolage Grotesque', Georgia, 'Times New Roman', serif";
 
-  const stageLabel = (status: "yellow" | "red", stage: number) =>
-    stage === (status === "red" ? 2 : 1) ? "28-day retention" : stage === 0 ? "7-day check" : "14-day check";
+  const stageLabel = (status: "yellow" | "red", stage: number) => {
+    const intervals = status === "red" ? RED_INTERVALS_DAYS : YELLOW_INTERVALS_DAYS;
+    const days = intervals[stage] ?? intervals[intervals.length - 1];
+    return `${days}-day ${stage === intervals.length - 1 ? "retention" : "check"}`;
+  };
 
   const problemRowsHtml = items
     .map(({ problem, status, stage }) => {

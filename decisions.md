@@ -377,8 +377,8 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
 - **[built] One scheduler.** Vercel Cron (`vercel.json`, 00:00 UTC = 09:00 JST, sends `Authorization: Bearer $CRON_SECRET`) calls
   `GET /api/cron/reminders`. On Hobby the run lands anywhere in that hour (09:00 to 09:59 JST). The GitHub Actions
   workflow that also fired at 08:00 UTC was removed: it sent every user two emails a day.
-- **[built] Marking green never deletes the queue silently.** Yellow gives reviews at +7 and +28 days, red at +7, +14
-  and +28. If a problem still has reviews queued when it is marked green, the page asks once: keep the reminders
+- **[built] Marking green never deletes the queue silently.** Yellow gives reviews at +7, +28 and +56 days, red at
+  +7, +14, +28 and +56. If a problem still has reviews queued when it is marked green, the page asks once: keep the reminders
   (the default, also for the due review, which is completed either way), remove them, or cancel. Only a reset to
   unattempted always clears the queue, and yellow or red restart the schedule from today.
 - **[built] `normalizeStriver` lives in `lib/striver-normalize.ts`**, not the `"use client"` store: a server route
@@ -389,6 +389,9 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
 ---
 
 ## Changelog
+
+- **2026-11-03:** Striver: added a +56 day review for both yellow and red (yellow 7/28/56, red 7/14/28/56); email
+  stage labels now come from the interval lists.
 
 - **2026-11-03:** Striver: marking a problem green no longer deletes its queued reviews; the page asks once
   whether to keep or remove them.

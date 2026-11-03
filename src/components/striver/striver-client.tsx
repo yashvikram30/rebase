@@ -172,7 +172,7 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
         <span className="striver-eyebrow">DSA practice</span>
         <h1>Striver {problems.length} sheet</h1>
         <p className="striver-lead">
-          Mark each problem by how it went. A hint schedules reviews at 7 and 28 days, a struggle at 7, 14 and 28.
+          Mark each problem by how it went. A hint schedules reviews at 7, 28 and 56 days, a struggle at 7, 14, 28 and 56.
           A daily email tells you what to redo.
         </p>
       </header>
@@ -277,7 +277,7 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
                     <button
                       type="button"
                       className="striver-answer is-yellow"
-                      title="Review again in 7 and 28 days"
+                      title="Review again in 7, 28 and 56 days"
                       onClick={() => chooseStatus(p, "yellow")}
                     >
                       Needed a hint
@@ -285,7 +285,7 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
                     <button
                       type="button"
                       className="striver-answer is-red"
-                      title="Review again in 7, 14 and 28 days"
+                      title="Review again in 7, 14, 28 and 56 days"
                       onClick={() => chooseStatus(p, "red")}
                     >
                       Struggled
@@ -493,8 +493,8 @@ function ProblemRow({
 }) {
   const choices: { value: ProblemStatus; label: string; title: string }[] = [
     { value: "green", label: "Green", title: "Solved on your own" },
-    { value: "yellow", label: "Yellow", title: "Needed a hint: review in 7 and 28 days" },
-    { value: "red", label: "Red", title: "Couldn't solve it: review in 7, 14 and 28 days" },
+    { value: "yellow", label: "Yellow", title: "Needed a hint: review in 7, 28 and 56 days" },
+    { value: "red", label: "Red", title: "Couldn't solve it: review in 7, 14, 28 and 56 days" },
   ];
 
   return (

@@ -20,30 +20,33 @@ describe("striver-schedule", () => {
     expect(parsed.getDate()).toBe(27);
   });
 
-  it("creates Yellow schedule with 7d and 28d intervals", () => {
+  it("creates Yellow schedule with 7d, 28d and 56d intervals", () => {
     const base = new Date(2026, 9, 1); // Oct 1, 2026
     const schedule = createScheduleForProblem(42, "yellow", base);
-    expect(schedule).toHaveLength(2);
+    expect(schedule).toHaveLength(3);
     expect(schedule[0].dueDate).toBe("2026-10-08"); // +7d
     expect(schedule[0].stage).toBe(0);
     expect(schedule[1].dueDate).toBe("2026-10-29"); // +28d
     expect(schedule[1].stage).toBe(1);
+    expect(schedule[2].dueDate).toBe("2026-11-26"); // +56d
+    expect(schedule[2].stage).toBe(2);
   });
 
-  it("creates Red schedule with 7d, 14d, and 28d intervals", () => {
+  it("creates Red schedule with 7d, 14d, 28d and 56d intervals", () => {
     const base = new Date(2026, 9, 1); // Oct 1, 2026
     const schedule = createScheduleForProblem(99, "red", base);
-    expect(schedule).toHaveLength(3);
+    expect(schedule).toHaveLength(4);
     expect(schedule[0].dueDate).toBe("2026-10-08"); // +7d
     expect(schedule[1].dueDate).toBe("2026-10-15"); // +14d
     expect(schedule[2].dueDate).toBe("2026-10-29"); // +28d
+    expect(schedule[3].dueDate).toBe("2026-11-26"); // +56d
   });
 
   it("keeps pending reviews when problem is updated to green", () => {
     const base = new Date(2026, 9, 1);
     const existing = createScheduleForProblem(10, "red", base);
     const updated = updateReviewsOnStatusChange(existing, 10, "green");
-    expect(updated).toHaveLength(3);
+    expect(updated).toHaveLength(4);
   });
 
   it("clears pending reviews on green only when asked to", () => {

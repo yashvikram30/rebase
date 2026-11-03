@@ -37,5 +37,5 @@ export type StriverStoreState = {
   reminders: boolean;
 };
 
-export const YELLOW_INTERVALS_DAYS = [7, 28] as const;
-export const RED_INTERVALS_DAYS = [7, 14, 28] as const;
+export const YELLOW_INTERVALS_DAYS = [7, 28, 56] as const;
+export const RED_INTERVALS_DAYS = [7, 14, 28, 56] as const;
