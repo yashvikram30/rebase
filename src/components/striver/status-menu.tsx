@@ -2,18 +2,17 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { usePopover } from "@/lib/use-popover";
-import { RED_INTERVALS_DAYS, YELLOW_INTERVALS_DAYS, type ProblemStatus } from "@/lib/striver-types";
+import type { ProblemStatus } from "@/lib/striver-types";
 
-const days = (list: readonly number[]) => list.join(", ");
-
-const OPTIONS: { value: ProblemStatus; label: string; hint: string }[] = [
-  { value: "green", label: "Green", hint: "Solved on your own" },
-  { value: "yellow", label: "Yellow", hint: `Needed a hint · reviews at ${days(YELLOW_INTERVALS_DAYS)} days` },
-  { value: "red", label: "Red", hint: `Couldn't solve it · reviews at ${days(RED_INTERVALS_DAYS)} days` },
-  { value: "unattempted", label: "Not attempted", hint: "Clears its reviews" },
+const OPTIONS: { value: ProblemStatus; label: string }[] = [
+  { value: "green", label: "Green" },
+  { value: "yellow", label: "Yellow" },
+  { value: "red", label: "Red" },
+  { value: "unattempted", label: "Not attempted" },
 ];
 
-const POP_HEIGHT = 230;
+const POP_HEIGHT = 190;
+const POP_WIDTH = 160;
 
 /** The "How it went" dropdown: the topic menu's look, with a fixed popup so the scrolling table never clips it. */
 export function StatusMenu({
@@ -45,7 +44,7 @@ export function StatusMenu({
     if (!open) {
       const r = e.currentTarget.getBoundingClientRect();
       const flip = r.bottom + POP_HEIGHT > window.innerHeight && r.top > POP_HEIGHT;
-      setPos({ top: flip ? r.top - POP_HEIGHT - 6 : r.bottom + 6, left: Math.max(8, Math.min(r.left, window.innerWidth - 288)) });
+      setPos({ top: flip ? r.top - POP_HEIGHT - 6 : r.bottom + 6, left: Math.max(8, Math.min(r.left, window.innerWidth - POP_WIDTH - 8)) });
     }
     setOpen((v) => !v);
   }
@@ -79,10 +78,7 @@ export function StatusMenu({
                 }}
               >
                 <span className={"st-dot is-" + o.value} aria-hidden="true" />
-                <span className="st-status-text">
-                  <strong>{o.label}</strong>
-                  <small>{o.hint}</small>
-                </span>
+                <span>{o.label}</span>
               </button>
             </li>
           ))}
