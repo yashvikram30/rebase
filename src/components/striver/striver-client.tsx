@@ -29,6 +29,8 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
   const [collapsedSubtopics, setCollapsedSubtopics] = useState<Record<string, boolean>>({});
   const [openNotes, setOpenNotes] = useState<Record<number, boolean>>({});
   const [testState, setTestState] = useState<{ busy: boolean; msg: string | null }>({ busy: false, msg: null });
+  // Set when marking green would leave reviews queued: the user is asked once whether to keep them.
+  const [greenAsk, setGreenAsk] = useState<{ problem: StriverProblem; queued: number } | null>(null);
 
   // Reviews missed while away move to the quietest days of the coming week, as the daily job does for the server copy.
   useEffect(() => {
@@ -101,6 +103,25 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
   // While searching or filtering, every group with a match is open; otherwise the user's own toggles apply.
   const topicOpen = (t: string) => filtering || (expandedTopics[t] ?? t === topicGroups[0]?.topic);
   const subOpen = (t: string, s: string) => !collapsedSubtopics[`${t}::${s}`];
+
+  // Green never deletes the queue silently. If reviews would stay queued, ask once whether to keep them.
+  function chooseStatus(p: StriverProblem, status: ProblemStatus) {
+    if (status === "green") {
+      const current = store.statuses[p.id]?.status ?? "unattempted";
+      const hasDue = store.reviews.some((r) => r.problemId === p.id && !r.completed && r.dueDate <= todayStr);
+      const queued = store.reviews.filter((r) => r.problemId === p.id && !r.completed && r.dueDate > todayStr).length;
+      if (queued > 0 && (current !== "green" || hasDue)) {
+        setGreenAsk({ problem: p, queued });
+        return;
+      }
+    }
+    setProblemStatus(p.id, status);
+  }
+
+  function answerGreenAsk(clearPending: boolean) {
+    if (greenAsk) setProblemStatus(greenAsk.problem.id, "green", undefined, clearPending);
+    setGreenAsk(null);
+  }
 
   function expandAll() {
     setExpandedTopics(Object.fromEntries(topicGroups.map((g) => [g.topic, true])));
@@ -250,14 +271,14 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
                     </small>
                   </div>
                   <div className="striver-due-actions" role="group" aria-label={`How did ${p.label} go?`}>
-                    <button type="button" className="striver-answer is-green" onClick={() => setProblemStatus(p.id, "green")}>
+                    <button type="button" className="striver-answer is-green" onClick={() => chooseStatus(p, "green")}>
                       Mastered
                     </button>
                     <button
                       type="button"
                       className="striver-answer is-yellow"
                       title="Review again in 7 and 28 days"
-                      onClick={() => setProblemStatus(p.id, "yellow")}
+                      onClick={() => chooseStatus(p, "yellow")}
                     >
                       Needed a hint
                     </button>
@@ -265,7 +286,7 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
                       type="button"
                       className="striver-answer is-red"
                       title="Review again in 7, 14 and 28 days"
-                      onClick={() => setProblemStatus(p.id, "red")}
+                      onClick={() => chooseStatus(p, "red")}
                     >
                       Struggled
                     </button>
@@ -397,6 +418,7 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
                                     status={store.statuses[p.id]?.status ?? "unattempted"}
                                     notes={store.statuses[p.id]?.notes}
                                     next={nextReviewByProblem.get(p.id)}
+                                    onSelect={(status) => chooseStatus(p, status)}
                                     notesOpen={Boolean(openNotes[p.id])}
                                     onToggleNotes={() => setOpenNotes((prev) => ({ ...prev, [p.id]: !prev[p.id] }))}
                                   />
@@ -418,6 +440,36 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
           <p className="striver-empty">No problems match. Try a different search or clear the filters.</p>
         )}
       </div>
+
+      {greenAsk && (
+        <div className="striver-ask-backdrop" onClick={() => setGreenAsk(null)}>
+          <div
+            className="striver-ask"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="striver-ask-title"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.key === "Escape" && setGreenAsk(null)}
+          >
+            <h3 id="striver-ask-title">Keep the remaining reminders?</h3>
+            <p>
+              {greenAsk.problem.label} still has {greenAsk.queued} review{greenAsk.queued > 1 ? "s" : ""} queued. Marking
+              it green can keep them coming or drop them.
+            </p>
+            <div className="striver-ask-actions">
+              <button type="button" className="striver-answer is-green" autoFocus onClick={() => answerGreenAsk(false)}>
+                Keep reminders
+              </button>
+              <button type="button" className="striver-answer is-red" onClick={() => answerGreenAsk(true)}>
+                Remove them
+              </button>
+              <button type="button" className="striver-answer" onClick={() => setGreenAsk(null)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -427,6 +479,7 @@ function ProblemRow({
   status,
   notes,
   next,
+  onSelect,
   notesOpen,
   onToggleNotes,
 }: {
@@ -434,6 +487,7 @@ function ProblemRow({
   status: ProblemStatus;
   notes?: string;
   next?: Next;
+  onSelect: (status: ProblemStatus) => void;
   notesOpen: boolean;
   onToggleNotes: () => void;
 }) {
@@ -492,7 +546,7 @@ function ProblemRow({
               className={"status-pill" + (status === c.value ? " is-" + c.value : "")}
               aria-pressed={status === c.value}
               title={c.title}
-              onClick={() => setProblemStatus(p.id, c.value)}
+              onClick={() => onSelect(c.value)}
             >
               {c.label}
             </button>
@@ -503,7 +557,7 @@ function ProblemRow({
               className="status-pill status-reset"
               aria-label={`Reset ${p.label}`}
               title="Reset"
-              onClick={() => setProblemStatus(p.id, "unattempted")}
+              onClick={() => onSelect("unattempted")}
             >
               ×
             </button>

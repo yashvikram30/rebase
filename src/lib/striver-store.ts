@@ -19,6 +19,8 @@ export function setProblemStatus(
   problemId: number,
   status: ProblemStatus,
   notes?: string,
+  /** Only for green: drop the reviews still queued instead of keeping them. */
+  clearPending = false,
 ) {
   const cur = store.get();
   const now = Date.now();
@@ -45,6 +47,7 @@ export function setProblemStatus(
     problemId,
     status,
     new Date(now),
+    clearPending,
   );
 
   // If there was an active review due today or overdue for this problem, mark it as completed

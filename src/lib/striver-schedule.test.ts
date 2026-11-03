@@ -39,10 +39,24 @@ describe("striver-schedule", () => {
     expect(schedule[2].dueDate).toBe("2026-10-29"); // +28d
   });
 
-  it("clears pending reviews when problem is updated to green", () => {
+  it("keeps pending reviews when problem is updated to green", () => {
     const base = new Date(2026, 9, 1);
     const existing = createScheduleForProblem(10, "red", base);
     const updated = updateReviewsOnStatusChange(existing, 10, "green");
+    expect(updated).toHaveLength(3);
+  });
+
+  it("clears pending reviews on green only when asked to", () => {
+    const base = new Date(2026, 9, 1);
+    const existing = createScheduleForProblem(10, "yellow", base);
+    const updated = updateReviewsOnStatusChange(existing, 10, "green", base, true);
+    expect(updated).toHaveLength(0);
+  });
+
+  it("clears pending reviews when problem is reset to unattempted", () => {
+    const base = new Date(2026, 9, 1);
+    const existing = createScheduleForProblem(10, "red", base);
+    const updated = updateReviewsOnStatusChange(existing, 10, "unattempted");
     expect(updated).toHaveLength(0);
   });
 

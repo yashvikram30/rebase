@@ -52,15 +52,19 @@ export function createScheduleForProblem(
 
 /**
  * Updates an existing review list when a problem's status changes.
- * - If green / unattempted: clears all active uncompleted reviews for this problem.
- * - If yellow / red: clears uncompleted reviews for this problem and creates the new schedule.
+ * - Unattempted (reset): clears all active uncompleted reviews for this problem.
+ * - Green: keeps the pending reviews unless `clearPending` is set (the user chose to drop them).
+ * - Yellow / red: clears uncompleted reviews for this problem and creates the new schedule.
  */
 export function updateReviewsOnStatusChange(
   currentReviews: ScheduledReview[],
   problemId: number,
   newStatus: ProblemStatus,
   fromDate: Date = new Date(),
+  clearPending = false,
 ): ScheduledReview[] {
+  if (newStatus === "green" && !clearPending) return currentReviews;
+
   // Keep reviews for other problems, and keep completed reviews for history
   const filtered = currentReviews.filter((r) => r.problemId !== problemId || r.completed);
 
