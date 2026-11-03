@@ -12,7 +12,7 @@ const OPTIONS: { value: ProblemStatus; label: string }[] = [
 ];
 
 const POP_HEIGHT = 190;
-const POP_WIDTH = 160;
+const POP_WIDTH = 184;
 
 /** The "How it went" dropdown: the topic menu's look, with a fixed popup so the scrolling table never clips it. */
 export function StatusMenu({

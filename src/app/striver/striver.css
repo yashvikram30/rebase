@@ -745,12 +745,13 @@
 }
 
 /* ---------- "How it went" dropdown: one fixed width so every row lines up ---------- */
-.st-status-btn { width: 150px; min-width: 0; justify-content: flex-start; }
+.st-status-btn { box-sizing: border-box; width: 184px; min-width: 0; height: 38px; padding: 0 14px; gap: 10px; justify-content: flex-start; }
+.st-status-btn .striver-chevron { margin-left: auto; }
 .st-status-btn.is-green { border-color: color-mix(in srgb, var(--st-green) 45%, transparent); background: color-mix(in srgb, var(--st-green) 14%, var(--panel)); }
 .st-status-btn.is-yellow { border-color: color-mix(in srgb, var(--st-yellow) 50%, transparent); background: color-mix(in srgb, var(--st-yellow) 16%, var(--panel)); }
 .st-status-btn.is-red { border-color: color-mix(in srgb, var(--st-red) 45%, transparent); background: color-mix(in srgb, var(--st-red) 13%, var(--panel)); }
-.st-status-btn > span:nth-of-type(2) { flex: 1; text-align: left; }
-.st-status-pop { position: fixed; width: 160px; max-height: none; }
+.st-status-btn > span:nth-of-type(2) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+.st-status-pop { position: fixed; box-sizing: border-box; width: 184px; max-height: none; }
 .st-status-item { justify-content: flex-start; }
 .st-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong); }
 .st-dot.is-green { background: var(--st-green); }
