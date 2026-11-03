@@ -390,6 +390,9 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
 
 ## Changelog
 
+- **2026-11-03:** Striver: the "How it went" pills became a themed dropdown (`status-menu.tsx`) with a fixed-position
+  popup, so the scrolling table never clips it. "Not attempted" replaces the × reset.
+
 - **2026-11-03:** Striver: added a +56 day review for both yellow and red (yellow 7/28/56, red 7/14/28/56); email
   stage labels now come from the interval lists.
 

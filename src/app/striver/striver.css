@@ -391,7 +391,6 @@
 .striver-switch:focus-visible,
 .striver-topic-head:focus-visible,
 .striver-subtopic-head:focus-visible,
-.status-pill:focus-visible,
 .striver-answer:focus-visible,
 .striver-legend-item:focus-visible,
 .notes-btn:focus-visible {
@@ -616,37 +615,6 @@
   color: var(--text);
 }
 
-.status-pill-group {
-  display: inline-flex;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: var(--bg);
-}
-.status-pill {
-  padding: 4px 10px;
-  border: 0;
-  border-radius: 7px;
-  background: none;
-  color: var(--muted);
-  font: 650 12px var(--sans);
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-.status-pill:hover {
-  background: var(--bg-hover);
-  color: var(--text);
-}
-.status-pill.is-green { background: var(--st-green); color: #fff; }
-.status-pill.is-yellow { background: var(--st-yellow); color: #1f1208; }
-.status-pill.is-red { background: var(--st-red); color: #fff; }
-.status-reset {
-  padding: 4px 8px;
-  font-size: 14px;
-  line-height: 1;
-}
-
 .sched-badge {
   display: inline-block;
   padding: 3px 9px;
@@ -768,3 +736,20 @@
   border-color: var(--line);
   color: inherit;
 }
+
+/* ---------- "How it went" dropdown ---------- */
+.st-status-btn { min-width: 150px; }
+.st-status-btn.is-green { border-color: color-mix(in srgb, var(--st-green) 45%, transparent); background: color-mix(in srgb, var(--st-green) 14%, var(--panel)); }
+.st-status-btn.is-yellow { border-color: color-mix(in srgb, var(--st-yellow) 50%, transparent); background: color-mix(in srgb, var(--st-yellow) 16%, var(--panel)); }
+.st-status-btn.is-red { border-color: color-mix(in srgb, var(--st-red) 45%, transparent); background: color-mix(in srgb, var(--st-red) 13%, var(--panel)); }
+.st-status-btn > span:nth-of-type(2) { flex: 1; text-align: left; }
+.st-status-pop { position: fixed; width: 280px; max-height: none; }
+.st-status-item { justify-content: flex-start; align-items: flex-start; }
+.st-status-text { display: grid; gap: 2px; }
+.st-status-text strong { font-weight: 650; }
+.st-status-text small { font: 500 12px/1.35 var(--sans); }
+.st-dot { flex: none; width: 10px; height: 10px; margin-top: 4px; border-radius: 50%; background: var(--line-strong); }
+.st-status-btn .st-dot { margin-top: 0; }
+.st-dot.is-green { background: var(--st-green); }
+.st-dot.is-yellow { background: var(--st-yellow); }
+.st-dot.is-red { background: var(--st-red); }

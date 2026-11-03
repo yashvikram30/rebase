@@ -10,6 +10,7 @@ import {
   useStriver,
 } from "@/lib/striver-store";
 import type { ProblemStatus, StriverProblem } from "@/lib/striver-types";
+import { StatusMenu } from "./status-menu";
 import { TopicMenu } from "./topic-menu";
 
 type SubtopicGroup = { subtopic: string; problems: StriverProblem[] };
@@ -491,12 +492,6 @@ function ProblemRow({
   notesOpen: boolean;
   onToggleNotes: () => void;
 }) {
-  const choices: { value: ProblemStatus; label: string; title: string }[] = [
-    { value: "green", label: "Green", title: "Solved on your own" },
-    { value: "yellow", label: "Yellow", title: "Needed a hint: review in 7, 28 and 56 days" },
-    { value: "red", label: "Red", title: "Couldn't solve it: review in 7, 14, 28 and 56 days" },
-  ];
-
   return (
     <tr>
       <td className="c-order">{p.order}</td>
@@ -538,31 +533,7 @@ function ProblemRow({
         )}
       </td>
       <td className="c-classify">
-        <div className="status-pill-group" role="group" aria-label={`Status of ${p.label}`}>
-          {choices.map((c) => (
-            <button
-              key={c.value}
-              type="button"
-              className={"status-pill" + (status === c.value ? " is-" + c.value : "")}
-              aria-pressed={status === c.value}
-              title={c.title}
-              onClick={() => onSelect(c.value)}
-            >
-              {c.label}
-            </button>
-          ))}
-          {status !== "unattempted" && (
-            <button
-              type="button"
-              className="status-pill status-reset"
-              aria-label={`Reset ${p.label}`}
-              title="Reset"
-              onClick={() => onSelect("unattempted")}
-            >
-              ×
-            </button>
-          )}
-        </div>
+        <StatusMenu value={status} label={p.label} onChange={onSelect} />
       </td>
       <td className="c-schedule">
         {status === "green" ? (
