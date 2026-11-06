@@ -11,7 +11,7 @@ const noStore = { "Cache-Control": "no-store" };
  * address; the body supplies only the reviews (and the user's local date) so it works before the first sync.
  */
 /** Each email waits on a model call for its interview questions. */
-export const maxDuration = 60;
+export const maxDuration = 90;
 
 export async function POST(req: Request) {
   const session = await auth();

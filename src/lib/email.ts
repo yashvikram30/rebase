@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import type { InterviewExtras } from "./interview-questions";
 import { RED_INTERVALS_DAYS, YELLOW_INTERVALS_DAYS, type StriverProblem } from "./striver-types";
 
 const esc = (s: string) =>
@@ -28,7 +29,7 @@ export async function sendRevisionEmail({
   items: EmailProblemItem[];
   todayStr: string;
   /** Interview follow-ups by problem id; a problem without any just shows no list. */
-  questions?: Record<number, string[]>;
+  questions?: Record<number, InterviewExtras>;
   appUrl?: string;
 }): Promise<{ ok: boolean; messageId?: string; error?: string; skipped?: boolean }> {
   const user = process.env.SMTP_USER;
@@ -79,12 +80,17 @@ export async function sendRevisionEmail({
     return `${days}-day ${stage === intervals.length - 1 ? "retention" : "check"}`;
   };
 
-  const questionsHtml = (qs?: string[]) =>
-    qs?.length
+  const listHtml = (title: string, qs: string[]) =>
+    qs.length
       ? `
-                <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid ${C.line};">
-                  <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: ${C.muted};">Be ready to answer</div>
-                  <ul style="margin: 6px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.5; color: ${C.ink};">${qs.map((q) => `<li style="margin: 3px 0;">${esc(q)}</li>`).join("")}</ul>
+                  <div style="margin-top: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: ${C.muted};">${title}</div>
+                  <ul style="margin: 5px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.5; color: ${C.ink};">${qs.map((q) => `<li style="margin: 3px 0;">${esc(q)}</li>`).join("")}</ul>`
+      : "";
+
+  const questionsHtml = (e?: InterviewExtras) =>
+    e && (e.followups.length || e.variations.length)
+      ? `
+                <div style="margin-top: 12px; padding-top: 4px; border-top: 1px solid ${C.line};">${listHtml("Follow-up questions", e.followups)}${listHtml("Variations to try", e.variations)}
                 </div>`
       : "";
 
