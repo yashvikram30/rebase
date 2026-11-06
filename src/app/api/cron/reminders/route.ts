@@ -53,7 +53,7 @@ export async function GET(req: Request) {
       // Only the address recorded from the user's own session is ever used.
       if (!row.email || !state.reminders) continue;
 
-      const items = toEmailItems(reviews.filter((r) => !r.completed && r.dueDate === todayStr));
+      const items = toEmailItems(reviews.filter((r) => !r.completed && r.dueDate === todayStr), state.customProblems);
       if (items.length === 0) continue;
 
       const result = await sendRevisionEmail({ to: row.email, items, todayStr });

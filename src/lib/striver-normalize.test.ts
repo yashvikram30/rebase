@@ -36,3 +36,17 @@ describe("compareProblemNumbers", () => {
     expect(sorted).toEqual([18, "18.1", "18.2", "18.10", 19, 20, "20.1", "20.2", 21]);
   });
 });
+
+describe("custom problems", () => {
+  const good = { id: 100001, order: "18.1", label: "X", topic: "T", subtopic: "S", difficulty: "hard", leetcodeLink: "https://a.b", youtubeLink: "javascript:alert(1)" };
+
+  it("keeps valid ones, forces isCustom, and drops unsafe links, bad rows and duplicate ids", () => {
+    const out = normalizeStriver({ customProblems: [good, good, { id: "x" }, null, { ...good, id: 2, label: "" }] }).customProblems;
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({ id: 100001, isCustom: true, leetcodeLink: "https://a.b", youtubeLink: null, topicPath: ["T", "S"] });
+  });
+
+  it("defaults to none for old stored state", () => {
+    expect(normalizeStriver({ statuses: {} }).customProblems).toEqual([]);
+  });
+});

@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   const due = active.filter((r) => r.dueDate <= today);
   // Nothing due is the normal case right after marking a problem, so a test falls back to what is coming up.
   const pool = due.length > 0 ? due : active.sort((a, b) => a.dueDate.localeCompare(b.dueDate)).slice(0, 5);
-  const customList = Array.isArray(body.customProblems) ? body.customProblems : undefined;
+  const customList = normalizeStriver({ customProblems: body.customProblems }).customProblems;
   const items = toEmailItems(pool, customList);
   if (items.length === 0) {
     return Response.json({ ok: true, sent: false, count: 0 }, { headers: noStore });

@@ -3,7 +3,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useHydrated } from "@/lib/plan-store";
 import { toDateString } from "@/lib/striver-schedule";
 import {
+  addCustomProblem,
   checkAndLevelMissedReviews,
+  deleteCustomProblem,
+  migrateLegacyCustomProblems,
   saveProblemNotes,
   setProblemStatus,
   setReminders,
@@ -11,7 +14,6 @@ import {
 } from "@/lib/striver-store";
 import type { ProblemStatus, StriverProblem } from "@/lib/striver-types";
 import { compareProblemNumbers } from "@/lib/striver-types";
-import { useUserProblems } from "@/lib/striver-user-problems";
 import { StatusMenu } from "./status-menu";
 import { TopicMenu } from "./topic-menu";
 
@@ -24,7 +26,9 @@ const pct = (n: number, total: number) => (total ? (n / total) * 100 : 0);
 export function StriverClient({ problems, email }: { problems: StriverProblem[]; email: string }) {
   const store = useStriver();
   const hydrated = useHydrated();
-  const { userProblems, addUserProblem, deleteUserProblem } = useUserProblems();
+  const userProblems = store.customProblems;
+  const addUserProblem = addCustomProblem;
+  const deleteUserProblem = deleteCustomProblem;
 
   // Merge predefined static sheet with user-added problems
   const allProblems = useMemo(() => {
@@ -135,6 +139,7 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
 
   // Reviews missed while away move to the quietest days of the coming week, as the daily job does for the server copy.
   useEffect(() => {
+    migrateLegacyCustomProblems();
     checkAndLevelMissedReviews();
   }, []);
 

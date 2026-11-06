@@ -63,6 +63,8 @@ export type StriverStoreState = {
   reviews: ScheduledReview[];
   /** Daily revision email to the signed-in account's address. On unless the user turns it off. */
   reminders: boolean;
+  /** Problems the user added to the sheet. Stored here so they sync with progress and the daily email can see them. */
+  customProblems: StriverProblem[];
 };
 
 export const YELLOW_INTERVALS_DAYS = [7, 28, 56] as const;
