@@ -288,6 +288,22 @@
     "articleLink": "https://takeuforward.org/blogs/data-structure-and-algorithm/find-a-peak-element-in-an-array"
   },
   {
+    "id": 20181,
+    "order": "18.1",
+    "label": "Peak Index in a Mountain Array",
+    "slug": "peak-index-in-a-mountain-array",
+    "topic": "Binary Search",
+    "subtopic": "Binary Search",
+    "topicPath": [
+      "Binary Search",
+      "Binary Search"
+    ],
+    "difficulty": "medium",
+    "leetcodeLink": "https://leetcode.com/problems/peak-index-in-a-mountain-array/",
+    "youtubeLink": "https://youtu.be/cXxmbemS6XM",
+    "articleLink": "https://takeuforward.org/data-structure/find-peak-element"
+  },
+  {
     "id": 83,
     "order": 19,
     "label": "Find minimum in Rotated Sorted Array",
@@ -318,6 +334,38 @@
     "leetcodeLink": "https://leetcode.com/problems/search-in-rotated-sorted-array-ii/",
     "youtubeLink": "https://youtu.be/w2G2W8l__pc",
     "articleLink": "https://takeuforward.org/blogs/data-structure-and-algorithm/search-in-rotated-sorted-array-ii"
+  },
+  {
+    "id": 20201,
+    "order": "20.1",
+    "label": "Search in Rotated Sorted Array I",
+    "slug": "search-in-rotated-sorted-array-i",
+    "topic": "Binary Search",
+    "subtopic": "Binary Search",
+    "topicPath": [
+      "Binary Search",
+      "Binary Search"
+    ],
+    "difficulty": "medium",
+    "leetcodeLink": "https://leetcode.com/problems/search-in-rotated-sorted-array/",
+    "youtubeLink": "https://youtu.be/5qGrJbHhqFs",
+    "articleLink": "https://takeuforward.org/data-structure/search-element-in-a-rotated-sorted-array"
+  },
+  {
+    "id": 20202,
+    "order": "20.2",
+    "label": "Find out how many times array has been rotated",
+    "slug": "find-out-how-many-times-array-has-been-rotated",
+    "topic": "Binary Search",
+    "subtopic": "Binary Search",
+    "topicPath": [
+      "Binary Search",
+      "Binary Search"
+    ],
+    "difficulty": "medium",
+    "leetcodeLink": null,
+    "youtubeLink": "https://youtu.be/jtSi35vXkio",
+    "articleLink": "https://takeuforward.org/practice/dsa/find-out-how-many-times-the-array-is-rotated"
   },
   {
     "id": 90,

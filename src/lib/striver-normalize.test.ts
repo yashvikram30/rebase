@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { normalizeStriver } from "./striver-normalize";
 import { createScheduleForProblem } from "./striver-schedule";
+import { compareProblemNumbers } from "./striver-types";
 
 describe("normalizeStriver", () => {
   it("defaults to reminders on and drops unknown fields such as a stored email", () => {
@@ -25,5 +26,13 @@ describe("createScheduleForProblem", () => {
     const from = new Date(2026, 9, 28, 15, 30);
     createScheduleForProblem(1, "red", from);
     expect(from.getHours()).toBe(15);
+  });
+});
+
+describe("compareProblemNumbers", () => {
+  it("sorts integer and decimal numbers naturally", () => {
+    const list = [21, "20.2", "18.1", 19, 18, "20.1", "18.10", "18.2", 20];
+    const sorted = [...list].sort(compareProblemNumbers);
+    expect(sorted).toEqual([18, "18.1", "18.2", "18.10", 19, 20, "20.1", "20.2", 21]);
   });
 });
