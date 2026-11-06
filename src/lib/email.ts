@@ -21,11 +21,14 @@ export async function sendRevisionEmail({
   to,
   items,
   todayStr,
+  questions = {},
   appUrl = siteUrl(),
 }: {
   to: string;
   items: EmailProblemItem[];
   todayStr: string;
+  /** Interview follow-ups by problem id; a problem without any just shows no list. */
+  questions?: Record<number, string[]>;
   appUrl?: string;
 }): Promise<{ ok: boolean; messageId?: string; error?: string; skipped?: boolean }> {
   const user = process.env.SMTP_USER;
@@ -76,6 +79,15 @@ export async function sendRevisionEmail({
     return `${days}-day ${stage === intervals.length - 1 ? "retention" : "check"}`;
   };
 
+  const questionsHtml = (qs?: string[]) =>
+    qs?.length
+      ? `
+                <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid ${C.line};">
+                  <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: ${C.muted};">Be ready to answer</div>
+                  <ul style="margin: 6px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.5; color: ${C.ink};">${qs.map((q) => `<li style="margin: 3px 0;">${esc(q)}</li>`).join("")}</ul>
+                </div>`
+      : "";
+
   const problemRowsHtml = items
     .map(({ problem, status, stage }) => {
       const dot = status === "red" ? C.red : C.yellow;
@@ -93,7 +105,7 @@ export async function sendRevisionEmail({
                 <div style="margin-top: 3px; font-size: 13px; color: ${C.muted};">${esc(problem.topic)} &rsaquo; ${esc(problem.subtopic)}</div>
                 <div style="margin-top: 8px; font-size: 12px; font-weight: 700; color: ${C.edge};">
                   ${stageLabel(status, stage)} &middot; <span style="color: ${C.muted}; font-weight: 600;">${how}</span>
-                </div>
+                </div>${questionsHtml(questions[problem.id])}
               </td>
               <td align="right" valign="middle" style="padding: 14px 16px 14px 0; font-family: ${font};">
                 <a href="${esc(practiceUrl)}" style="display: inline-block; padding: 9px 16px; background: ${C.orange}; color: #1f1208; text-decoration: none; border-radius: 10px; border-bottom: 3px solid ${C.edge}; font-size: 13px; font-weight: 700; white-space: nowrap;">Solve &rarr;</a>

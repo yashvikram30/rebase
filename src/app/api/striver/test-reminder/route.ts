@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { sendRevisionEmail } from "@/lib/email";
+import { generateInterviewQuestions } from "@/lib/interview-questions";
 import { normalizeStriver } from "@/lib/striver-normalize";
 import { toEmailItems } from "@/lib/striver-problems";
 
@@ -9,6 +10,9 @@ const noStore = { "Cache-Control": "no-store" };
  * Sends the signed-in user a sample digest of their own reviews. The recipient is always the session's
  * address; the body supplies only the reviews (and the user's local date) so it works before the first sync.
  */
+/** Each email waits on a model call for its interview questions. */
+export const maxDuration = 60;
+
 export async function POST(req: Request) {
   const session = await auth();
   const to = session?.user?.email;
@@ -36,7 +40,7 @@ export async function POST(req: Request) {
     return Response.json({ ok: true, sent: false, count: 0 }, { headers: noStore });
   }
 
-  const result = await sendRevisionEmail({ to, items, todayStr: today });
+  const result = await sendRevisionEmail({ to, items, todayStr: today, questions: await generateInterviewQuestions(items) });
   if (!result.ok) {
     return Response.json({ ok: false, error: "Could not send the email" }, { status: 502, headers: noStore });
   }
