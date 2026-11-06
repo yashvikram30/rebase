@@ -6,7 +6,7 @@ import { compareProblemNumbers } from "./striver-types";
 describe("normalizeStriver", () => {
   it("defaults to reminders on and drops unknown fields such as a stored email", () => {
     const s = normalizeStriver({ email: "someone@else.com" });
-    expect(s).toEqual({ statuses: {}, reviews: [], reminders: true });
+    expect(s).toEqual({ statuses: {}, reviews: [], reminders: true, customProblems: [] });
   });
 
   it("keeps an explicit opt-out and discards malformed entries", () => {
