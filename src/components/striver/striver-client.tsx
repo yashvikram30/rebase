@@ -16,6 +16,7 @@ import type { ProblemStatus, StriverProblem } from "@/lib/striver-types";
 import { compareProblemNumbers } from "@/lib/striver-types";
 import { StatusMenu } from "./status-menu";
 import { TopicMenu } from "./topic-menu";
+import { SelectMenu } from "./select-menu";
 
 type SubtopicGroup = { subtopic: string; problems: StriverProblem[] };
 type TopicGroup = { topic: string; subtopics: SubtopicGroup[]; totalCount: number };
@@ -77,7 +78,10 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
 
   useEffect(() => {
     if (!addModalOpen) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setAddModalOpen(false);
+    // Escape closes an open menu first (its own handler does that), and only then the dialog.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !document.querySelector(".striver-modal .st-menu-pop")) setAddModalOpen(false);
+    };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [addModalOpen]);
@@ -698,30 +702,28 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
                   <div className="striver-form-field">
                     <label htmlFor="problem-topic">Section</label>
                     {!isNewTopic ? (
-                      <select
+                      <SelectMenu
                         id="problem-topic"
+                        label="Section"
                         value={addTopic}
-                        onChange={(e) => {
-                          if (e.target.value === "__NEW__") {
+                        options={[
+                          ...availableTopics.map((t) => ({ value: t, label: t })),
+                          { value: "__NEW__", label: "+ New section…", action: true },
+                        ]}
+                        onChange={(v) => {
+                          if (v === "__NEW__") {
                             setIsNewTopic(true);
                             setCustomTopicName("");
                             setIsNewSubtopic(true);
                             setCustomSubtopicName("");
                           } else {
-                            setAddTopic(e.target.value);
-                            const subList = existingTopicMap.get(e.target.value) || [];
-                            setAddSubtopic(subList[0] || e.target.value);
+                            setAddTopic(v);
+                            const subList = existingTopicMap.get(v) || [];
+                            setAddSubtopic(subList[0] || v);
                             setIsNewSubtopic(false);
                           }
                         }}
-                      >
-                        {availableTopics.map((t) => (
-                          <option key={t} value={t}>
-                            {t}
-                          </option>
-                        ))}
-                        <option value="__NEW__">+ New section…</option>
-                      </select>
+                      />
                     ) : (
                       <div className="striver-input-with-cancel">
                         <input
@@ -753,25 +755,23 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
                   <div className="striver-form-field">
                     <label htmlFor="problem-subtopic">Subtopic</label>
                     {!isNewTopic && !isNewSubtopic ? (
-                      <select
+                      <SelectMenu
                         id="problem-subtopic"
+                        label="Subtopic"
                         value={addSubtopic}
-                        onChange={(e) => {
-                          if (e.target.value === "__NEW_SUB__") {
+                        options={[
+                          ...(existingTopicMap.get(addTopic) || [addTopic]).map((st) => ({ value: st, label: st })),
+                          { value: "__NEW_SUB__", label: "+ New subtopic…", action: true },
+                        ]}
+                        onChange={(v) => {
+                          if (v === "__NEW_SUB__") {
                             setIsNewSubtopic(true);
                             setCustomSubtopicName("");
                           } else {
-                            setAddSubtopic(e.target.value);
+                            setAddSubtopic(v);
                           }
                         }}
-                      >
-                        {(existingTopicMap.get(addTopic) || [addTopic]).map((st) => (
-                          <option key={st} value={st}>
-                            {st}
-                          </option>
-                        ))}
-                        <option value="__NEW_SUB__">+ New subtopic…</option>
-                      </select>
+                      />
                     ) : (
                       <div className="striver-input-with-cancel">
                         <input

@@ -998,6 +998,36 @@
 .striver-seg.is-easy.is-on { background: var(--st-green); }
 .striver-seg.is-medium.is-on { background: var(--st-yellow); color: #1a1400; }
 .striver-seg.is-hard.is-on { background: var(--st-red); }
+.st-field-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px var(--sans);
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.st-field-btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-field-btn:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line-strong)); }
+.st-field-btn:focus-visible,
+.st-field-btn[aria-expanded="true"] {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.st-field-btn .striver-chevron { flex: none; transform: rotate(45deg); margin-top: -3px; }
+.st-field-btn[aria-expanded="true"] .striver-chevron { transform: rotate(225deg); margin-top: 3px; }
+.st-field-menu .st-menu-pop { width: 100%; max-height: 220px; }
+.st-menu-item.is-action { color: var(--accent-text, var(--accent)); border-top: 1px solid var(--line); border-radius: 0 0 8px 8px; margin-top: 4px; }
 .striver-input-with-cancel {
   display: flex;
   gap: 6px;
