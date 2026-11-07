@@ -1,9 +1,11 @@
 # Rebase
 
-Practice for AI-enabled engineering interviews, and a free 16-week course on how computers work, taught in Python. Rebase is one Next.js app with two products:
+Practice for AI-enabled engineering interviews, and a free 16-week course on how computers work, taught in Python. Rebase is one Next.js app with three products:
 
 - **Learn.** A 64-day course: each day has a short lesson, curated links, a small build, an engineering step and a check, plus revision cards, linked notes and a schedule that adapts when you fall behind.
 - **Debug.** 42 broken programs with failing tests (16 easy, 21 medium, 5 hard). Seven of them break in three separate ways at once, so several tests fail for different reasons, as in a real round. Fix them in an in-browser editor that runs Python, or read an agent's session and decide whether you would approve its patch. An assistant gives hints (never the fix), and a mentor report reviews how you worked at the end.
+
+- **Striver.** A tracker for the Striver 180 DSA sheet, for signed-in users. Mark each problem green, yellow or red; yellow and red queue spaced reviews (yellow at 7, 28 and 56 days, red at 7, 14, 28 and 56) that move to quieter days when you miss them. You can add your own problems to any section, and they sync with your progress. A daily email lists what is due.
 
 Progress, revision cards and notes live in your browser first, and sync to your account if you sign in.
 
@@ -20,6 +22,15 @@ _Click the preview to open the full 26-second promo ([video/renders/video.mp4](v
 - **Mentor report:** after you finish a round, a reviewer reads the chat, the timeline and what you changed and writes feedback.
 - **Random draw:** a case with its title and topic hidden until you finish.
 
+## Striver
+
+- **Sheet:** the 180 problems by section and subtopic, with a status menu, notes and links to the problem, video and article. Filter by topic and status.
+- **Add a problem:** the dialog puts it in an existing or new section and subtopic. A number such as `18.1` sorts right after #18. Difficulty is easy, medium, hard or core, and the three links are optional but must start with `http://` or `https://`. Custom problems live in the synced Striver store, so the daily email sees them. Deleting one also removes its status, notes and queued reviews.
+- **Reviews:** marking a problem green keeps its queued reviews unless you choose to drop them.
+- **Daily email:** a Vercel cron (`/api/cron/reminders`, 00:00 UTC) emails each signed-in user the problems due, to the account's own address. It adds model-written follow-up questions and variations for each problem. If `TOKEN_API_KEY` is missing or the call fails, the email still goes out without them. Users can turn it off on the page, and `POST /api/striver/test-reminder` sends a sample to yourself.
+
+The email needs `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` and `CRON_SECRET` as well.
+
 ## Run it locally
 
 You need Node.js 20 or later.
@@ -32,17 +43,19 @@ npm run dev                  # http://localhost:3000
 
 The course content works without any configuration. Signing in, sync and the Debug assistant need the environment variables below.
 
-| Variable                               | Used for                                                                             |
-| -------------------------------------- | ------------------------------------------------------------------------------------ |
-| `MONGODB_URI`, `MONGODB_DB`            | Synced progress and notes, assistant limits and analytics (MongoDB Atlas)            |
-| `AUTH_SECRET`                          | Auth.js session signing and the assistant's round token (`openssl rand -base64 33`)  |
-| `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` | Google sign-in. The redirect URI is `<site>/api/auth/callback/google`                |
-| `AUTH_URL`                             | Only when not hosting on Vercel: the public URL                                      |
-| `ANALYTICS_OWNER_EMAIL`                | Google email(s) allowed to open `/analytics` (comma-separated)                       |
-| `TOKEN_API_KEY`                        | The assistant's model gateway (Token Harbor, OpenAI-compatible)                      |
-| `TOKEN_BASE_URL`, `TOKEN_MODEL`        | Optional. Default `https://tokenharbor.ai/v1` and `deepseek-v4.1-flash:free`         |
-| `TOKEN_REVIEW_MODEL`                   | Optional. The model for the mentor report                                            |
-| `DEBUG_DAILY_TOKEN_BUDGET`             | Optional. Tokens the assistant may use per UTC day, across everyone (default 400000) |
+| Variable                                                         | Used for                                                                             |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `MONGODB_URI`, `MONGODB_DB`                                      | Synced progress and notes, assistant limits and analytics (MongoDB Atlas)            |
+| `AUTH_SECRET`                                                    | Auth.js session signing and the assistant's round token (`openssl rand -base64 33`)  |
+| `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`                           | Google sign-in. The redirect URI is `<site>/api/auth/callback/google`                |
+| `AUTH_URL`                                                       | Only when not hosting on Vercel: the public URL                                      |
+| `ANALYTICS_OWNER_EMAIL`                                          | Google email(s) allowed to open `/analytics` (comma-separated)                       |
+| `TOKEN_API_KEY`                                                  | The assistant's model gateway (Token Harbor, OpenAI-compatible)                      |
+| `TOKEN_BASE_URL`, `TOKEN_MODEL`                                  | Optional. Default `https://tokenharbor.ai/v1` and `deepseek-v4.1-flash:free`         |
+| `TOKEN_REVIEW_MODEL`                                             | Optional. The model for the mentor report                                            |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` | Optional. Sending the Striver daily email                                            |
+| `CRON_SECRET`                                                    | Optional. Authorises the cron request to `/api/cron/reminders`                       |
+| `DEBUG_DAILY_TOKEN_BUDGET`                                       | Optional. Tokens the assistant may use per UTC day, across everyone (default 400000) |
 
 Of the `TOKEN_*` variables only `TOKEN_API_KEY` is needed; the rest have defaults. `AUTH_SECRET` and `TOKEN_API_KEY` must both be set for the assistant. Without them the chat says "Agent chat is not configured." On a host such as Vercel, set the variables for the right environment and redeploy, since changes only apply to new deployments.
 
@@ -78,6 +91,7 @@ The app deploys to Vercel from `main`. Only the first two weeks of lesson pages 
 - `data/debug/`: the Debug cases. The answer key never leaves the server.
 - `src/data/revision/`: revision questions and cards.
 - `src/app/(learn)`, `(debug)`, `(workbench)`, `(account)`, `(platform)`: one route group per area, so each brings its own shell.
+- `src/app/striver`, `src/components/striver`, `src/lib/striver-*.ts`: the Striver sheet, store and review schedule. `src/lib/email.ts` and `src/lib/interview-questions.ts` build the daily email.
 - `src/lib/debug-agent.ts`: the assistant's prompt and hint ladder. `src/lib/agent-reply.ts` strips fixes from replies.
 - `decisions.md`: why things are the way they are, with a changelog. Update it when a decision changes.
 
