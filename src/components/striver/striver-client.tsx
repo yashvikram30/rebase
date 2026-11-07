@@ -75,6 +75,13 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
 
   const availableTopics = useMemo(() => Array.from(existingTopicMap.keys()), [existingTopicMap]);
 
+  useEffect(() => {
+    if (!addModalOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setAddModalOpen(false);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [addModalOpen]);
+
   function openAddModal(defaultTopic?: string, defaultSubtopic?: string) {
     const top = defaultTopic || (topicFilter !== "all" ? topicFilter : availableTopics[0] || "Binary Search");
     const subList = existingTopicMap.get(top) || [];
@@ -112,11 +119,21 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
       return;
     }
     if (!finalTopic) {
-      setAddError("Please select or enter a section / topic.");
+      setAddError("Please select or enter a section.");
       return;
     }
     if (!finalSubtopic) {
       setAddError("Please select or enter a subtopic.");
+      return;
+    }
+
+    const badLink = [
+      ["LeetCode", addLeetcode],
+      ["Video", addYoutube],
+      ["Article", addArticle],
+    ].find(([, v]) => v.trim() && !/^https?:\/\//i.test(v.trim()));
+    if (badLink) {
+      setAddError(`${badLink[0]} link must start with http:// or https://`);
       return;
     }
 
@@ -612,10 +629,12 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
             aria-modal="true"
             aria-labelledby="striver-modal-title"
             onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.key === "Escape" && setAddModalOpen(false)}
           >
             <div className="striver-modal-header">
-              <h3 id="striver-modal-title">Add problem to sheet</h3>
+              <div>
+                <h3 id="striver-modal-title">Add a problem</h3>
+                <p className="striver-modal-sub">It joins your sheet, syncs with your progress and shows up in the daily email.</p>
+              </div>
               <button
                 type="button"
                 className="striver-modal-close"
@@ -626,199 +645,212 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
               </button>
             </div>
 
-            <form onSubmit={handleAddProblem} className="striver-modal-form">
-              {addError && <p className="striver-modal-error">{addError}</p>}
-
-              <div className="striver-form-row">
-                <div className="striver-form-field">
-                  <label htmlFor="problem-topic">Section / Topic</label>
-                  {!isNewTopic ? (
-                    <select
-                      id="problem-topic"
-                      value={addTopic}
-                      onChange={(e) => {
-                        if (e.target.value === "__NEW__") {
-                          setIsNewTopic(true);
-                          setCustomTopicName("");
-                          setIsNewSubtopic(true);
-                          setCustomSubtopicName("");
-                        } else {
-                          setAddTopic(e.target.value);
-                          const subList = existingTopicMap.get(e.target.value) || [];
-                          setAddSubtopic(subList[0] || e.target.value);
-                          setIsNewSubtopic(false);
-                        }
-                      }}
-                    >
-                      {availableTopics.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                      <option value="__NEW__">+ New custom topic...</option>
-                    </select>
-                  ) : (
-                    <div className="striver-input-with-cancel">
-                      <input
-                        id="problem-topic"
-                        type="text"
-                        placeholder="e.g. Binary Search"
-                        value={customTopicName}
-                        onChange={(e) => setCustomTopicName(e.target.value)}
-                        autoFocus
-                      />
-                      <button
-                        type="button"
-                        className="striver-mini-cancel"
-                        onClick={() => {
-                          setIsNewTopic(false);
-                          setAddTopic(availableTopics[0] || "");
-                          const subList = existingTopicMap.get(availableTopics[0] || "") || [];
-                          setAddSubtopic(subList[0] || availableTopics[0] || "");
-                          setIsNewSubtopic(false);
-                        }}
-                      >
-                        Select existing
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="striver-form-field">
-                  <label htmlFor="problem-subtopic">Subtopic</label>
-                  {!isNewTopic && !isNewSubtopic ? (
-                    <select
-                      id="problem-subtopic"
-                      value={addSubtopic}
-                      onChange={(e) => {
-                        if (e.target.value === "__NEW_SUB__") {
-                          setIsNewSubtopic(true);
-                          setCustomSubtopicName("");
-                        } else {
-                          setAddSubtopic(e.target.value);
-                        }
-                      }}
-                    >
-                      {(existingTopicMap.get(addTopic) || [addTopic]).map((st) => (
-                        <option key={st} value={st}>
-                          {st}
-                        </option>
-                      ))}
-                      <option value="__NEW_SUB__">+ New subtopic...</option>
-                    </select>
-                  ) : (
-                    <div className="striver-input-with-cancel">
-                      <input
-                        id="problem-subtopic"
-                        type="text"
-                        placeholder="e.g. BS on 1D Arrays"
-                        value={customSubtopicName}
-                        onChange={(e) => setCustomSubtopicName(e.target.value)}
-                      />
-                      {!isNewTopic && (
-                        <button
-                          type="button"
-                          className="striver-mini-cancel"
-                          onClick={() => {
-                            setIsNewSubtopic(false);
-                            const subList = existingTopicMap.get(addTopic) || [];
-                            setAddSubtopic(subList[0] || addTopic);
-                          }}
-                        >
-                          Select existing
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="striver-form-row">
-                <div className="striver-form-field striver-field-order">
-                  <label htmlFor="problem-order">Number / Order</label>
-                  <input
-                    id="problem-order"
-                    type="text"
-                    placeholder="e.g. 18.1, 20.1, 20.2"
-                    value={addOrder}
-                    onChange={(e) => setAddOrder(e.target.value)}
-                    required
-                  />
-                  <small className="striver-field-hint">e.g. 18.1 inserts after #18, 20.1 after #20</small>
-                </div>
-
-                <div className="striver-form-field">
-                  <label htmlFor="problem-diff">Difficulty</label>
-                  <select
-                    id="problem-diff"
-                    value={addDiff}
-                    onChange={(e) => setAddDiff(e.target.value as "core" | "easy" | "medium" | "hard")}
-                  >
-                    <option value="easy">Easy</option>
-                    <option value="medium">Medium</option>
-                    <option value="hard">Hard</option>
-                    <option value="core">Core</option>
-                  </select>
-                </div>
-              </div>
-
+            <form onSubmit={handleAddProblem} className="striver-modal-form" noValidate>
               <div className="striver-form-field">
-                <label htmlFor="problem-label">Problem Title</label>
+                <label htmlFor="problem-label">Problem title</label>
                 <input
                   id="problem-label"
                   type="text"
                   placeholder="e.g. Peak Index in a Mountain Array"
                   value={addLabel}
                   onChange={(e) => setAddLabel(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="striver-form-field">
-                <label htmlFor="problem-leetcode">LeetCode URL (optional)</label>
-                <input
-                  id="problem-leetcode"
-                  type="url"
-                  placeholder="https://leetcode.com/problems/..."
-                  value={addLeetcode}
-                  onChange={(e) => setAddLeetcode(e.target.value)}
+                  maxLength={200}
+                  autoFocus
                 />
               </div>
 
               <div className="striver-form-row">
                 <div className="striver-form-field">
-                  <label htmlFor="problem-youtube">Video URL (optional)</label>
+                  <label htmlFor="problem-order">Number</label>
                   <input
-                    id="problem-youtube"
-                    type="url"
-                    placeholder="https://youtu.be/..."
-                    value={addYoutube}
-                    onChange={(e) => setAddYoutube(e.target.value)}
+                    id="problem-order"
+                    type="text"
+                    placeholder="e.g. 18.1"
+                    value={addOrder}
+                    onChange={(e) => setAddOrder(e.target.value)}
+                    maxLength={20}
                   />
+                  <small className="striver-field-hint">18.1 sorts right after #18</small>
                 </div>
+
                 <div className="striver-form-field">
-                  <label htmlFor="problem-article">Article URL (optional)</label>
-                  <input
-                    id="problem-article"
-                    type="url"
-                    placeholder="https://takeuforward.org/..."
-                    value={addArticle}
-                    onChange={(e) => setAddArticle(e.target.value)}
-                  />
+                  <span className="striver-field-label" id="problem-diff-label">Difficulty</span>
+                  <div className="striver-segmented" role="radiogroup" aria-labelledby="problem-diff-label">
+                    {(["easy", "medium", "hard", "core"] as const).map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        role="radio"
+                        aria-checked={addDiff === d}
+                        className={`striver-seg is-${d}${addDiff === d ? " is-on" : ""}`}
+                        onClick={() => setAddDiff(d)}
+                      >
+                        {d}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              <div className="striver-modal-actions">
-                <button type="submit" className="striver-btn striver-btn-primary">
-                  Add problem
-                </button>
-                <button
-                  type="button"
-                  className="striver-btn"
-                  onClick={() => setAddModalOpen(false)}
-                >
-                  Cancel
-                </button>
+              <fieldset className="striver-fieldset">
+                <legend>Where it goes</legend>
+                <div className="striver-form-row">
+                  <div className="striver-form-field">
+                    <label htmlFor="problem-topic">Section</label>
+                    {!isNewTopic ? (
+                      <select
+                        id="problem-topic"
+                        value={addTopic}
+                        onChange={(e) => {
+                          if (e.target.value === "__NEW__") {
+                            setIsNewTopic(true);
+                            setCustomTopicName("");
+                            setIsNewSubtopic(true);
+                            setCustomSubtopicName("");
+                          } else {
+                            setAddTopic(e.target.value);
+                            const subList = existingTopicMap.get(e.target.value) || [];
+                            setAddSubtopic(subList[0] || e.target.value);
+                            setIsNewSubtopic(false);
+                          }
+                        }}
+                      >
+                        {availableTopics.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                        <option value="__NEW__">+ New section…</option>
+                      </select>
+                    ) : (
+                      <div className="striver-input-with-cancel">
+                        <input
+                          id="problem-topic"
+                          type="text"
+                          placeholder="e.g. Binary Search"
+                          value={customTopicName}
+                          onChange={(e) => setCustomTopicName(e.target.value)}
+                          maxLength={100}
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          className="striver-mini-cancel"
+                          onClick={() => {
+                            setIsNewTopic(false);
+                            setAddTopic(availableTopics[0] || "");
+                            const subList = existingTopicMap.get(availableTopics[0] || "") || [];
+                            setAddSubtopic(subList[0] || availableTopics[0] || "");
+                            setIsNewSubtopic(false);
+                          }}
+                        >
+                          Use existing
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="striver-form-field">
+                    <label htmlFor="problem-subtopic">Subtopic</label>
+                    {!isNewTopic && !isNewSubtopic ? (
+                      <select
+                        id="problem-subtopic"
+                        value={addSubtopic}
+                        onChange={(e) => {
+                          if (e.target.value === "__NEW_SUB__") {
+                            setIsNewSubtopic(true);
+                            setCustomSubtopicName("");
+                          } else {
+                            setAddSubtopic(e.target.value);
+                          }
+                        }}
+                      >
+                        {(existingTopicMap.get(addTopic) || [addTopic]).map((st) => (
+                          <option key={st} value={st}>
+                            {st}
+                          </option>
+                        ))}
+                        <option value="__NEW_SUB__">+ New subtopic…</option>
+                      </select>
+                    ) : (
+                      <div className="striver-input-with-cancel">
+                        <input
+                          id="problem-subtopic"
+                          type="text"
+                          placeholder="e.g. BS on 1D Arrays"
+                          value={customSubtopicName}
+                          onChange={(e) => setCustomSubtopicName(e.target.value)}
+                          maxLength={100}
+                        />
+                        {!isNewTopic && (
+                          <button
+                            type="button"
+                            className="striver-mini-cancel"
+                            onClick={() => {
+                              setIsNewSubtopic(false);
+                              const subList = existingTopicMap.get(addTopic) || [];
+                              setAddSubtopic(subList[0] || addTopic);
+                            }}
+                          >
+                            Use existing
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </fieldset>
+
+              <fieldset className="striver-fieldset">
+                <legend>Links <span>(optional)</span></legend>
+                <div className="striver-form-field">
+                  <label htmlFor="problem-leetcode">LeetCode</label>
+                  <input
+                    id="problem-leetcode"
+                    type="url"
+                    placeholder="https://leetcode.com/problems/…"
+                    value={addLeetcode}
+                    onChange={(e) => setAddLeetcode(e.target.value)}
+                  />
+                </div>
+                <div className="striver-form-row">
+                  <div className="striver-form-field">
+                    <label htmlFor="problem-youtube">Video</label>
+                    <input
+                      id="problem-youtube"
+                      type="url"
+                      placeholder="https://youtu.be/…"
+                      value={addYoutube}
+                      onChange={(e) => setAddYoutube(e.target.value)}
+                    />
+                  </div>
+                  <div className="striver-form-field">
+                    <label htmlFor="problem-article">Article</label>
+                    <input
+                      id="problem-article"
+                      type="url"
+                      placeholder="https://takeuforward.org/…"
+                      value={addArticle}
+                      onChange={(e) => setAddArticle(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </fieldset>
+
+              <div className="striver-modal-footer">
+                {addError ? (
+                  <p className="striver-modal-error" role="alert">{addError}</p>
+                ) : (
+                  <span className="striver-modal-hint">Esc to close</span>
+                )}
+                <div className="striver-modal-actions">
+                  <button type="button" className="striver-btn" onClick={() => setAddModalOpen(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="striver-btn striver-btn-primary">
+                    Add problem
+                  </button>
+                </div>
               </div>
             </form>
           </div>
