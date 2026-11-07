@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { normalizeStriver } from "./striver-normalize";
 import { createScheduleForProblem } from "./striver-schedule";
+import { compareProblemNumbers } from "./striver-types";
 
 describe("normalizeStriver", () => {
   it("defaults to reminders on and drops unknown fields such as a stored email", () => {
     const s = normalizeStriver({ email: "someone@else.com" });
-    expect(s).toEqual({ statuses: {}, reviews: [], reminders: true });
+    expect(s).toEqual({ statuses: {}, reviews: [], reminders: true, customProblems: [] });
   });
 
   it("keeps an explicit opt-out and discards malformed entries", () => {
@@ -25,5 +26,27 @@ describe("createScheduleForProblem", () => {
     const from = new Date(2026, 9, 28, 15, 30);
     createScheduleForProblem(1, "red", from);
     expect(from.getHours()).toBe(15);
+  });
+});
+
+describe("compareProblemNumbers", () => {
+  it("sorts integer and decimal numbers naturally", () => {
+    const list = [21, "20.2", "18.1", 19, 18, "20.1", "18.10", "18.2", 20];
+    const sorted = [...list].sort(compareProblemNumbers);
+    expect(sorted).toEqual([18, "18.1", "18.2", "18.10", 19, 20, "20.1", "20.2", 21]);
+  });
+});
+
+describe("custom problems", () => {
+  const good = { id: 100001, order: "18.1", label: "X", topic: "T", subtopic: "S", difficulty: "hard", leetcodeLink: "https://a.b", youtubeLink: "javascript:alert(1)" };
+
+  it("keeps valid ones, forces isCustom, and drops unsafe links, bad rows and duplicate ids", () => {
+    const out = normalizeStriver({ customProblems: [good, good, { id: "x" }, null, { ...good, id: 2, label: "" }] }).customProblems;
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({ id: 100001, isCustom: true, leetcodeLink: "https://a.b", youtubeLink: null, topicPath: ["T", "S"] });
+  });
+
+  it("defaults to none for old stored state", () => {
+    expect(normalizeStriver({ statuses: {} }).customProblems).toEqual([]);
   });
 });
