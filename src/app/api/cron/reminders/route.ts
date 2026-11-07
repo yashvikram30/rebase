@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { sendRevisionEmail } from "@/lib/email";
+import { generateInterviewQuestions } from "@/lib/interview-questions";
 import { syncRows } from "@/lib/mongo";
 import { toEmailItems } from "@/lib/striver-problems";
 import { rescheduleMissedReviews, toDateString } from "@/lib/striver-schedule";
 import { normalizeStriver } from "@/lib/striver-normalize";
+
+/** Each email waits on a model call for its interview questions. */
+export const maxDuration = 300;
 
 function isAuthorized(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
@@ -53,10 +57,10 @@ export async function GET(req: Request) {
       // Only the address recorded from the user's own session is ever used.
       if (!row.email || !state.reminders) continue;
 
-      const items = toEmailItems(reviews.filter((r) => !r.completed && r.dueDate === todayStr));
+      const items = toEmailItems(reviews.filter((r) => !r.completed && r.dueDate === todayStr), state.customProblems);
       if (items.length === 0) continue;
 
-      const result = await sendRevisionEmail({ to: row.email, items, todayStr });
+      const result = await sendRevisionEmail({ to: row.email, items, todayStr, questions: await generateInterviewQuestions(items) });
       if (result.ok) {
         emailsSent++;
         logs.push(`Sent ${items.length} problems to user ${row.uid}`);
