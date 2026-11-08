@@ -231,7 +231,7 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
   }, [allProblems, query, topicFilter, statusFilter, store.statuses]);
 
   // While searching or filtering, every group with a match is open; otherwise the user's own toggles apply.
-  const topicOpen = (t: string) => filtering || (expandedTopics[t] ?? t === topicGroups[0]?.topic);
+  const topicOpen = (t: string) => filtering || (expandedTopics[t] ?? false);
   const subOpen = (t: string, s: string) => !collapsedSubtopics[`${t}::${s}`];
 
   // Green never deletes the queue silently. If reviews would stay queued, ask once whether to keep them.
