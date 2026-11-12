@@ -6,14 +6,29 @@ const MAX_VARIATIONS = 4;
 
 export type InterviewExtras = { followups: string[]; variations: string[] };
 
+const ATTEMPTS = 3;
+const BACKOFF_MS = 2_000;
+
 /**
- * Asks the model for a few follow-up interview questions per problem, in one request.
- * Never throws: with no key, a failed call or an unreadable reply it returns {} and the email goes out without them.
- * Keyed by problem id.
+ * Asks the model for a few follow-up interview questions per problem, in one request, retrying a failed or
+ * empty reply a couple of times with a short backoff.
+ * Never throws: with no key, or when every attempt fails, it returns {} and the email goes out without them.
+ * Keyed by problem id; a problem missing from the result got nothing, so the caller must not mark it as done.
  */
 export async function generateInterviewQuestions(items: EmailProblemItem[]): Promise<Record<number, InterviewExtras>> {
+  if (!process.env.TOKEN_API_KEY || items.length === 0) return {};
+  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+    const out = await requestQuestions(items);
+    if (Object.keys(out).length > 0) return out;
+    if (attempt < ATTEMPTS) await new Promise((r) => setTimeout(r, BACKOFF_MS * attempt));
+  }
+  console.error(`[interview-questions] gave up after ${ATTEMPTS} attempts for problems ${items.map((i) => i.problem.id).join(",")}`);
+  return {};
+}
+
+async function requestQuestions(items: EmailProblemItem[]): Promise<Record<number, InterviewExtras>> {
   const key = process.env.TOKEN_API_KEY;
-  if (!key || items.length === 0) return {};
+  if (!key) return {};
 
   const list = items
     .slice(0, MAX_PROBLEMS)

@@ -158,3 +158,12 @@ export function getDueReviews(
 ): ScheduledReview[] {
   return reviews.filter((r) => !r.completed && r.dueDate === targetDateStr);
 }
+
+/** The review whose interval is this many days gets the model-written interview questions (once per problem). */
+export const QUESTION_INTERVAL_DAYS = 28;
+
+/** True for the 28-day review: stage 1 for yellow (7/28/56), stage 2 for red (7/14/28/56). */
+export function isQuestionStage(status: "yellow" | "red", stage: number): boolean {
+  const intervals = status === "yellow" ? YELLOW_INTERVALS_DAYS : RED_INTERVALS_DAYS;
+  return intervals[stage] === QUESTION_INTERVAL_DAYS;
+}

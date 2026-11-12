@@ -5,8 +5,17 @@ import type { Visit } from "./analytics";
  * One row per user per synced store: { uid, key, value (JSON text), updated }.
  * `email` is the account's address, taken from the session (never from the client) on the Striver row so the
  * daily reminder cron knows where to send.
+ * `questioned` lists the Striver problem ids that already got model-written interview questions. Only the cron
+ * writes it, and it sits outside `value` so a stale browser save can never overwrite it.
  */
-export type SyncRow = { uid: string; key: string; value: string; updated: number; email?: string };
+export type SyncRow = {
+  uid: string;
+  key: string;
+  value: string;
+  updated: number;
+  email?: string;
+  questioned?: number[];
+};
 
 declare global {
   var _mongo: Promise<MongoClient> | undefined;

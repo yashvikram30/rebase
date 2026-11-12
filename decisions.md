@@ -383,12 +383,23 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
   unattempted always clears the queue, and yellow or red restart the schedule from today.
 - **[built] `normalizeStriver` lives in `lib/striver-normalize.ts`**, not the `"use client"` store: a server route
   importing a function from a client module receives a reference stub, not the function.
+- **[built] Model-written interview questions go on the 28-day review only, once per problem.** The cron asks for
+  them only for a review whose interval is 28 days (yellow stage 1, red stage 2) and whose problem id is not in the
+  row's `questioned` list. The list lives on the Mongo row, outside the synced `value`, because the page saves the
+  whole `value` and a stale tab would otherwise erase it. An id is added only after the email went out with questions
+  for it. The model call is retried twice with a backoff; if it still fails the reminder goes out without questions,
+  the id is not marked, the failure is logged, and the next run retries while the review is still open. A review
+  answered before a retry succeeds never gets questions (no durable retry queue). The test-reminder route is a
+  sample: it always asks and never marks.
 - **[open] The cron uses the UTC date, the browser uses its local date,** so a due review can show a few hours
   earlier or later than the email. Storing the user's timezone on the row would fix it.
 
 ---
 
 ## Changelog
+
+- **2026-11-13:** Striver daily email: interview questions only on the 28-day review, once per problem (`questioned`
+  on the sync row), with retries on a failed model call.
 
 - **2026-11-03:** Striver: the "How it went" pills became a themed dropdown (`status-menu.tsx`) with a fixed-position
   popup, so the scrolling table never clips it. "Not attempted" replaces the × reset.

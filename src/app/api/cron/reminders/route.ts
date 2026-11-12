@@ -3,7 +3,7 @@ import { sendRevisionEmail } from "@/lib/email";
 import { generateInterviewQuestions } from "@/lib/interview-questions";
 import { syncRows } from "@/lib/mongo";
 import { toEmailItems } from "@/lib/striver-problems";
-import { rescheduleMissedReviews, toDateString } from "@/lib/striver-schedule";
+import { isQuestionStage, rescheduleMissedReviews, toDateString } from "@/lib/striver-schedule";
 import { normalizeStriver } from "@/lib/striver-normalize";
 
 /** Each email waits on a model call for its interview questions. */
@@ -60,10 +60,24 @@ export async function GET(req: Request) {
       const items = toEmailItems(reviews.filter((r) => !r.completed && r.dueDate === todayStr), state.customProblems);
       if (items.length === 0) continue;
 
-      const result = await sendRevisionEmail({ to: row.email, items, todayStr, questions: await generateInterviewQuestions(items) });
+      // Questions go only on a problem's 28-day review, and only once: a problem already in `questioned` is skipped.
+      const already = new Set(row.questioned ?? []);
+      const askFor = items.filter((i) => isQuestionStage(i.status, i.stage) && !already.has(i.problem.id));
+      const questions = askFor.length > 0 ? await generateInterviewQuestions(askFor) : {};
+      const missing = askFor.filter((i) => !questions[i.problem.id]).map((i) => i.problem.id);
+      if (missing.length > 0) {
+        console.error(`[cron/reminders] no questions for user ${row.uid}, problems ${missing.join(",")}; will retry`);
+      }
+
+      const result = await sendRevisionEmail({ to: row.email, items, todayStr, questions });
       if (result.ok) {
         emailsSent++;
         logs.push(`Sent ${items.length} problems to user ${row.uid}`);
+        // Mark a problem only once its email really went out with questions, so a failed call retries on a later run.
+        const done = Object.keys(questions).map(Number);
+        if (!result.skipped && done.length > 0) {
+          await col.updateOne({ _id: row._id }, { $addToSet: { questioned: { $each: done } } });
+        }
       } else {
         logs.push(`Failed sending to user ${row.uid}: ${result.error}`);
       }

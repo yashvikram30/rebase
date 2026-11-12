@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   addDays,
   createScheduleForProblem,
+  isQuestionStage,
   parseDateString,
   rescheduleMissedReviews,
   toDateString,
@@ -160,5 +161,12 @@ describe("striver-schedule", () => {
     const moved = updated.find((r) => r.problemId === 999);
     // Closest day with min count (1) is Day +1 (Oct 11)
     expect(moved?.dueDate).toBe("2026-10-11");
+  });
+});
+
+describe("isQuestionStage", () => {
+  it("picks the 28-day review for each colour", () => {
+    expect([0, 1, 2].map((s) => isQuestionStage("yellow", s))).toEqual([false, true, false]);
+    expect([0, 1, 2, 3].map((s) => isQuestionStage("red", s))).toEqual([false, false, true, false]);
   });
 });
