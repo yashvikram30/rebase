@@ -391,12 +391,32 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
   the id is not marked, the failure is logged, and the next run retries while the review is still open. A review
   answered before a retry succeeds never gets questions (no durable retry queue). The test-reminder route is a
   sample: it always asks and never marks.
+- **[built] Daily drill at `/striver/drill`: an on-demand revision page, separate from the email.** You open it any
+  day, pick a scope (problems you have attempted, or the whole sheet) and a size (5, 10 or 15 cards), and answer short
+  recall cards without writing code. Each problem has five card kinds: intuition, brute force, pattern, complexity
+  and pitfall.
+  - **No model runs while you use it.** The card bank (`src/data/striver-drill.json`, 179 entries) was drafted once by
+    the gateway model with `npm run drill:build` and is static data. Pattern and complexity cards are graded
+    automatically with wrong options drawn from other problems; the three written kinds are self-rated (missed,
+    partly, got it) after revealing the reference, so there is no model call, no cost and no failure on the day.
+  - **Selection** (`src/lib/drill-deck.ts`): weighted sampling without replacement. A red problem weighs more than a
+    green one, a missed card more than a known one, and a card fades for a day to ten days after it was answered.
+    At most two cards per problem per deck. The deck is seeded by date and round number, so it is reproducible.
+  - **History is kept.** Ratings live in `csplan.drill` (a synced store): per card the last rating, when, and how
+    often it was seen, plus cards done per day for the streak. This is the answer history the sheet itself never had.
+  - **The drill does not change the 7/28/56-day review schedule.** A missed card only makes that card return sooner.
+  - **[open] Model-drafted answers need a human pass.** Spot checks were accurate; complexity strings are used as
+    answers, so a wrong one teaches the wrong thing. Custom problems have no cards. A "check my written answer" model
+    button is not built.
 - **[open] The cron uses the UTC date, the browser uses its local date,** so a due review can show a few hours
   earlier or later than the email. Storing the user's timezone on the row would fix it.
 
 ---
 
 ## Changelog
+
+- **2026-11-13:** Striver: added the daily drill (`/striver/drill`), a static model-drafted card bank, and the
+  `csplan.drill` sync key.
 
 - **2026-11-13:** Striver daily email: interview questions only on the 28-day review, once per problem (`questioned`
   on the sync row), with retries on a failed model call.

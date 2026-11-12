@@ -14,7 +14,8 @@
     "db:generate": "drizzle-kit generate",
     "db:seed": "tsx scripts/seed.ts",
     "data:build": "tsx scripts/build-data.ts",
-    "debug:build": "tsx scripts/build-debug.ts"
+    "debug:build": "tsx scripts/build-debug.ts",
+    "drill:build": "tsx scripts/build-drill.ts"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.3",

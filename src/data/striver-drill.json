@@ -1,0 +1,1792 @@
+{
+ "20": {
+  "id": 20,
+  "idea": "Run a modified merge sort and, while merging two sorted halves, every time an element of the right half is placed before remaining left elements, those left elements form inversions with it, adding (mid - i + 1) at once.",
+  "brute": "Checking all pairs i < j with a[i] > a[j] takes O(n^2) time, which is too slow for n up to 10^5.",
+  "pattern": "Divide and conquer",
+  "time": "O(n log n)",
+  "space": "O(n)",
+  "whyComplexity": "Merge sort divides into log n levels, each doing linear merge work, and the inversion count is accumulated during those merges at no extra asymptotic cost.",
+  "pitfall": "Interactions between the two halves are only counted during the merge step, so you must not merge before counting and must store counts in a 64-bit integer since inversions can exceed 2^31."
+ },
+ "21": {
+  "id": 21,
+  "idea": "XOR all array elements with all numbers 1..n to get missing ^ repeating; a set bit distinguishes them, and partitioning both ranges by that bit yields the two values, then a scan labels which is duplicated.",
+  "brute": "Sort the array or use a frequency array to find the missing and duplicated values, but that takes O(n log n) time or O(n) extra space.",
+  "pattern": "Bit manipulation",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "It uses a constant number of linear scans: XOR over the array and 1..n, partition XORs, and one check to identify which candidate occurs in the array.",
+  "pitfall": "After partitioning, the two candidates are not automatically in missing/repeating order, so you must test one against the original array to label them correctly."
+ },
+ "22": {
+  "id": 22,
+  "idea": "Boyer-Moore voting: keep a candidate and a counter, canceling each occurrence of a different value; because the majority appears more than n/2 times, it cannot be fully canceled.",
+  "brute": "Use a hash map of frequencies or check every element's count, taking O(n) extra space or O(n^2) time.",
+  "pattern": "Greedy",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "One pass over the array with constant-time updates to the candidate and counter.",
+  "pitfall": "Resetting the candidate incorrectly when the counter reaches zero or forgetting that the voting result is only guaranteed to be the majority when the problem guarantees one."
+ },
+ "23": {
+  "id": 23,
+  "idea": "Generalize Boyer-Moore to two candidates: whenever three distinct values appear, cancel them, leaving only possible >n/3 candidates, then verify their counts in a second pass.",
+  "brute": "Count frequencies with a hash map and return all keys with count > n/3, using O(n) extra space.",
+  "pattern": "Greedy",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "Two linear scans with constant extra space for two candidates and counters.",
+  "pitfall": "Not verifying the two surviving candidates in a second pass, because a candidate may appear <= n/3 times when no value exceeds n/3."
+ },
+ "24": {
+  "id": 24,
+  "idea": "Track both the maximum and minimum product ending at each position; a negative number can turn the previous minimum into the new maximum.",
+  "brute": "Enumerate all subarrays and compute their products, taking O(n^2) or O(n^3) time.",
+  "pattern": "Dynamic programming",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "Each element is processed once, updating constant-size max/min states.",
+  "pitfall": "Updating max before min (or ignoring min) so negative products are missed, and mishandling zeros by carrying a stale product."
+ },
+ "25": {
+  "id": 25,
+  "idea": "Since nums1 has trailing free space, fill it from the back: compare the largest remaining elements of nums1[0..m-1] and nums2[0..n-1] with two pointers i=m-1 and j=n-1, writing the larger into position i+j+1.",
+  "brute": "Copy nums2 into nums1's tail and sort the whole array, which wastes the given ordering and costs O((m+n) log(m+n)) instead of a linear merge.",
+  "pattern": "Two pointers",
+  "time": "O(m+n)",
+  "space": "O(1)",
+  "whyComplexity": "Each pointer moves at most m+n steps total and everything is merged in place with constant extra variables.",
+  "pitfall": "Iterating from the front overwrites unread nums1 elements, so you must write from the end and then copy any leftover nums2 elements when nums1 runs out first."
+ },
+ "26": {
+  "id": 26,
+  "idea": "During a modified merge sort, before merging each pair of sorted halves count reverse pairs with two pointers: for each j in the right half, advance i while nums[i] <= 2*nums[j], and add the count of remaining left elements.",
+  "brute": "Comparing every pair i < j for nums[i] > 2*nums[j] is O(n^2), too slow for n up to 5*10^4.",
+  "pattern": "Divide and conquer",
+  "time": "O(n log n)",
+  "space": "O(n)",
+  "whyComplexity": "The two-pointer counting plus merge is linear per level of the divide-and-conquer recursion, giving log n levels of O(n) work.",
+  "pitfall": "The comparison 2*nums[j] overflows 32-bit int and the count must be done after both halves are individually sorted but before merging them, otherwise indices lose their i < j guarantee."
+ },
+ "27": {
+  "id": 27,
+  "idea": "Sort the array, fix one number, then use two pointers to find pairs summing to the remaining target while skipping duplicate values.",
+  "brute": "Triple nested loops over all i<j<k, taking O(n^3) time and missing efficient duplicate handling.",
+  "pattern": "Two pointers",
+  "time": "O(n^2)",
+  "space": "O(1)",
+  "whyComplexity": "The outer loop is O(n), and each two-pointer inner scan is O(n), giving O(n^2).",
+  "pitfall": "Failing to skip duplicates for the fixed index and for both pointers after recording a triplet, which produces duplicate triples."
+ },
+ "28": {
+  "id": 28,
+  "idea": "Sort, fix two indices, and use two pointers on the remaining suffix to find pairs summing to target - nums[i] - nums[j], skipping duplicates.",
+  "brute": "Four nested loops over all quadruples, taking O(n^4) time.",
+  "pattern": "Two pointers",
+  "time": "O(n^3)",
+  "space": "O(1)",
+  "whyComplexity": "Two nested fixed indices take O(n^2), and each two-pointer scan over the rest takes O(n).",
+  "pitfall": "Duplicate quadruplets from not skipping equal values at every level, and 32-bit overflow when summing four 1e9-sized values."
+ },
+ "29": {
+  "id": 29,
+  "idea": "Kadane's algorithm: the best subarray ending at i is either nums[i] alone or the previous best ending subarray plus nums[i]; keep the running maximum.",
+  "brute": "Check every subarray sum with two loops, taking O(n^2) time.",
+  "pattern": "Dynamic programming",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "One pass maintaining current and global maximum subarray sums.",
+  "pitfall": "Initializing the current sum and answer to 0, which returns 0 for an all-negative array instead of the largest negative element."
+ },
+ "31": {
+  "id": 31,
+  "idea": "Find the rightmost pivot where nums[i] < nums[i+1], swap it with the smallest larger value to its right, then reverse the suffix to make it the next lexicographic permutation.",
+  "brute": "Generate all permutations, sort them, and pick the next one, which is factorial time.",
+  "pattern": "Simulation / in-place rearrangement",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "Three linear scans at most: find pivot, find swap partner, reverse suffix.",
+  "pitfall": "Using <= when finding the pivot or forgetting to reverse the suffix; if no pivot exists, reverse the whole array (last permutation)."
+ },
+ "36": {
+  "id": 36,
+  "idea": "Dutch national flag: use low/mid/high pointers to place 0s before mid, 2s after mid, and leave 1s in the middle in one pass.",
+  "brute": "Sort the array or count 0s/1s/2s and overwrite it, which is O(n log n) or uses two passes.",
+  "pattern": "Two pointers",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "Each element is examined and moved at most once by the three pointers.",
+  "pitfall": "Incrementing mid after swapping with high; the value swapped from the end has not been examined yet."
+ },
+ "37": {
+  "id": 37,
+  "idea": "Scan once keeping a hash map from value to index; for each element check whether target - nums[i] is already stored, and if so return the two indices.",
+  "brute": "Testing all pairs takes O(n^2) time when a hash map gives O(1) lookups.",
+  "pattern": "Hashing / frequency map",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "Each element is inserted and queried once with expected O(1) hash operations.",
+  "pitfall": "Check for the complement before inserting the current element, otherwise an element can pair with itself (e.g. target = 2*nums[i]) and return duplicate indices."
+ },
+ "65": {
+  "id": 65,
+  "idea": "Binary search on columns: take the middle column, find its maximum element, and move toward the side whose adjacent value is larger, since a peak must exist there.",
+  "brute": "Check every cell against its four neighbors, O(mn), which is too slow for the intended logarithmic-in-one-dimension solution.",
+  "pattern": "Binary search",
+  "time": "O(m log n)",
+  "space": "O(1)",
+  "whyComplexity": "There are O(log n) binary-search steps and each step scans one column of m rows to find its maximum.",
+  "pitfall": "Comparing with diagonal neighbors instead of only left/right in the chosen column, or failing to treat out-of-bound neighbors as negative infinity."
+ },
+ "67": {
+  "id": 67,
+  "idea": "The median is the smallest value x such that more than half of all matrix elements are <= x; binary search x and count elements <= x in each sorted row with upper_bound.",
+  "brute": "Flatten the matrix and sort all n*m elements to pick the middle, but that is O(nm log(nm)) and ignores row sortedness.",
+  "pattern": "Binary search on the answer",
+  "time": "O(n log m log(maxVal - minVal))",
+  "space": "O(1)",
+  "whyComplexity": "Each binary-search step counts <= mid in O(log m) per row, and the value range is halved each time.",
+  "pitfall": "Use upper_bound per row to count elements <= mid, and for an odd total use the condition count > (n*m)/2 for the smallest feasible mid."
+ },
+ "68": {
+  "id": 68,
+  "idea": "Start at the top-right corner: if the current value is less than target move down, if greater move left, eliminating one row or column each step.",
+  "brute": "Scan every cell in the matrix, O(mn), which ignores the row and column sorted structure.",
+  "pattern": "Two pointers",
+  "time": "O(m+n)",
+  "space": "O(1)",
+  "whyComplexity": "Each move discards an entire row or column, so at most m+n steps are taken.",
+  "pitfall": "Starting at the top-left or bottom-right, where both neighboring directions can move toward or away from the target, and forgetting to handle an empty matrix."
+ },
+ "73": {
+  "id": 73,
+  "idea": "Sort the stall positions, then binary search the minimum distance d and greedily check whether c cows can be placed with every adjacent cow at least d apart.",
+  "brute": "Try every possible minimum distance and test if c cows fit, but the range can be large and each test is linear, making it too slow.",
+  "pattern": "Binary search on the answer",
+  "time": "O(n log n + n log(maxPos - minPos))",
+  "space": "O(1)",
+  "whyComplexity": "Sorting takes O(n log n), and each of O(log range) binary-search checks scans all stalls once.",
+  "pitfall": "Forgetting to sort the stalls invalidates the greedy, and each candidate stall must be compared with the last placed cow, not just the previous stall."
+ },
+ "74": {
+  "id": 74,
+  "idea": "Minimize the maximum subarray sum by binary searching a capacity, then greedily splitting nums into at most k contiguous parts each with sum <= capacity.",
+  "brute": "Try all ways to place k-1 cuts or use exponential recursion to minimize the largest part, which is too slow.",
+  "pattern": "Binary search on the answer",
+  "time": "O(n log(sum(nums)))",
+  "space": "O(1)",
+  "whyComplexity": "Binary search over the sum range takes O(log sum) checks, and each check scans the array once.",
+  "pitfall": "If k > n or any element exceeds the candidate capacity, the partition is impossible; k = 1 must return the total sum."
+ },
+ "75": {
+  "id": 75,
+  "idea": "Binary search for any peak: if nums[mid] < nums[mid+1] the slope rises, so a peak must be to the right; otherwise a peak is at mid or to the left.",
+  "brute": "Scan linearly and return an element greater than its neighbors, O(n), which is too slow for the intended logarithmic solution.",
+  "pattern": "Binary search",
+  "time": "O(log n)",
+  "space": "O(1)",
+  "whyComplexity": "Each comparison halves the search range.",
+  "pitfall": "Accessing nums[mid+1] without ensuring mid+1 is valid, and treating out-of-bounds boundaries incorrectly instead of as negative infinity."
+ },
+ "76": {
+  "id": 76,
+  "idea": "Binary search a partition cut in the smaller array so that the left halves contain exactly k elements and all left elements are <= all right elements; the kth element is the maximum of the left halves.",
+  "brute": "Merge the two sorted arrays and return the kth element, which takes O(n+m) time and space.",
+  "pattern": "Binary search",
+  "time": "O(log(min(n, m)))",
+  "space": "O(1)",
+  "whyComplexity": "Each step eliminates half of the smaller array's possible partition positions.",
+  "pitfall": "Handle cuts at 0 and at the array length with -∞/+∞ sentinels, and remember k is 1-indexed while partition sizes are 0-indexed."
+ },
+ "77": {
+  "id": 77,
+  "idea": "Binary search a partition of the smaller array so the combined left half has size floor((m+n)/2) and max(left) <= min(right); the median then comes from the boundary elements.",
+  "brute": "Merge the two sorted arrays and compute the median directly, which uses O(m+n) time and space.",
+  "pattern": "Binary search",
+  "time": "O(log(min(m, n)))",
+  "space": "O(1)",
+  "whyComplexity": "Each binary-search step halves the possible partition positions in the smaller array.",
+  "pitfall": "For even total length average maxLeft and minRight, and use sentinels for empty left/right partitions to avoid out-of-bounds comparisons."
+ },
+ "83": {
+  "id": 83,
+  "idea": "Compare nums[mid] with nums[hi]: if nums[mid] > nums[hi], the rotation point and minimum lie to the right; otherwise the minimum is at mid or to the left.",
+  "brute": "Scan all elements and track the minimum, O(n), too slow for the required logarithmic search.",
+  "pattern": "Binary search",
+  "time": "O(log n)",
+  "space": "O(1)",
+  "whyComplexity": "The search interval is halved each iteration.",
+  "pitfall": "Setting lo = mid+1 when nums[mid] < nums[hi], which can skip the minimum at mid; keep hi = mid in that case."
+ },
+ "88": {
+  "id": 88,
+  "idea": "Use rotated-array binary search, but when nums[lo], nums[mid], and nums[hi] are equal the sorted side is ambiguous, so shrink both ends by one.",
+  "brute": "Scan linearly for the target, O(n), which is too slow in the average case.",
+  "pattern": "Binary search",
+  "time": "O(n) worst case (O(log n) average)",
+  "space": "O(1)",
+  "whyComplexity": "Binary search usually halves the range, but duplicates can force one-by-one shrinking from both ends in the worst case.",
+  "pitfall": "Assuming a sorted half can be identified even when nums[lo] == nums[mid] == nums[hi]; that fails with duplicates and requires shrinking both ends."
+ },
+ "90": {
+  "id": 90,
+  "idea": "In the sorted array, paired elements before the single element start at even indices; after it, pairing shifts, so binary search for the first index where the pair pattern breaks.",
+  "brute": "XOR all elements or scan adjacent pairs linearly, O(n), which is too slow for the required logarithmic solution.",
+  "pattern": "Binary search",
+  "time": "O(log n)",
+  "space": "O(1)",
+  "whyComplexity": "Each step discards half of the remaining indices.",
+  "pitfall": "Comparing mid with the wrong partner; normalize mid to an even index or use mid^1 carefully to handle both even and odd positions."
+ },
+ "91": {
+  "id": 91,
+  "idea": "Binary search the integer answer in [1, M], comparing x^N with M using a capped power computation to avoid overflow.",
+  "brute": "Try every integer from 1 to M and compare its Nth power with M, O(MN), which is far too slow.",
+  "pattern": "Binary search on the answer",
+  "time": "O(N log M)",
+  "space": "O(1)",
+  "whyComplexity": "Binary search takes O(log M) steps and each step computes mid^N in O(N) multiplications.",
+  "pitfall": "Overflow in mid^N and off-by-one bounds; cap intermediate products at M and return -1 when no exact integer root exists."
+ },
+ "94": {
+  "id": 94,
+  "idea": "The minimum eating speed k is monotonic: if Koko can finish at speed k, she can finish at any larger speed, so binary search for the smallest feasible k where sum(ceil(pile/k)) <= h.",
+  "brute": "Try every speed from 1 to max(piles) and simulate all piles, which is O(n * maxPile) and too slow.",
+  "pattern": "Binary search on the answer",
+  "time": "O(n log(max(piles)))",
+  "space": "O(1)",
+  "whyComplexity": "Binary search tests O(log maxPile) speeds and each feasibility check scans the n piles once.",
+  "pitfall": "Use integer ceiling (pile + k - 1) / k and early-exit once hours exceed h; never test k = 0."
+ },
+ "97": {
+  "id": 97,
+  "idea": "In an inorder traversal of a correct BST the sequence is sorted; locate the two positions where it is not increasing, and swap the values of those two nodes.",
+  "brute": "Trying to detect the swap by comparing only adjacent levels/parents is unreliable and misses non-local swaps.",
+  "pattern": "Tree traversal (DFS)",
+  "time": "O(n)",
+  "space": "O(h)",
+  "whyComplexity": "One inorder pass visits all n nodes and the recursion stack grows to the tree height h.",
+  "pitfall": "If the two swapped nodes are adjacent in inorder, both anomaly points come from the same comparison, so track both 'first' and 'last' violation pointers carefully."
+ },
+ "98": {
+  "id": 98,
+  "idea": "Post-order DFS returns for each subtree its min, max, size and whether it is a BST; a subtree is a BST if both children are BSTs and left.max < root < right.min.",
+  "brute": "Independently validating every subtree yields O(n^2) work on a skewed tree.",
+  "pattern": "Tree traversal (DFS)",
+  "time": "O(n)",
+  "space": "O(h)",
+  "whyComplexity": "Each node produces its aggregated subtree info once and the recursion stack is at most the tree height h.",
+  "pitfall": "Null children must be given sentinel min/max (or handled explicitly) so an empty subtree never falsely breaks the BST bound."
+ },
+ "99": {
+  "id": 99,
+  "idea": "Inorder traversal of a BST is sorted, so collect the values (or nodes) in order and use a two pointer scan to find the pair summing to k.",
+  "brute": "Checking every pair of nodes is O(n^2), or doing a hash lookup still needs the sorted-order structure.",
+  "pattern": "Two pointers",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "The inorder list has n values and the two pointer scan touches each once, with O(n) extra storage for the list.",
+  "pitfall": "Two pointers with strict < and > moves correctly but must ensure the two hits are distinct nodes, not the same node counted twice."
+ },
+ "100": {
+  "id": 100,
+  "idea": "An inorder traversal of a valid BST visits nodes in strictly increasing order, so walk the tree inorder while remembering the previous node and verify each value exceeds it.",
+  "brute": "Compare every node only against its immediate left and right children, which is too weak because it misses violations against distant ancestors.",
+  "pattern": "Tree traversal (DFS)",
+  "time": "O(n)",
+  "space": "O(h)",
+  "whyComplexity": "Each of the n nodes is visited once and the recursion stack holds at most the tree height h.",
+  "pitfall": "Must enforce strict inequality so equal values are rejected, and must compare against inherited min/max bounds (or the tracked previous node), not just direct children."
+ },
+ "101": {
+  "id": 101,
+  "idea": "Recursively consume preorder values with an index while carrying a (lower, upper) bound; the next value is valid only inside the current bound, then becomes the root of that subtree.",
+  "brute": "Inserting each preorder element into a BST one at a time costs O(n^2) on a skewed tree.",
+  "pattern": "Tree traversal (DFS)",
+  "time": "O(n)",
+  "space": "O(h)",
+  "whyComplexity": "Each preorder value is placed exactly once and the recursion depth is bounded by the tree height h.",
+  "pitfall": "Forgetting to tighten the bound when descending (upper for left child, lower for right child) produces a wrong or degenerate tree."
+ },
+ "102": {
+  "id": 102,
+  "idea": "Search for the key; once found, if it has two children copy its inorder successor's value (leftmost node of the right subtree) and delete that successor, otherwise splice its single child (or null) into the parent's link.",
+  "brute": "Deleting by rebuilding the whole BST from the remaining keys is O(n) per deletion and discards the existing structure.",
+  "pattern": "Binary search tree property",
+  "time": "O(h)",
+  "space": "O(h)",
+  "whyComplexity": "The key search and the successor search each walk at most one root-to-leaf path, with recursion depth bounded by h.",
+  "pitfall": "Forgetting to return the (possibly new) subtree root to the parent link, and mishandling deletion of a node with only a right child or as the root."
+ },
+ "103": {
+  "id": 103,
+  "idea": "Descend from the root: if both target values are smaller than the current node go left, if both are larger go right, otherwise the current node is the split point and hence the LCA.",
+  "brute": "Storing the root-to-node paths for both nodes and comparing them works but uses O(h) extra space and two traversals.",
+  "pattern": "Binary search tree property",
+  "time": "O(h)",
+  "space": "O(1)",
+  "whyComplexity": "Only one root-to-LCA path is followed, one level per comparison.",
+  "pitfall": "Writing strict vs non-strict comparisons wrong when one node is an ancestor of the other (handle p.val <= root.val <= q.val after normalizing order)."
+ },
+ "104": {
+  "id": 104,
+  "idea": "Walk down the BST: keep the last node where you moved left as the successor and the last node where you moved right as the predecessor, stopping when you hit the key (then scan its subtrees) or a null pointer.",
+  "brute": "Doing a full inorder traversal and remembering the previous node costs O(n) time when only O(h) is needed.",
+  "pattern": "Binary search tree property",
+  "time": "O(h)",
+  "space": "O(1)",
+  "whyComplexity": "Only a single root-to-leaf descent is made, updating the candidate ancestor once per level.",
+  "pitfall": "Once the key is found, forgetting that successor is the leftmost node of its right subtree (and predecessor the rightmost of its left subtree) rather than the tracked ancestor."
+ },
+ "105": {
+  "id": 105,
+  "idea": "An inorder traversal of a BST visits keys in sorted order, so push left spines onto a stack and pop k nodes, stopping as soon as the kth value is produced.",
+  "brute": "Collecting the entire inorder array and indexing it is O(n) time and O(n) space even when k is tiny.",
+  "pattern": "Tree traversal (DFS)",
+  "time": "O(h + k)",
+  "space": "O(h)",
+  "whyComplexity": "Descending to the leftmost node costs O(h) and each of the k popped nodes costs amortized O(1).",
+  "pitfall": "Re-doing the full traversal instead of returning early at the kth pop, and not validating that k <= number of nodes (empty tree / k out of range)."
+ },
+ "106": {
+  "id": 106,
+  "idea": "In a BST, walk down comparing the values until you either reach a null pointer (create the new node there) or find the key already present (return the unchanged subtree).",
+  "brute": "Inserting as a leaf in an arbitrary binary tree and then rebalancing is unnecessary — the BST ordering already dictates the exact insertion position.",
+  "pattern": "Binary search tree property",
+  "time": "O(h)",
+  "space": "O(1)",
+  "whyComplexity": "The search descends one level per comparison along a single root-to-leaf path of height h (O(n) in a skewed tree).",
+  "pitfall": "Forgetting to assign the created node back to parent.left/parent.right (returning it), and overlooking the duplicate-key case."
+ },
+ "110": {
+  "id": 110,
+  "idea": "Preorder gives the root; find that root in inorder to split left and right subtrees, then recursively build both sides using an index map for O(1) inorder lookup.",
+  "brute": "Linear-searching the root in inorder at every recursive step makes construction O(n^2).",
+  "pattern": "Divide and conquer",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "Each node becomes a root exactly once, and the hashmap stores all n inorder indices.",
+  "pitfall": "This works only when node values are unique, and the recursive ranges for left and right subtrees must be updated exactly after consuming the root."
+ },
+ "112": {
+  "id": 112,
+  "idea": "Serialize with a preorder walk that emits a sentinel such as '#' for every null child, so the token stream uniquely determines the tree; deserialize by consuming tokens from a pointer/queue, attaching children recursively.",
+  "brute": "Emitting only values without null markers is ambiguous, since different trees can produce the same value sequence.",
+  "pattern": "Tree traversal (DFS)",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "Serialization and deserialization each touch every node and null child once, and the encoded string stores 2n+1 tokens.",
+  "pitfall": "Using a plain comma join without a distinct delimiter for negatives/nulls, or re-splitting the string at every recursive call instead of sharing one index/iterator."
+ },
+ "116": {
+  "id": 116,
+  "idea": "Collect the root, then the left boundary excluding leaves, all leaves left-to-right, and the right boundary bottom-up excluding leaves.",
+  "brute": "A plain inorder or level-order traversal does not produce boundary order and often duplicates corner leaves or the root.",
+  "pattern": "Tree traversal (DFS)",
+  "time": "O(n)",
+  "space": "O(h)",
+  "whyComplexity": "Each node is visited a constant number of times across the boundary, leaf, and right-boundary traversals.",
+  "pitfall": "Exclude leaves from both left and right boundaries, reverse the right boundary before appending, and handle a single-node tree."
+ },
+ "118": {
+  "id": 118,
+  "idea": "Recursively search both subtrees: if p and q are found in different subtrees, the current node is the LCA; otherwise return the non-null result from the subtree that contains both or one of them.",
+  "brute": "Finding root-to-p and root-to-q paths separately and comparing them uses extra space and two traversals.",
+  "pattern": "Tree traversal (DFS)",
+  "time": "O(n)",
+  "space": "O(h)",
+  "whyComplexity": "In the worst case the recursion visits every node once, with stack depth bounded by the tree height h.",
+  "pitfall": "If p is an ancestor of q, the first matching node is the LCA, so return immediately when root equals p or q."
+ },
+ "119": {
+  "id": 119,
+  "idea": "Do a BFS assigning each node a positional index (children 2*i and 2*i+1, or re-based per level), then the width of a level is last index minus first index plus one.",
+  "brute": "Counting nodes per level treats missing nodes as width zero, so it fails for sparse trees where the true width spans empty gaps.",
+  "pattern": "Tree traversal (BFS / level order)",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "Each node is visited once, and the queue holds at most one level's nodes.",
+  "pitfall": "Integer overflow from positional indices like 2^i in deep skewed trees, avoided by subtracting the level's first index before computing children."
+ },
+ "120": {
+  "id": 120,
+  "idea": "Build a parent map to make the tree undirected, then BFS from the start node; the maximum BFS depth is the time needed to burn the whole tree.",
+  "brute": "Burning only downward from the start node misses fire spreading upward through ancestors, so it undercounts the time.",
+  "pattern": "Graph BFS",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "The parent map and BFS each touch every node and edge of the tree a constant number of times.",
+  "pitfall": "The start node need not be the root, so parent edges must be traversed; the answer is the last BFS level, not the number of visited nodes."
+ },
+ "121": {
+  "id": 121,
+  "idea": "Treat the tree as an undirected graph by recording each node's parent, then BFS from the target node and stop after K levels.",
+  "brute": "Searching only downward from the target misses ancestors and nodes in sibling subtrees, and recomputing distances from every node is O(n^2).",
+  "pattern": "Graph BFS",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "Building the parent map visits every node once, and BFS over the n-node tree also visits each node at most once.",
+  "pitfall": "Use a visited set or parent checks so BFS never goes back, and handle K = 0 by returning only the target node."
+ },
+ "122": {
+  "id": 122,
+  "idea": "Use DFS while maintaining the current root-to-leaf path, record a copy when reaching a leaf, then backtrack by removing the last node.",
+  "brute": "Building strings or lists by copying at every recursive step without backtracking wastes time and often creates incorrect partial paths.",
+  "pattern": "Backtracking",
+  "time": "O(n)",
+  "space": "O(h)",
+  "whyComplexity": "Each node is visited once, and the recursion stack plus current path is bounded by the tree height h; output size is excluded.",
+  "pitfall": "Only record a path at a leaf, copy the path before storing it, and remove the last element after each recursive return."
+ },
+ "123": {
+  "id": 123,
+  "idea": "BFS per level and take the last node of each level (or DFS visiting the right child first and recording the first node seen at each depth).",
+  "brute": "Recording every node per level and taking the maximum value or the last enqueued without level boundaries produces wrong or duplicated entries.",
+  "pattern": "Tree traversal (BFS / level order)",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "Each node is visited once, and the queue (or recursion stack) holds up to one level or the tree height.",
+  "pitfall": "Forgetting to reset the level snapshot so the last node of one level is confused with the first of the next, and returning nothing for an empty tree."
+ },
+ "124": {
+  "id": 124,
+  "idea": "BFS carrying each node's horizontal distance from the root, recording a node's value only the first time its distance is seen, then reading distances in sorted order.",
+  "brute": "DFS without tracking horizontal distance can overwrite a distance with a deeper node, showing a bottom node instead of the topmost one.",
+  "pattern": "Tree traversal (BFS / level order)",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "Each node is visited once while a hash map or ordered map holds at most one entry per horizontal distance (at most n).",
+  "pitfall": "Overwriting the first-seen value at a horizontal distance on later visits, which shows a lower node, and not ordering the output by horizontal distance."
+ },
+ "125": {
+  "id": 125,
+  "idea": "Assign each node a (row, column) coordinate and group nodes by column, then sort each column by row and value before concatenating columns from left to right.",
+  "brute": "A plain level-order traversal without sorting columns and ties by value produces the wrong vertical order.",
+  "pattern": "Tree traversal (BFS / level order)",
+  "time": "O(n log n)",
+  "space": "O(n)",
+  "whyComplexity": "Every node is collected once, but sorting all columns can cost O(n log n) in the worst case.",
+  "pitfall": "When two nodes share the same row and column, sort them by value, and output columns in increasing column order."
+ },
+ "130": {
+  "id": 130,
+  "idea": "Postorder DFS returns the height of each subtree while updating the diameter as the sum of left and right subtree heights at every node.",
+  "brute": "Computing the height of every node separately and taking the maximum left+right sum costs O(n^2).",
+  "pattern": "Tree traversal (DFS)",
+  "time": "O(n)",
+  "space": "O(h)",
+  "whyComplexity": "Each node is processed once in postorder, and the recursion stack is bounded by the tree height h.",
+  "pitfall": "The diameter may not pass through the root, so update the global answer at every node; a single node has diameter 0."
+ },
+ "132": {
+  "id": 132,
+  "idea": "Post-order DFS where each call returns the best single-branch downward gain (node value plus the larger non-negative child gain), while the global answer is the best 'arch' node value + both child gains.",
+  "brute": "Enumerate every ordered pair of nodes and compute the path between them, which is at least O(n^2) and requires per-pair path finding, far too slow.",
+  "pattern": "Tree traversal (DFS)",
+  "time": "O(n)",
+  "space": "O(h)",
+  "whyComplexity": "Every node is visited once and each visit does constant work, with recursion depth equal to the tree height.",
+  "pitfall": "Not clamping a child gain at 0 (ignoring negative branches) or updating the global maximum after returning instead of before, and assuming a non-empty tree when the answer can be negative."
+ },
+ "134": {
+  "id": 134,
+  "idea": "BFS with a queue, processing one level at a time by snapshotting the current queue size and collecting each level into its own list.",
+  "brute": "Recursing without tracking depth or repeatedly scanning the queue mixes nodes from different levels and breaks the level grouping.",
+  "pattern": "Tree traversal (BFS / level order)",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "Every node is enqueued and dequeued once, and the queue holds at most the widest level, up to about n/2 nodes.",
+  "pitfall": "Iterating the queue with a live size instead of a fixed per-level snapshot, which merges consecutive levels, and mishandling an empty tree."
+ },
+ "139": {
+  "id": 139,
+  "idea": "Thread the tree: when a node has no left child, visit it and move right; otherwise find its inorder predecessor (rightmost node of the left subtree) and make that predecessor's null right pointer temporarily point to the current node, so no stack or recursion is needed.",
+  "brute": "Plain recursive or stack-based inorder keeps O(h) call frames or O(h) stack nodes, which is rejected when O(1) extra space is demanded.",
+  "pattern": "Tree traversal (DFS)",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "Each edge is walked at most twice (once to create a thread, once to remove it), and no auxiliary stack or recursion is used.",
+  "pitfall": "Forgetting to cut the temporary thread (set predecessor.right = null) before moving into the right subtree, which loops forever."
+ },
+ "142": {
+  "id": 142,
+  "idea": "Enumerate all 2^n subsets by iterating a bitmask from 0 to 2^n - 1 and including nums[i] whenever the i-th bit of the mask is set.",
+  "brute": "Recursively generate all subsets, which uses extra recursion stack and is less direct than bitmask enumeration.",
+  "pattern": "Bit manipulation",
+  "time": "O(n * 2^n)",
+  "space": "O(n * 2^n)",
+  "whyComplexity": "There are 2^n subsets, and building each subset takes O(n) time, while the output itself stores n * 2^n elements.",
+  "pitfall": "For n = 0, the loop bound 1 << n equals 1, yielding the single empty subset; avoid shifting by n when n >= 31."
+ },
+ "144": {
+  "id": 144,
+  "idea": "Count the number of set bits at each bit position modulo 3, or use two bitmasks (ones and twos) to simulate modulo 3 and extract the single number.",
+  "brute": "Use a hash map to count frequencies of each number, which takes O(n) time but O(n) extra space.",
+  "pattern": "Bit manipulation",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "Either 32 bit positions each scanned once, or a single pass updating two bitmasks, both linear in n with constant extra space.",
+  "pitfall": "Failing to handle negative numbers or the sign bit, and incorrectly clearing bits when using the ones/twos state machine."
+ },
+ "145": {
+  "id": 145,
+  "idea": "XOR all numbers to get a ^ b; any set bit in that XOR separates the two unique values, so partition all numbers by that bit and XOR each group to recover each singleton.",
+  "brute": "Use a hash map to count frequencies and collect the two values appearing once, but that costs O(n) extra space instead of O(1).",
+  "pattern": "Bit manipulation",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "One pass computes the total XOR, and a second pass partitions numbers into two groups using a distinguishing bit, with only constant extra variables.",
+  "pitfall": "You must choose a bit that is actually set in the total XOR; using an arbitrary bit can put both unique numbers in the same partition."
+ },
+ "289": {
+  "id": 289,
+  "idea": "Let dp[i] be the minimum cost to reach stone i; dp[i] = min over j in [i-k, i-1] of dp[j] + abs(h[i] - h[j]), with dp[0] = 0.",
+  "brute": "Try every possible sequence of jumps from the first stone recursively, which is exponential.",
+  "pattern": "Dynamic programming",
+  "time": "O(nk)",
+  "space": "O(n)",
+  "whyComplexity": "For each of the n positions, the transition examines up to k previous positions.",
+  "pitfall": "Initialize unreachable dp states to infinity and keep j >= 0; if k >= n, the frog can jump directly from the start to any stone."
+ },
+ "290": {
+  "id": 290,
+  "idea": "At each house take the better of skipping it, dp[i-1], or robbing it, dp[i-2] + nums[i], so only the last two DP values are needed.",
+  "brute": "Recursively consider robbing or skipping every house, which explores 2^n choices.",
+  "pattern": "Dynamic programming",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "A single left-to-right pass updates two rolling maximum values.",
+  "pitfall": "Adjacent houses cannot both be robbed; handle empty and single-house inputs and update rolling variables without overwriting values still needed."
+ },
+ "292": {
+  "id": 292,
+  "idea": "Let dp[day][last] be the maximum points through a day when the last chosen activity is last; today choose any activity different from last and add its points.",
+  "brute": "Try every possible activity sequence over n days, which is 3^n possibilities.",
+  "pattern": "Dynamic programming",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "There are only three activities, so each day does a constant 3-by-3 transition and only the previous day's row is kept.",
+  "pitfall": "Today's activity cannot equal yesterday's; initialize the first day correctly and use a dummy last state before any activity has been chosen."
+ },
+ "300": {
+  "id": 300,
+  "idea": "Process the grid row by row with 1D DP; dp[j] is the number of paths to the current cell, updated as dp[j] = 0 if blocked, else dp[j] + dp[j-1].",
+  "brute": "Recursively enumerate every monotone path from start to end, which is exponential.",
+  "pattern": "Dynamic programming",
+  "time": "O(nm)",
+  "space": "O(m)",
+  "whyComplexity": "Each cell is computed once from its top and left neighbors, and the obstacle simply zeroes that cell's path count.",
+  "pitfall": "An obstacle in the first row or column blocks all later cells in that row/column, and an obstacle at the start or end must make the answer 0."
+ },
+ "304": {
+  "id": 304,
+  "idea": "Use DP over at most k transactions, storing for each transaction count the best profit while holding a stock and while not holding a stock, and process days left to right.",
+  "brute": "Enumerate all choices of up to k buy/sell pairs, which is exponential in the number of transactions.",
+  "pattern": "Dynamic programming",
+  "time": "O(nk)",
+  "space": "O(k)",
+  "whyComplexity": "For each day, the algorithm updates all k transaction-count states, giving n*k transitions.",
+  "pitfall": "Initialize holding states to negative infinity and cash states to zero; if k >= n/2 the problem becomes unlimited transactions, and buying and selling on the same day must not double-count a transaction."
+ },
+ "305": {
+  "id": 305,
+  "idea": "Maintain cash, the best profit with no stock, and hold, the best profit while holding a stock; each day update both using today's price and subtract the fee once on a sell.",
+  "brute": "Enumerate all possible buy/sell transaction combinations, which is exponential.",
+  "pattern": "Dynamic programming",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "A single pass updates two constant-size states using today's price.",
+  "pitfall": "Apply the transaction fee exactly once per completed transaction, and initialize hold = -prices[0] consistently."
+ },
+ "307": {
+  "id": 307,
+  "idea": "Let dp[i][j] be the minimum edits to convert the first i chars of word1 into the first j chars of word2; a match uses the diagonal, otherwise take min of insert, delete, and replace.",
+  "brute": "Recursively try all insert/delete/replace sequences, which is exponential.",
+  "pattern": "Dynamic programming",
+  "time": "O(nm)",
+  "space": "O(min(n,m))",
+  "whyComplexity": "There are n*m states each with O(1) transitions, and only one row is needed if the shorter string is used as columns.",
+  "pitfall": "Initialize the first row/column to i/j for empty-string insert/delete cases, and compare word1[i-1] with word2[j-1] for the diagonal match."
+ },
+ "308": {
+  "id": 308,
+  "idea": "Let dp[i][j] be the LCS length of prefixes ending at i and j; if the characters match take 1 plus the diagonal, otherwise take the maximum of dropping either character.",
+  "brute": "Enumerate all subsequences of both strings and compare them, which is exponential.",
+  "pattern": "Dynamic programming",
+  "time": "O(nm)",
+  "space": "O(min(n,m))",
+  "whyComplexity": "It fills an n-by-m table of prefix states and can roll rows over the shorter string.",
+  "pitfall": "On a mismatch, resetting to zero instead of taking the max of top and left computes longest common substring, not subsequence."
+ },
+ "309": {
+  "id": 309,
+  "idea": "Let dp[i][j] be the length of the longest common suffix ending at i and j; on a match extend the diagonal, and on a mismatch reset to zero while tracking the global maximum.",
+  "brute": "Compare every substring of one string with every substring of the other, which is far too slow.",
+  "pattern": "Dynamic programming",
+  "time": "O(nm)",
+  "space": "O(min(n,m))",
+  "whyComplexity": "It fills n-by-m ending-position states once and keeps only one row over the shorter string.",
+  "pitfall": "Forgetting to reset to zero on a mismatch or failing to track the maximum over all cells instead of only the final cell."
+ },
+ "310": {
+  "id": 310,
+  "idea": "The longest palindromic subsequence length equals the LCS length of the string and its reverse, since matched characters can be kept symmetrically around the palindrome.",
+  "brute": "Enumerate every subsequence and check whether it is a palindrome, which is exponential.",
+  "pattern": "Dynamic programming",
+  "time": "O(n^2)",
+  "space": "O(n)",
+  "whyComplexity": "It runs the LCS DP on two strings of length n and can keep only rolling rows.",
+  "pitfall": "Confusing subsequence with substring, where characters may be skipped, or forgetting the length-1 and empty base cases in interval DP."
+ },
+ "314": {
+  "id": 314,
+  "idea": "Let dp[i][j] be whether the first i chars of s match the first j chars of p; '?' matches any char and '*' can match empty or one more char.",
+  "brute": "Recursively branch on every possible expansion of '*', which can be exponential.",
+  "pattern": "Dynamic programming",
+  "time": "O(nm)",
+  "space": "O(m)",
+  "whyComplexity": "Each DP cell is computed in O(1), and rolling over the pattern keeps only one row of size m.",
+  "pitfall": "Handle consecutive '*' correctly and initialize empty-string matching to true only when the pattern prefix consists entirely of '*'."
+ },
+ "315": {
+  "id": 315,
+  "idea": "Define dp[w] as the maximum value achievable with capacity w, and process each item once so that each item is either taken or skipped.",
+  "brute": "Try every subset of items and compute its total weight and value, which is exponential and infeasible for large n.",
+  "pattern": "Dynamic programming",
+  "time": "O(nW)",
+  "space": "O(W)",
+  "whyComplexity": "It fills every item-capacity state once in O(nW) time and keeps only one capacity row of W+1 entries.",
+  "pitfall": "Iterating capacities left-to-right reuses an item, converting 0/1 knapsack into unbounded knapsack."
+ },
+ "316": {
+  "id": 316,
+  "idea": "Count combinations by processing coins in the outer loop and amounts in the inner loop, so each amount uses unlimited copies of the current coin without regard to order.",
+  "brute": "Try every ordered sequence of coins recursively, which explodes exponentially and double-counts different orders as different combinations.",
+  "pattern": "Dynamic programming",
+  "time": "O(nA)",
+  "space": "O(A)",
+  "whyComplexity": "It updates A amount states for each of n coins, using one array of size A+1.",
+  "pitfall": "Putting the amount loop outside the coin loop counts permutations instead of combinations."
+ },
+ "320": {
+  "id": 320,
+  "idea": "Let S be the total stone weight; the answer is S minus twice the largest subset sum not exceeding S/2, computable by 0/1 subset-sum DP.",
+  "brute": "Try all 2^n ways to split the stones into two groups and compute the minimum difference, which is exponential.",
+  "pattern": "Dynamic programming",
+  "time": "O(nS)",
+  "space": "O(S)",
+  "whyComplexity": "It checks reachable subset sums up to S/2 for each of n stones, using a boolean array of size S/2.",
+  "pitfall": "Updating subset sums upward reuses the same stone multiple times; capacities must be updated downward."
+ },
+ "324": {
+  "id": 324,
+  "idea": "Transform plus/minus assignments into choosing positive numbers whose sum is P=(sum(nums)+target)/2, then count subsets with sum P.",
+  "brute": "Enumerate all 2^n sign assignments and count those whose signed sum equals target, which is exponential.",
+  "pattern": "Dynamic programming",
+  "time": "O(nP)",
+  "space": "O(P)",
+  "whyComplexity": "It processes each number once over P possible positive subset sums, storing only the number of ways for each sum.",
+  "pitfall": "Forgetting to reject odd sum+target or |target| greater than sum, or iterating sums upward and reusing each number."
+ },
+ "327": {
+  "id": 327,
+  "idea": "Let dp[i][j] be the minimum scalar multiplications to parenthesize matrices i..j; try every split k with cost dp[i][k]+dp[k+1][j]+p[i-1]*p[k]*p[j].",
+  "brute": "Try all possible parenthesizations recursively, which is exponential in the number of matrices.",
+  "pattern": "Dynamic programming",
+  "time": "O(n^3)",
+  "space": "O(n^2)",
+  "whyComplexity": "There are O(n^2) intervals and each tests O(n) split points, using an O(n^2) DP table.",
+  "pitfall": "Use dimensions p[i-1], p[k], p[j] for the split and handle length-1 intervals as zero while filling by increasing interval length."
+ },
+ "329": {
+  "id": 329,
+  "idea": "Let cuts[j] be the minimum cuts for s[0..j]; expand each odd/even palindrome center and update cuts[right] from cuts[left-1]+1 (or 0 if left is 0).",
+  "brute": "Try every possible cut partition and test whether each piece is a palindrome, which is exponential.",
+  "pattern": "Dynamic programming",
+  "time": "O(n^2)",
+  "space": "O(n)",
+  "whyComplexity": "Each of O(n) centers expands over O(n) characters, and the cuts array uses O(n) space.",
+  "pitfall": "A palindrome starting at index 0 needs 0 cuts rather than referencing cuts[-1], and even-length centers must be handled separately."
+ },
+ "448": {
+  "id": 448,
+  "idea": "Move slow one step and fast two steps; when fast reaches the end, slow is at the middle, using the second middle for even length as LeetCode requires.",
+  "brute": "Count the nodes in one pass, then traverse n/2 nodes in a second pass, which needs two passes.",
+  "pattern": "Fast and slow pointers",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "The fast pointer traverses the list once while the slow pointer advances half as far.",
+  "pitfall": "The loop condition must safely handle empty, single-node, and even-length lists and return the correct middle for even length."
+ },
+ "496": {
+  "id": 496,
+  "idea": "Use Tarjan's DFS; a root is an articulation point if it has more than one DFS child, and a non-root u is one if some child v has low[v] >= disc[u].",
+  "brute": "Remove each vertex and check whether the remaining graph splits into multiple components, costing O(V*(V+E)).",
+  "pattern": "Graph DFS",
+  "time": "O(V + E)",
+  "space": "O(V + E)",
+  "whyComplexity": "The DFS visits each vertex and edge once and updates low-link in constant time per edge.",
+  "pitfall": "Forget the root special case or fail to run DFS from every unvisited vertex in a disconnected graph."
+ },
+ "497": {
+  "id": 497,
+  "idea": "Run Tarjan's DFS with discovery time and low-link; an edge u -> v is a bridge exactly when low[v] > disc[u].",
+  "brute": "Remove each edge one by one and check whether the graph stays connected, which is O(E*(V+E)).",
+  "pattern": "Graph DFS",
+  "time": "O(V + E)",
+  "space": "O(V + E)",
+  "whyComplexity": "A single DFS visits every vertex and edge once while maintaining discovery and low-link values.",
+  "pitfall": "Skip the exact parent edge by edge id, not just the parent vertex, so parallel edges are handled correctly."
+ },
+ "498": {
+  "id": 498,
+  "idea": "Kosaraju's algorithm finds strongly connected components by doing a DFS to get finishing order, then DFS on the reversed graph in reverse finishing order.",
+  "brute": "Checking reachability between every pair of vertices costs O(V*(V+E)) or more and is unnecessary.",
+  "pattern": "Graph DFS",
+  "time": "O(V + E)",
+  "space": "O(V + E)",
+  "whyComplexity": "Each DFS pass visits every vertex and directed edge at most once, and reversing the graph also takes O(V + E).",
+  "pitfall": "The second pass must iterate vertices in decreasing finish time and traverse the reversed edges, not the original graph."
+ },
+ "499": {
+  "id": 499,
+  "idea": "Color each connected component alternately with two colors via BFS/DFS; if an edge connects two vertices of the same color, the graph is not bipartite.",
+  "brute": "Trying all possible 2-color assignments is exponential.",
+  "pattern": "Graph BFS",
+  "time": "O(V+E)",
+  "space": "O(V)",
+  "whyComplexity": "Each vertex is enqueued once and each edge is checked once.",
+  "pitfall": "The graph may be disconnected, so loop over every uncolored vertex and process each component; also check self-loops, which immediately break bipartiteness."
+ },
+ "500": {
+  "id": 500,
+  "idea": "Kahn's topological sort on the prerequisite DAG; if fewer than n nodes are output, the remaining nodes contain a directed cycle.",
+  "brute": "Repeatedly scanning for a zero-indegree node costs O(V^2) and still needs cycle handling.",
+  "pattern": "Topological sort",
+  "time": "O(V+E)",
+  "space": "O(V+E)",
+  "whyComplexity": "Each course is queued once and each prerequisite edge is relaxed once.",
+  "pitfall": "Compare the number of processed nodes to n to detect a cycle; an empty queue alone does not prove success."
+ },
+ "501": {
+  "id": 501,
+  "idea": "DFS the undirected graph keeping the parent; if an already visited neighbor is not the parent, a cycle exists.",
+  "brute": "Removing each edge and checking whether the graph remains connected, or repeatedly exploring all paths, is too slow.",
+  "pattern": "Graph DFS",
+  "time": "O(V+E)",
+  "space": "O(V)",
+  "whyComplexity": "Each vertex and each undirected edge is examined once.",
+  "pitfall": "Ignore only the edge back to the immediate parent and run DFS from every unvisited vertex so disconnected components and self-loops are detected."
+ },
+ "502": {
+  "id": 502,
+  "idea": "Kahn's algorithm: maintain indegrees, repeatedly take a node with indegree 0, append it to the order, and decrement its outgoing neighbors.",
+  "brute": "Scanning the whole graph for a zero-indegree node at every step costs O(V^2).",
+  "pattern": "Topological sort",
+  "time": "O(V+E)",
+  "space": "O(V+E)",
+  "whyComplexity": "Each vertex enters the queue once and each directed edge is processed once.",
+  "pitfall": "If a cycle exists, the algorithm outputs fewer than V vertices, so callers must handle that rather than assuming a full topological order."
+ },
+ "503": {
+  "id": 503,
+  "idea": "Compare adjacent words to build a directed graph where the first differing character gives an edge a -> b, then topologically sort the letters; a cycle means the order is invalid.",
+  "brute": "Try every permutation of letters and test whether it explains the sorted list, which is factorial and hopeless.",
+  "pattern": "Topological sort",
+  "time": "O(n * L + V + E)",
+  "space": "O(V + E)",
+  "whyComplexity": "Building the graph scans all words up to length L, and topological sort visits each unique letter and edge once.",
+  "pitfall": "If a word is a prefix of the next word but appears after it, the input is invalid even though there is no mismatching character."
+ },
+ "505": {
+  "id": 505,
+  "idea": "Build the prerequisite graph and run Kahn's algorithm to produce a course order; if the order does not contain all numCourses, a cycle exists and the answer is empty.",
+  "brute": "Trying all course orderings or DFS without cycle tracking is exponential or can return invalid orders.",
+  "pattern": "Topological sort",
+  "time": "O(V+E)",
+  "space": "O(V+E)",
+  "whyComplexity": "Each course and prerequisite edge is enqueued/processed once.",
+  "pitfall": "Return [] when the topological order length is less than numCourses, and build edges in the correct direction (prerequisite -> course)."
+ },
+ "507": {
+  "id": 507,
+  "idea": "Topologically sort the DAG, then relax each edge in topological order so each vertex's shortest distance is finalized when processed.",
+  "brute": "Use Dijkstra or Bellman-Ford without exploiting acyclicity, which is slower than necessary for a DAG.",
+  "pattern": "Topological sort",
+  "time": "O(V + E)",
+  "space": "O(V + E)",
+  "whyComplexity": "Topological sort and one pass of edge relaxations each take linear time.",
+  "pitfall": "Only relax outgoing edges from vertices with finite distance, and leave unreachable vertices as infinity."
+ },
+ "508": {
+  "id": 508,
+  "idea": "BFS from the source; because every edge has unit weight, the first time a vertex is reached is its shortest distance.",
+  "brute": "DFS all paths from source to target and keep the minimum length, which can be exponential.",
+  "pattern": "Graph BFS",
+  "time": "O(V + E)",
+  "space": "O(V)",
+  "whyComplexity": "BFS enqueues each vertex at most once and scans each edge once.",
+  "pitfall": "Mark a vertex visited when it is enqueued, not when it is dequeued, otherwise duplicates can corrupt distances."
+ },
+ "509": {
+  "id": 509,
+  "idea": "BFS on the implicit graph of words, where edges connect words differing by one character, gives the shortest transformation length.",
+  "brute": "Compare all word pairs to build the graph, O(N^2 L), then BFS—too slow.",
+  "pattern": "Graph BFS",
+  "time": "O(N * L * 26)",
+  "space": "O(N * L)",
+  "whyComplexity": "BFS visits each word once and checks 26 replacements per character.",
+  "pitfall": "Mark words visited when enqueued, not when dequeued; otherwise BFS may re-add words, and return 0 if endWord is not in wordList."
+ },
+ "510": {
+  "id": 510,
+  "idea": "BFS layers from beginWord build predecessor links for all shortest paths, then DFS/backtracking from endWord reconstructs every sequence.",
+  "brute": "Enumerating all paths via DFS finds shortest paths but explores exponentially many non-shortest paths.",
+  "pattern": "Graph BFS",
+  "time": "O(N * L * 26 + P * L)",
+  "space": "O(N * L + P * L)",
+  "whyComplexity": "BFS processes each word's 26 replacements once, and outputting P shortest paths takes O(P * L).",
+  "pitfall": "Avoid revisiting words within the same level incorrectly and if endWord is not in wordList return an empty list."
+ },
+ "512": {
+  "id": 512,
+  "idea": "First label each existing island with DSU and record its size; then for every water cell, sum the unique sizes of adjacent islands plus one and take the maximum.",
+  "brute": "Flip each water cell to land and run DFS/BFS to measure the largest island, which costs O((nm)^2).",
+  "pattern": "Union-Find",
+  "time": "O(nm α(nm))",
+  "space": "O(nm)",
+  "whyComplexity": "DSU labels and sizes each cell once, and each water cell checks at most four neighbors.",
+  "pitfall": "Multiple adjacent cells may belong to the same island, so count each component id only once; if the grid has no zero, the answer is n*m."
+ },
+ "514": {
+  "id": 514,
+  "idea": "Treat each newly added land cell as a DSU node; increase the island count by one, then union it with already-land orthogonal neighbors and decrement the count for every union that merges two distinct components.",
+  "brute": "After each addLand operation, run DFS/BFS over the whole grid to count islands, which costs O(k*n*m).",
+  "pattern": "Union-Find",
+  "time": "O(k α(nm))",
+  "space": "O(nm)",
+  "whyComplexity": "Each position is activated once and performs at most four near-constant DSU unions/finds.",
+  "pitfall": "Only add an island when the cell was water, and decrement only when a union actually merges two distinct components; duplicate addLand positions must be ignored."
+ },
+ "515": {
+  "id": 515,
+  "idea": "Use DSU to count connected components and redundant edges; if redundant >= components-1, answer is components-1, else -1.",
+  "brute": "Simulate moving cables arbitrarily or try all rewirings, exponential.",
+  "pattern": "Union-Find",
+  "time": "O(E α(V))",
+  "space": "O(V)",
+  "whyComplexity": "Each edge is processed once with near-constant DSU operations.",
+  "pitfall": "If total edges < n-1, it is impossible regardless of redundancy; return -1."
+ },
+ "516": {
+  "id": 516,
+  "idea": "Maintain a forest with parent and rank/size; find returns the root with path compression, and union links the smaller tree under the larger.",
+  "brute": "Naive parent linking can create a long chain, making find O(n).",
+  "pattern": "Union-Find",
+  "time": "O(α(n)) per operation",
+  "space": "O(n)",
+  "whyComplexity": "Path compression plus union by rank keeps trees nearly flat.",
+  "pitfall": "Forgetting path compression or union by rank, or forgetting to initialize parent[i] = i."
+ },
+ "517": {
+  "id": 517,
+  "idea": "Sort all edges by cost and use DSU to add edges that connect different components; after V-1 edges, the total cost is the MST weight.",
+  "brute": "Try all subsets of edges to find a spanning tree, exponential.",
+  "pattern": "Minimum spanning tree",
+  "time": "O(E log E)",
+  "space": "O(V)",
+  "whyComplexity": "Sorting E edges dominates; DSU operations are near constant.",
+  "pitfall": "If fewer than V-1 edges are accepted, the graph is disconnected and the answer is -1."
+ },
+ "518": {
+  "id": 518,
+  "idea": "Relax every edge V-1 times; distances become shortest because any shortest path has at most V-1 edges, and one extra pass detects negative cycles.",
+  "brute": "Exhaustively enumerating all walks/paths is exponential and ignores negative-cycle detection.",
+  "pattern": "Shortest path (Dijkstra / Bellman-Ford)",
+  "time": "O(V * E)",
+  "space": "O(V)",
+  "whyComplexity": "V-1 passes over E edges compute shortest paths, plus one pass for negative-cycle detection.",
+  "pitfall": "Failing to detect a negative cycle reachable from the source; check for any edge still relaxable after V-1 rounds."
+ },
+ "519": {
+  "id": 519,
+  "idea": "Bellman-Ford for at most K+1 edges: after each of K+1 rounds, dist[v] is the cheapest fare to v using at most that many flights.",
+  "brute": "DFS/backtracking every route with up to K stops is exponential.",
+  "pattern": "Shortest path (Dijkstra / Bellman-Ford)",
+  "time": "O(K * E)",
+  "space": "O(V)",
+  "whyComplexity": "K+1 relaxation rounds each scan all E flights.",
+  "pitfall": "Relaxing edges in-place in one round can use more than K stops; use a copy of distances from the previous round."
+ },
+ "520": {
+  "id": 520,
+  "idea": "Greedily expand the closest unfinalized vertex using a min-heap of tentative distances; in a graph with non-negative weights this fixes its shortest distance.",
+  "brute": "Repeatedly scan all edges for V-1 rounds like Bellman-Ford, which is O(VE) and unnecessary with non-negative weights.",
+  "pattern": "Shortest path (Dijkstra / Bellman-Ford)",
+  "time": "O((V + E) log V)",
+  "space": "O(V + E)",
+  "whyComplexity": "Each edge can cause one heap decrease-key/push, and each heap operation costs O(log V).",
+  "pitfall": "Do not finalize a vertex when it is pushed; skip stale heap entries and finalize only when popped, and never use negative edges."
+ },
+ "522": {
+  "id": 522,
+  "idea": "DP over intermediate vertices: dp[i][j] = min(dp[i][j], dp[i][k] + dp[k][j]) using vertices 0..k as intermediates.",
+  "brute": "Running Bellman-Ford or Dijkstra from each source is slower or fails with negative edges.",
+  "pattern": "Dynamic programming",
+  "time": "O(V^3)",
+  "space": "O(V^2)",
+  "whyComplexity": "Three nested loops over vertices.",
+  "pitfall": "The k loop must be outermost; putting i or j outside breaks the DP, and negative cycles must be checked on the diagonal."
+ },
+ "525": {
+  "id": 525,
+  "idea": "Model each cell as a vertex and run a modified Dijkstra where the path cost is the maximum absolute height difference along the path, not the sum.",
+  "brute": "Enumerate all paths from start to end and take the minimum possible maximum edge difference, which is exponential.",
+  "pattern": "Shortest path (Dijkstra / Bellman-Ford)",
+  "time": "O(V log V)",
+  "space": "O(V)",
+  "whyComplexity": "The grid has V cells and O(V) edges, and each cell can be popped/pushed O(1) times with O(log V) heap cost.",
+  "pitfall": "Accumulate effort as the running maximum of absolute differences, not as a sum of edge weights, and handle start == end."
+ },
+ "530": {
+  "id": 530,
+  "idea": "Run multi-source BFS from all 1-cells at once; the first time a cell is reached, its distance is the distance to the nearest 1.",
+  "brute": "Running a separate BFS from every cell to the nearest 1 costs O((mn)^2) on large grids.",
+  "pattern": "Graph BFS",
+  "time": "O(m*n)",
+  "space": "O(m*n)",
+  "whyComplexity": "Each of the m*n cells is enqueued and processed at most once.",
+  "pitfall": "Initialize every 1 with distance 0 and enqueue all of them before BFS; starting from only one 1 or leaving unvisited cells as 0 breaks the answer."
+ },
+ "531": {
+  "id": 531,
+  "idea": "From the starting pixel, flood outward through 4-directional neighbors that share the original color and repaint them to the new color using DFS or BFS.",
+  "brute": "Scanning the whole grid repeatedly until no changes is wasteful and can loop forever without tracking visited pixels.",
+  "pattern": "Graph DFS",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "Each of the n cells is visited at most once and the frontier/stack can hold up to n cells.",
+  "pitfall": "If the new color equals the original color the recursion never terminates, so check that early or guard by recoloring the start before recursing."
+ },
+ "532": {
+  "id": 532,
+  "idea": "DFS each island and record a canonical shape signature, such as coordinates relative to the first cell or a path-with-backtrack string, then count unique signatures.",
+  "brute": "Comparing every island to every other by raw coordinates is too slow and treats translated copies as different.",
+  "pattern": "Graph DFS",
+  "time": "O(m*n)",
+  "space": "O(m*n)",
+  "whyComplexity": "Every land cell is visited once and the total length of all shape signatures is O(m*n).",
+  "pitfall": "Normalize the shape relative to the island's starting cell or include backtracking markers; absolute coordinates make identical shapes shifted in the grid look distinct."
+ },
+ "534": {
+  "id": 534,
+  "idea": "Treat the grid as a graph where land cells are nodes; count connected components by running DFS/BFS from each unvisited '1' and marking all reachable land.",
+  "brute": "Trying to merge islands by repeated full-grid sweeps is slow and error prone.",
+  "pattern": "Graph DFS",
+  "time": "O(m*n)",
+  "space": "O(m*n)",
+  "whyComplexity": "Each cell is visited once across all traversals and the visited marking/stack may use up to mn entries.",
+  "pitfall": "Deep recursion on a large all-land grid causes stack overflow, so an iterative stack/BFS or explicit visited array is safer."
+ },
+ "536": {
+  "id": 536,
+  "idea": "Multi-source BFS: enqueue all initially rotten oranges at minute 0, then expand one layer per minute, tracking the time until no fresh oranges remain.",
+  "brute": "Repeatedly scanning the entire grid per minute until stable is O(m*n*minutes) and easy to get wrong.",
+  "pattern": "Graph BFS",
+  "time": "O(m*n)",
+  "space": "O(m*n)",
+  "whyComplexity": "Each cell enters the queue at most once and the queue holds up to mn cells across the BFS layers.",
+  "pitfall": "Must return 0 when there are no fresh oranges initially, and -1 if any fresh orange remains unreachable after the BFS completes."
+ },
+ "537": {
+  "id": 537,
+  "idea": "Regions of 'O' connected to the border can never be surrounded, so flood-fill from all border 'O's to mark safe cells, then flip every remaining 'O' to 'X'.",
+  "brute": "Testing each region independently and checking border connectivity repeatedly costs O((mn)^2) or risks flipping border-connected regions.",
+  "pattern": "Graph DFS",
+  "time": "O(m*n)",
+  "space": "O(m*n)",
+  "whyComplexity": "Each grid cell is visited at most once during the border flood fill and final flip.",
+  "pitfall": "You must start from all border 'O's, not just one, and only flip 'O's that were not marked safe; otherwise border-connected regions are incorrectly captured."
+ },
+ "542": {
+  "id": 542,
+  "idea": "Greedily track the farthest reachable index while scanning left to right; if the current index exceeds it, the end is unreachable, otherwise update it with i + nums[i].",
+  "brute": "Trying all possible jump combinations or using O(n^2) DP is too slow.",
+  "pattern": "Greedy",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "A single left-to-right pass maintains only the farthest reachable index.",
+  "pitfall": "If an index is beyond the current farthest reachable index, return false; also handle the single-element case correctly."
+ },
+ "544": {
+  "id": 544,
+  "idea": "Make two greedy passes over the ratings, left-to-right ensuring every child with a higher rating than its left neighbor gets one more candy, then right-to-left for the right neighbor, and sum the max of the two.",
+  "brute": "Repeatedly sweep the array fixing violations until stable, which is O(n^2) in a strictly increasing or decreasing ratings array.",
+  "pattern": "Greedy",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "Two linear passes fill one candy-count array of length n, and max(left, right) satisfies both neighbor constraints locally.",
+  "pitfall": "Comparing with <= instead of < (equal ratings need no extra candy) and forgetting the second right-to-left pass for descending runs."
+ },
+ "545": {
+  "id": 545,
+  "idea": "Track the range [lo, hi] of possible counts of currently unmatched '(' as you scan: '(' raises both, ')' lowers both, '*' lowers lo and raises hi, clamping lo at 0.",
+  "brute": "Recursively try all three meanings of every '*' (2^n branches) and memoize on (index, open count) with DP in O(n^2) time, which is slower and needs extra state.",
+  "pattern": "Greedy",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "One left-to-right pass keeps only two integers, the min and max feasible open-bracket counts.",
+  "pitfall": "Forgetting to clamp lo to 0 and to check lo == 0 (not hi) at the end, plus returning early when hi < 0."
+ },
+ "546": {
+  "id": 546,
+  "idea": "Copy every interval that ends before the new interval starts, then absorb all intervals overlapping the new one by expanding it to [min start, max end], then append the rest.",
+  "brute": "Appending the new interval and repeatedly merging any overlapping pairs is O(n^2) if done by rescanning the whole list each time.",
+  "pattern": "Sorting + scan",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "The existing intervals are already sorted, so a single linear pass over them plus the output list suffices.",
+  "pitfall": "Getting the strict comparisons right so that an interval merely touching the new one (end == start) is merged, and handling an empty input list."
+ },
+ "547": {
+  "id": 547,
+  "idea": "Sort jobs by profit descending and place each job in the latest free slot at or before its deadline, using a disjoint-set 'parent' array to jump to the previous free slot in near-constant time.",
+  "brute": "Sorting by profit and, for each job, scanning backwards through all slots to find a free one is O(n * maxDeadline) and can time out.",
+  "pattern": "Greedy",
+  "time": "O(n log n)",
+  "space": "O(n)",
+  "whyComplexity": "Sorting the n jobs dominates; the DSU find/union placement is amortized O(alpha(n)) per job.",
+  "pitfall": "Only min(n, maxDeadline) slots are ever useful, and slots are 1-indexed — off-by-one or unclamped deadlines silently drop or misplace jobs."
+ },
+ "548": {
+  "id": 548,
+  "idea": "Sort all arrival times and all departure times separately, then sweep with two pointers, incrementing the platform count on an arrival and decrementing on a departure, tracking the maximum.",
+  "brute": "For every instant in the time range count how many intervals cover it, which is O(n * maxTime) and too slow for large time values.",
+  "pattern": "Two pointers",
+  "time": "O(n log n)",
+  "space": "O(1)",
+  "whyComplexity": "Sorting both arrays costs O(n log n) and the merge-style sweep is a single linear pass with two indices and one counter.",
+  "pitfall": "Handling simultaneous arrival and departure — departure must be processed before arrival at the same time, i.e. the condition is departures[j] <= arrivals[i] — and not sorting the two arrays independently."
+ },
+ "549": {
+  "id": 549,
+  "idea": "Sort all meetings by finish time and greedily select a meeting whenever its start time is at or after the last selected meeting's end.",
+  "brute": "Trying every subset of meetings and checking pairwise non-overlap is O(2^n) and infeasible beyond tiny inputs.",
+  "pattern": "Greedy",
+  "time": "O(n log n)",
+  "space": "O(1)",
+  "whyComplexity": "Sorting dominates and the selection pass is linear with only the last end time kept; counting sort can make it O(n) for small time bounds.",
+  "pitfall": "Sorting by start time instead of finish time, or using strictly greater than for the overlap check so meetings touching at one instant are wrongly rejected."
+ },
+ "550": {
+  "id": 550,
+  "idea": "Sort intervals by end time and greedily keep each interval whose start is at or after the last kept end, counting removals as the rest.",
+  "brute": "Greedy by earliest start time, or removing the longest interval, both fail because they can force extra removals when one interval overlaps many.",
+  "pattern": "Greedy",
+  "time": "O(n log n)",
+  "space": "O(1)",
+  "whyComplexity": "Sorting by end dominates; the single scan keeps only the last chosen end time.",
+  "pitfall": "Using sorted-by-start order or getting the boundary comparison wrong so intervals that touch (end == start) are counted as overlapping."
+ },
+ "561": {
+  "id": 561,
+  "idea": "Track the running prefix sum and keep a frequency map of how many times each prefix sum has been seen; each index adds map[prefixSum - k] subarrays ending there.",
+  "brute": "Enumerating every subarray and summing it costs O(n^2) (or O(n^3) naively), which is too slow, and sliding window breaks with negative numbers.",
+  "pattern": "Hashing / frequency map",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "Each element requires one prefix-sum update and one O(1) expected hash lookup and increment, so the pass is linear.",
+  "pitfall": "Initialize the map with {0: 1} so subarrays starting at index 0 are counted, and remember negative values make sliding window invalid."
+ },
+ "562": {
+  "id": 562,
+  "idea": "Maintain prefix XOR frequencies: a subarray ending at j has XOR K exactly when its prefix XOR equals pref[j]^K, so add the count of that prefix seen so far.",
+  "brute": "Enumerate every subarray and compute its XOR, O(n^2) or O(n^3), which is too slow for large arrays.",
+  "pattern": "Hashing / frequency map",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "We scan the array once and perform O(1) expected hash-map lookups and updates per element.",
+  "pitfall": "Forgetting to initialize the map with {0:1}, which misses subarrays whose XOR from index 0 equals K, and using int for the count when it can exceed 2^31."
+ },
+ "563": {
+  "id": 563,
+  "idea": "Put every value in a hash set; a number is the start of a consecutive run only if num-1 is absent, and from each such start count upward while successors exist.",
+  "brute": "Sorting the array then scanning gives O(n log n), and naively counting runs from every element degrades to O(n^2) without the start check.",
+  "pattern": "Hashing / frequency map",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "Every number is visited once as a run start and once as part of a run extension, so total work is linear despite the inner while loop.",
+  "pitfall": "Only begin counting from elements whose predecessor num-1 is missing; omitting this check makes the inner loop re-scan runs and blows up to O(n^2)."
+ },
+ "564": {
+  "id": 564,
+  "idea": "Maintain a running prefix sum and a hash map from each prefix sum to the earliest index where it occurred, then at index i look up prefixSum - k to get the longest subarray ending at i.",
+  "brute": "Checking all O(n^2) subarrays and summing each is too slow, and a sliding window fails because the array may contain negatives.",
+  "pattern": "Hashing / frequency map",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "One pass of O(1) hash lookups and insertions suffices to find the earliest occurrence of every prefix sum.",
+  "pitfall": "Store only the first (earliest) index for each prefix sum and seed the map with {0: -1}, since later duplicates would yield shorter subarrays."
+ },
+ "566": {
+  "id": 566,
+  "idea": "Split the stream between a max-heap holding the smaller half and a min-heap holding the larger half, keeping their sizes within one so the median is a heap top or the average of the two tops.",
+  "brute": "Appending to a list and re-sorting on every findMedian call is O(n log n) per query instead of O(log n) insertion and O(1) query.",
+  "pattern": "Heap / priority queue",
+  "time": "O(log n) per addNum, O(1) per findMedian",
+  "space": "O(n)",
+  "whyComplexity": "Each insertion pushes into one heap and moves at most one element across, costing log n, and the two heaps together store all n numbers.",
+  "pitfall": "Pushing to the wrong heap first and skipping the rebalancing transfer, or not handling empty heaps at the start of the stream and odd/even size differences."
+ },
+ "570": {
+  "id": 570,
+  "idea": "Heapify bottom-up: starting from the last internal node (index n/2-1) and sifting down each node to the root turns any array into a valid heap in linear time.",
+  "brute": "Calling push (sift-up) n times builds the heap in O(n log n), missing the tighter linear bound the bottom-up pass achieves.",
+  "pattern": "Heap / priority queue",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "Nodes at height h number about n/2^(h+1), so the total sift-down work is the sum of h*n/2^(h+1), which converges to O(n).",
+  "pitfall": "Starting the sift-down loop at index 0 (or at the leaves) instead of at the last internal node n/2-1, and misusing 0-indexed children 2i+1, 2i+2."
+ },
+ "573": {
+  "id": 573,
+  "idea": "Build a max-heap in linear time by sifting down (heapify) every internal node from the last parent floor(n/2)-1 down to index 0, since leaves are already valid heaps.",
+  "brute": "Inserting all n elements one at a time with sift-up costs O(n log n) because each of the bottom-level elements can bubble up the full height.",
+  "pattern": "Heap / priority queue",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "The sum over levels of (number of nodes at that level) x (remaining height) telescopes to O(n).",
+  "pitfall": "Starting the sift-down loop from index n-1 or from index 1 instead of the last internal node, and using the 0-indexed parent/child formulas for a 1-indexed array."
+ },
+ "576": {
+  "id": 576,
+  "idea": "Keep the elements in an array with the heap property (parent <= children): push appends at the end and sifts up, pop swaps the root with the last element, removes it, and sifts down.",
+  "brute": "Scanning the whole array on every push/pop or re-sorting after each operation is O(n) or O(n log n) per operation instead of O(log n).",
+  "pattern": "Heap / priority queue",
+  "time": "O(log n) per push/pop, O(1) peek",
+  "space": "O(n)",
+  "whyComplexity": "Sift up and sift down each traverse only one root-to-leaf path of length log n, and the array stores exactly the n elements.",
+  "pitfall": "Forgetting to sift down the moved last element after a pop, or breaking the sift-down loop on the wrong child index condition (2*i+1 < size)."
+ },
+ "578": {
+  "id": 578,
+  "idea": "Maintain a min-heap of at most k elements: push every number and pop the smallest whenever the size exceeds k, so the heap top is exactly the k-th largest.",
+  "brute": "Sorting the whole array and indexing n-k is O(n log n) and uses O(n) work, while a max-heap of all n elements costs O(n + k log n) and extra space.",
+  "pattern": "Heap / priority queue",
+  "time": "O(n log k)",
+  "space": "O(k)",
+  "whyComplexity": "Each of the n pushes/pops touches a heap of size at most k, so each operation costs log k and the heap holds only k elements.",
+  "pitfall": "Off-by-one bounds when k = 1 or k = n, and confusion between k-th largest (duplicates counted) and k-th distinct largest."
+ },
+ "611": {
+  "id": 611,
+  "idea": "Hash-map each original node to its clone, then in a second pass set clone.next and clone.random from the map (an O(1)-space variant instead interleaves clones between originals and splits them apart).",
+  "brute": "Copying only next pointers and then searching for each random node's clone is O(n^2) because random can point anywhere in the list.",
+  "pattern": "Hashing / frequency map",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "Two linear passes with O(1) map lookups and one stored clone per node.",
+  "pitfall": "Not handling random == null and forgetting to rebuild the original list's next pointers when using the interleaving approach."
+ },
+ "612": {
+  "id": 612,
+  "idea": "Merge k sorted lists by repeatedly popping the smallest head: push every list's head into a min-heap keyed by value and list index, then pop, append to the result, and push that node's successor until the heap empties.",
+  "brute": "Concatenate all nodes and sort them, which costs O(N log N) instead of exploiting that each list is already sorted.",
+  "pattern": "Heap / priority queue",
+  "time": "O(N log k)",
+  "space": "O(k)",
+  "whyComplexity": "Each of the N nodes is pushed and popped once from a heap of size at most k, so every operation costs O(log k), and the heap holds one node per list.",
+  "pitfall": "Forgetting to push the popped node's next pointer back into the heap (or mishandling empty lists) silently drops nodes and truncates the merged list."
+ },
+ "613": {
+  "id": 613,
+  "idea": "Use a dummy head and a tail pointer, repeatedly splicing in the smaller of the two current nodes, then attach whichever list still has nodes left.",
+  "brute": "Creating a brand-new node for every merged element instead of reusing existing nodes wastes memory and is unnecessary since the lists are already sorted.",
+  "pattern": "Linked list pointer manipulation",
+  "time": "O(n + m)",
+  "space": "O(1)",
+  "whyComplexity": "Each of the n+m nodes is examined once and linked with only a few constant pointers.",
+  "pitfall": "Forgetting to append the non-exhausted remainder of the longer list, or mishandling one list being empty at the start."
+ },
+ "614": {
+  "id": 614,
+  "idea": "For each block, first count and verify that k nodes remain, reverse just those k nodes with the standard prev/curr rewiring, and link the reversed block between the previous block's tail and the next block's head.",
+  "brute": "Reversing node by node and only discovering the list is short mid-reversal corrupts the tail, which must be left in its original order.",
+  "pattern": "Linked list pointer manipulation",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "Each node is visited a constant number of times (once to check the block length and once to reverse it).",
+  "pitfall": "Reversing a final partial group of fewer than k nodes — the leftover tail must stay untouched — and forgetting to reconnect prevTail.next to the new block head."
+ },
+ "615": {
+  "id": 615,
+  "idea": "Find the length n and the tail, link tail.next to head to form a ring, then walk n - (k mod n) steps from the old head and cut the ring there to get the new head.",
+  "brute": "Rotating one step at a time, k times, is O(n*k) and times out when k is huge.",
+  "pattern": "Linked list pointer manipulation",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "One pass to measure the list plus at most one more pass to reach the new cut point.",
+  "pitfall": "Forgetting to reduce k modulo n, so k % n == 0 (or an empty/single-node list) must return the original head rather than shifting."
+ },
+ "616": {
+  "id": 616,
+  "idea": "Merge sort the list: split with slow/fast pointers, recursively sort both halves, and merge them with the standard two-list merge.",
+  "brute": "Copying the values into an array, sorting and rewriting avoids pointer work but costs O(n) extra space and does not actually sort the nodes.",
+  "pattern": "Divide and conquer",
+  "time": "O(n log n)",
+  "space": "O(log n)",
+  "whyComplexity": "log n levels of splitting each doing O(n) merge work, with O(log n) recursion stack (a bottom-up merge makes it O(1) space).",
+  "pitfall": "Not terminating the first half with slow.next = null, which makes the recursion loop forever or merge a half into itself."
+ },
+ "618": {
+  "id": 618,
+  "idea": "Find the middle with slow/fast pointers, reverse the second half in place, compare the two halves, and optionally restore the list.",
+  "brute": "Copy all values into an array and check with two pointers, which uses O(n) extra space.",
+  "pattern": "Fast and slow pointers",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "Finding the middle, reversing half, and comparing halves each take linear time with constant extra space.",
+  "pitfall": "Odd length needs the middle node skipped during comparison, and one- or two-node lists must be handled correctly."
+ },
+ "620": {
+  "id": 620,
+  "idea": "Move slow one step and fast two steps; if they meet there is a cycle, and if fast or fast.next becomes null there is no cycle.",
+  "brute": "Store visited nodes in a hash set and detect the first repeat, which uses O(n) extra space.",
+  "pattern": "Fast and slow pointers",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "The fast pointer gains on the slow pointer by one node per step, so a meeting occurs within O(n) steps.",
+  "pitfall": "Accessing fast.next when fast is null breaks, and a single node pointing to itself must still be detected."
+ },
+ "621": {
+  "id": 621,
+  "idea": "Use two pointers starting at the two heads; when a pointer reaches null, redirect it to the other head, so both pointers travel equal total distance and meet at the intersection.",
+  "brute": "Compare every node in one list with every node in the other, which costs O(mn) time.",
+  "pattern": "Two pointers",
+  "time": "O(m+n)",
+  "space": "O(1)",
+  "whyComplexity": "Each pointer traverses at most m+n nodes before meeting or both becoming null.",
+  "pitfall": "Intersection is by node reference, not value, and the no-intersection case must terminate at null."
+ },
+ "622": {
+  "id": 622,
+  "idea": "First detect a meeting with slow/fast pointers, then reset one pointer to the head and move both one step at a time; their next meeting is the cycle start.",
+  "brute": "Use a hash set to record nodes and return the first node seen twice, which uses O(n) extra space.",
+  "pattern": "Fast and slow pointers",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "Floyd's tortoise-and-hare detection plus the second walk each take linear time.",
+  "pitfall": "You must confirm the slow/fast meeting before resetting, and return null when there is no cycle."
+ },
+ "623": {
+  "id": 623,
+  "idea": "Detect a meeting with slow/fast pointers, then walk one pointer around the cycle until it returns to the meeting node, counting nodes along the way.",
+  "brute": "Store visited nodes with their positions in a hash map and compute the length when a repeat appears, which uses O(n) extra space.",
+  "pattern": "Fast and slow pointers",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "Cycle detection and then one traversal around the loop both take linear time.",
+  "pitfall": "You must return 0 when there is no loop, and count starting correctly from the meeting node."
+ },
+ "625": {
+  "id": 625,
+  "idea": "Build the sum with a dummy head and a carry: add the two digits plus carry, append sum % 10, and continue until both lists are exhausted and the carry is zero.",
+  "brute": "Converting both lists to integers overflows for long lists and then requires converting back to a list anyway.",
+  "pattern": "Linked list pointer manipulation",
+  "time": "O(max(n, m))",
+  "space": "O(max(n, m))",
+  "whyComplexity": "One pass over the longer list, and the result list holds at most max(n, m) + 1 digits.",
+  "pitfall": "Dropping the final carry (for example 5 + 5) so the last node of the answer is missing."
+ },
+ "626": {
+  "id": 626,
+  "idea": "Use a dummy head and two pointers separated by n nodes; move fast to the end, then remove slow.next so the nth node from the end is deleted in one pass.",
+  "brute": "Count the list length first and then make a second pass to remove the target node, which takes two passes.",
+  "pattern": "Fast and slow pointers",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "The fast pointer scans the list once while the slow pointer trails it by n nodes.",
+  "pitfall": "Removing the head requires a dummy node, and n may equal the list length."
+ },
+ "627": {
+  "id": 627,
+  "idea": "Walk the list once keeping three pointers prev, curr and next, and rewire curr.next to prev before advancing, so each edge is flipped in place.",
+  "brute": "Copying node values into an array, reversing the array and writing values back wastes O(n) extra space and fails when nodes must be moved rather than values changed.",
+  "pattern": "Linked list pointer manipulation",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "Every node is visited exactly once and only a constant number of pointers are stored.",
+  "pitfall": "Not saving curr.next before overwriting it (losing the rest of the list) and returning the old head instead of prev, which is the new head."
+ },
+ "629": {
+  "id": 629,
+  "idea": "Do one pass counting how many 0s, 1s and 2s there are, then a second pass overwriting the first count0 nodes with 0, the next count1 with 1 and the rest with 2.",
+  "brute": "Sorting the linked list with a comparison sort is O(n log n) when only three distinct values exist, so it ignores the counting structure.",
+  "pattern": "Linked list pointer manipulation",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "Two linear passes over the list with only three counters, no extra nodes or arrays.",
+  "pitfall": "Trying to emulate index-based Dutch-flag partitioning with array indices and running off the end of the list; only value overwriting works in a linked list."
+ },
+ "636": {
+  "id": 636,
+  "idea": "Maintain the smallest possible tail for each increasing-subsequence length and replace the first tail at least as large as the current number, or append if none exists.",
+  "brute": "Try every subsequence to check increasing order, which is exponential; the obvious O(n^2) DP is also slower than the optimal greedy-plus-binary-search method.",
+  "pattern": "Binary search",
+  "time": "O(n log n)",
+  "space": "O(n)",
+  "whyComplexity": "Each element performs one binary search over a tails array of length at most n, and the tails array stores at most n values.",
+  "pitfall": "Using upper_bound instead of lower_bound makes duplicates incorrectly extend a strictly increasing subsequence."
+ },
+ "653": {
+  "id": 653,
+  "idea": "Use the Sieve of Eratosthenes: for each prime p up to sqrt(N), mark multiples starting at p*p as composite; all unmarked numbers up to N are prime.",
+  "brute": "Test every number up to N by trial division up to sqrt, which is O(N sqrt N) and too slow for large N.",
+  "pattern": "Math / number theory",
+  "time": "O(n log log n)",
+  "space": "O(n)",
+  "whyComplexity": "Each prime p marks about n/p multiples, and the sum of 1/p over primes up to n is O(log log n), plus an O(n) boolean array.",
+  "pitfall": "Start marking composites at p*p and never mark p itself; also return no primes for N < 2."
+ },
+ "780": {
+  "id": 780,
+  "idea": "Track for each index the LIS length ending there and the number of ways to achieve it, then sum counts over indices with the global maximum length.",
+  "brute": "Enumerate every subsequence to find the longest and count those with that length, which is exponential.",
+  "pattern": "Dynamic programming",
+  "time": "O(n^2)",
+  "space": "O(n)",
+  "whyComplexity": "Every pair (i,j) with j<i is checked once, and only length/count arrays of size n are stored.",
+  "pitfall": "Do not extend from equal values; when a new longer length is found reset the count to count[j], and when lengths tie add count[j]."
+ },
+ "864": {
+  "id": 864,
+  "idea": "Sort candidates and backtrack with a start index so combinations are generated once; recurse with the same index to allow unlimited reuse and stop when the remaining target is negative.",
+  "brute": "Try every sequence of candidates summing to the target, which generates permutations, duplicates, and can loop indefinitely without an index bound.",
+  "pattern": "Backtracking",
+  "time": "O(n^(t/m + 1))",
+  "space": "O(t/m)",
+  "whyComplexity": "Recursion depth is at most t/m using the smallest candidate m, and each level branches over up to n candidates, giving O(n^(t/m + 1)) nodes.",
+  "pitfall": "Advancing the start index incorrectly prevents valid reuse, and not pruning when the remaining target becomes negative causes unnecessary work."
+ },
+ "865": {
+  "id": 865,
+  "idea": "Sort to group duplicates, backtrack with start index i+1 because each number is used once, and skip candidates equal to the previous candidate at the same recursion level to avoid duplicate combinations.",
+  "brute": "Generate all subsets, keep those summing to the target, and deduplicate the results, which is exponential and duplicate-heavy.",
+  "pattern": "Backtracking",
+  "time": "O(2^n)",
+  "space": "O(n)",
+  "whyComplexity": "In the worst case the search considers all subsets of the n candidates, and the recursion depth is O(n).",
+  "pitfall": "Skipping duplicates with candidates[i] == candidates[i-1] only when i > start is necessary; doing it globally can drop valid combinations."
+ },
+ "868": {
+  "id": 868,
+  "idea": "Sort the array, then backtrack and add the current path at every node; at each level skip a candidate if it equals the previous candidate to avoid duplicate subsets.",
+  "brute": "Generate all 2^n subsets and store them in a set to remove duplicates, which wastes both time and memory.",
+  "pattern": "Backtracking",
+  "time": "O(n * 2^n)",
+  "space": "O(n)",
+  "whyComplexity": "There are up to 2^n subsets, and copying each subset of length up to n costs O(n); the recursion stack uses O(n) space.",
+  "pitfall": "Adding duplicate subsets by skipping duplicates only when i > start rather than whenever candidates[i] == candidates[i-1] at the same decision level."
+ },
+ "870": {
+  "id": 870,
+  "idea": "Place queens row by row and maintain sets for occupied columns and both diagonals (row-col and row+col) to check conflicts in O(1), backtracking when no column is valid.",
+  "brute": "Try all n^n placements of n queens and validate each full board, which is far too slow.",
+  "pattern": "Backtracking",
+  "time": "O(n!)",
+  "space": "O(n)",
+  "whyComplexity": "The first row has n choices, the next at most n-1, and so on, while the column and diagonal sets allow O(1) pruning and use O(n) space.",
+  "pitfall": "Failing to reset the column and diagonal sets during backtracking, or using the wrong diagonal keys row+col and row-col."
+ },
+ "871": {
+  "id": 871,
+  "idea": "Precompute which substrings are palindromes, then backtrack over cut positions, only cutting at j when s[start..j] is a palindrome and recursing from j+1.",
+  "brute": "Enumerate all 2^(n-1) ways to place cuts and test each resulting piece for being a palindrome, repeating checks exponentially.",
+  "pattern": "Backtracking",
+  "time": "O(n * 2^n)",
+  "space": "O(n^2)",
+  "whyComplexity": "There can be O(2^n) partitions and copying each partition takes O(n), while the palindrome DP table uses O(n^2) space.",
+  "pitfall": "Forgetting that every single character is a palindrome and mishandling the final segment ending at the last index."
+ },
+ "873": {
+  "id": 873,
+  "idea": "Use backtracking: find an empty cell, try digits 1-9 that are valid for its row, column, and 3x3 box, recurse, and undo on failure.",
+  "brute": "Try every possible digit assignment for all empty cells and validate the whole board, which is exponentially wasteful.",
+  "pattern": "Backtracking",
+  "time": "O(9^m)",
+  "space": "O(m)",
+  "whyComplexity": "Each of the m empty cells branches over at most 9 candidates, with recursion depth m and O(1) validity checks.",
+  "pitfall": "Forgetting to undo a placement, or missing the 3x3 box constraint, corrupts later branches."
+ },
+ "874": {
+  "id": 874,
+  "idea": "DFS from every cell with backtracking, marking the current cell as visited before recursing in four directions and restoring it afterward so the same cell is not reused in one path.",
+  "brute": "For every starting cell, try all paths of length L without tracking visited cells, causing repeated visits and exponential blowup.",
+  "pattern": "Backtracking",
+  "time": "O(m * n * 3^L)",
+  "space": "O(L)",
+  "whyComplexity": "There are m*n starting cells, and after the first step each position has at most 3 non-backtracking directions, with recursion depth L.",
+  "pitfall": "Not unmarking the cell after recursion or using a visited set that is not restored makes later paths incorrectly treat cells as unavailable."
+ },
+ "875": {
+  "id": 875,
+  "idea": "Map each digit to its letters and recursively choose one letter for each digit position; every root-to-leaf path is one valid letter combination.",
+  "brute": "Generate all strings of length n over 26 letters and keep those matching the digit mappings, which is impossible at 26^n.",
+  "pattern": "Backtracking",
+  "time": "O(n * 4^n)",
+  "space": "O(n)",
+  "whyComplexity": "Each digit has at most 4 choices, so there are at most 4^n combinations, and building or copying each length-n combination costs O(n).",
+  "pitfall": "Forgetting to return [] for empty input instead of [''] and not restoring the current path after each recursion."
+ },
+ "876": {
+  "id": 876,
+  "idea": "Backtrack by building the string one character at a time, adding '(' only while open < n and ')' only while close < open, so every leaf is a valid balanced parenthesis string.",
+  "brute": "Enumerate all 2^(2n) strings with n '(' and n ')' and filter balanced ones, which is exponentially wasteful.",
+  "pattern": "Backtracking",
+  "time": "O(4^n / sqrt(n))",
+  "space": "O(n)",
+  "whyComplexity": "The number of valid leaves is the nth Catalan number, asymptotically 4^n / n^(3/2), and copying each length-n string costs O(n), giving O(4^n / sqrt(n)).",
+  "pitfall": "Letting close exceed open or letting open exceed n generates invalid strings and fails to prune the search."
+ },
+ "878": {
+  "id": 878,
+  "idea": "Build each subset by deciding for each element whether to include it, then backtrack.",
+  "brute": "Generate all binary masks and filter, which is O(n * 2^n) but less natural for recursion-style interviews.",
+  "pattern": "Backtracking",
+  "time": "O(n * 2^n)",
+  "space": "O(n * 2^n)",
+  "whyComplexity": "There are 2^n subsets, and copying each subset into the output takes up to O(n) time and space.",
+  "pitfall": "Copy the current path before adding it to the result, and include the empty subset."
+ },
+ "922": {
+  "id": 922,
+  "idea": "Taking k cards from the ends leaves a contiguous middle subarray of length n-k, so maximize the taken points by subtracting the minimum-sum middle window from the total sum.",
+  "brute": "Try every split of i cards from the left and k-i from the right by summing explicitly, which is O(k^2) without prefix sums and too slow.",
+  "pattern": "Sliding window",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "Compute the total once, then slide the length n-k middle window across the array in one pass.",
+  "pitfall": "Take exactly k cards from the ends; if k == n return the total, and handle the middle window length n-k = 0 correctly."
+ },
+ "923": {
+  "id": 923,
+  "idea": "Count subarrays with sum exactly goal by subtracting atMost(goal-1) from atMost(goal), where atMost uses a sliding window for non-negative values.",
+  "brute": "Check every subarray sum, which is O(n^2) or O(n^3).",
+  "pattern": "Sliding window",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "Two atMost passes each move the two pointers linearly over the array.",
+  "pitfall": "When goal = 0, atMost(-1) is invalid; handle it as 0, and exclude empty subarrays."
+ },
+ "924": {
+  "id": 924,
+  "idea": "Count subarrays with exactly k odd numbers by subtracting atMost(k-1) odd-count subarrays from atMost(k).",
+  "brute": "Check every subarray and count odd numbers, which is O(n^2) or O(n^3).",
+  "pattern": "Sliding window",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "Two atMost passes each move the two pointers linearly over the array.",
+  "pitfall": "When k = 0, atMost(-1) is invalid; track only the parity of numbers when expanding and shrinking."
+ },
+ "925": {
+  "id": 925,
+  "idea": "For each right endpoint, count how many starting positions produce a substring containing all three characters, using a shrinking window.",
+  "brute": "Enumerate all substrings and check for a, b, and c, which is O(n^2) or O(n^3).",
+  "pattern": "Sliding window",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "Each character is added and removed from the window at most once.",
+  "pitfall": "Count all valid substrings ending at each right, not just the minimal one; after shrinking to invalid, add the left pointer as the count."
+ },
+ "927": {
+  "id": 927,
+  "idea": "In any window, the minimum replacements needed is window length minus the frequency of its most frequent character.",
+  "brute": "Check every substring and compute character frequencies, which is O(n^2) or worse.",
+  "pattern": "Sliding window",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "The right and left pointers each move at most n times, and the alphabet size is fixed.",
+  "pitfall": "Remember replacements needed = window length - max frequency, and update frequencies when shrinking the window."
+ },
+ "928": {
+  "id": 928,
+  "idea": "Expand the window while it has at most k distinct characters; shrink from the left when the distinct count exceeds k.",
+  "brute": "Enumerate all substrings and count distinct characters in each, which is O(n^2) or O(n^3).",
+  "pattern": "Sliding window",
+  "time": "O(n)",
+  "space": "O(k)",
+  "whyComplexity": "Each character is added and removed once, and the frequency map stores at most k+1 distinct characters.",
+  "pitfall": "If k = 0, the answer is 0; shrink until the number of distinct characters is at most k."
+ },
+ "929": {
+  "id": 929,
+  "idea": "Maintain a sliding window with no duplicate characters, extending right and moving left just past the previous occurrence of the current character when a duplicate appears.",
+  "brute": "Check every substring and test whether it has duplicates, which is O(n^2) or worse and too slow.",
+  "pattern": "Sliding window",
+  "time": "O(n)",
+  "space": "O(min(n, k))",
+  "whyComplexity": "Each character is added to and removed from the window at most once, and k is the alphabet size.",
+  "pitfall": "When a duplicate is found, move left to max(left, lastSeen[ch] + 1), not simply lastSeen[ch] + 1, so the window never expands left."
+ },
+ "930": {
+  "id": 930,
+  "idea": "Maintain the longest window that contains at most k zeros; every zero in the window is treated as flipped to 1.",
+  "brute": "Try every substring and count zeros, but that is O(n^2) or O(n^3) and too slow.",
+  "pattern": "Sliding window",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "Each element enters and leaves the window at most once.",
+  "pitfall": "When k is larger than the total number of zeros, the whole array is valid; also handle k = 0."
+ },
+ "931": {
+  "id": 931,
+  "idea": "Expand to include all needed characters, then shrink from the left while still valid to minimize the window.",
+  "brute": "Try every substring and check whether it contains all characters of t, which is O(n^2 * m).",
+  "pattern": "Sliding window",
+  "time": "O(n + m)",
+  "space": "O(m)",
+  "whyComplexity": "Build the need map from t, then each pointer scans s once.",
+  "pitfall": "Duplicate characters in t require exact counts; update the answer after the window becomes valid and before moving the left pointer."
+ },
+ "957": {
+  "id": 957,
+  "idea": "Use two pointers to eliminate candidates: if knows(left, right), left cannot be the celebrity, otherwise right cannot be the celebrity; the remaining candidate is then verified.",
+  "brute": "Checking every person against all others requires O(n^2) calls and is too slow.",
+  "pattern": "Two pointers",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "Each comparison eliminates one person, and verifying the final candidate takes another O(n) calls.",
+  "pitfall": "You must verify the final candidate has indegree n-1 and outdegree 0; otherwise no celebrity exists and you should return -1."
+ },
+ "958": {
+  "id": 958,
+  "idea": "Maintain a main stack and an auxiliary stack whose top always stores the current minimum; push min(x, currentMin) onto the auxiliary stack and pop both together.",
+  "brute": "Scanning the entire stack to find the minimum on every getMin call is O(n) per call, too slow for repeated queries.",
+  "pattern": "Stack / monotonic stack",
+  "time": "O(1) per operation",
+  "space": "O(n)",
+  "whyComplexity": "Each operation pushes or pops at most one element from both stacks, and the auxiliary stack uses O(n) extra space.",
+  "pitfall": "Duplicate minima must also be pushed onto the auxiliary stack so that popping keeps the correct current minimum."
+ },
+ "959": {
+  "id": 959,
+  "idea": "For each histogram bar, the largest rectangle using its height extends until the first smaller bar on the left and right; a monotonic increasing stack finds both boundaries in one pass.",
+  "brute": "Checking every pair of bars and taking the minimum height between them is O(n^2) or O(n^3), too slow.",
+  "pattern": "Stack / monotonic stack",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "Each bar is pushed and popped at most once, so the total work is linear, and the stack can hold up to n indices.",
+  "pitfall": "You must flush the stack at the end with a sentinel 0 or treat the right boundary as n, otherwise rectangles ending at the array end are missed."
+ },
+ "960": {
+  "id": 960,
+  "idea": "Maintain key-to-node and frequency-to-doubly-linked-list maps; each access moves a key to frequency + 1 at the front, and eviction removes the LRU tail of the minimum-frequency bucket.",
+  "brute": "Scanning all keys on each operation to find the least frequently used item is O(n) per operation.",
+  "pattern": "Hashing / frequency map",
+  "time": "O(1) per get/put",
+  "space": "O(k)",
+  "whyComplexity": "Hash maps give O(1) key/frequency lookup, and each frequency bucket is a doubly linked list allowing O(1) LRU insertion, removal, and eviction.",
+  "pitfall": "Ties must be broken by LRU order within the same frequency, and minFreq must be updated correctly after inserts and accesses."
+ },
+ "961": {
+  "id": 961,
+  "idea": "Combine a hash map from key to node with a doubly linked list ordered by recency; get and put move the node to the front, and eviction removes the tail.",
+  "brute": "Using an array or list with timestamps requires scanning to find the least recently used item, O(n) per operation.",
+  "pattern": "Linked list pointer manipulation",
+  "time": "O(1) per get/put",
+  "space": "O(k)",
+  "whyComplexity": "The hash map gives O(1) node lookup, and the doubly linked list gives O(1) insertion, deletion, and recency moves.",
+  "pitfall": "Updating an existing key must move it to the front without increasing size, and eviction must remove the tail node from both the list and the hash map."
+ },
+ "962": {
+  "id": 962,
+  "idea": "Treat each row as a histogram of consecutive 1 heights, then compute the largest rectangle in that histogram and take the maximum over all rows.",
+  "brute": "Enumerating every submatrix and verifying all ones is O(m^2 n^2) or worse, too slow.",
+  "pattern": "Stack / monotonic stack",
+  "time": "O(m * n)",
+  "space": "O(n)",
+  "whyComplexity": "Each of the m rows is processed with an O(n) monotonic-stack histogram pass, and only O(n) height/stack storage is needed.",
+  "pitfall": "Reset the running height to 0 on '0' and use a sentinel 0 when computing each histogram so width boundaries are correct."
+ },
+ "963": {
+  "id": 963,
+  "idea": "Maintain a monotonic decreasing deque of indices: pop from the back while the incoming value is >= the back's value, push the new index, and evict the front index once it falls outside the window.",
+  "brute": "For each window of size k scan its k elements for the maximum, costing O(n*k), which is too slow when both n and k are large.",
+  "pattern": "Queue / deque",
+  "time": "O(n)",
+  "space": "O(k)",
+  "whyComplexity": "Each index enters and leaves the deque at most once, so all window maxima are produced in a single linear pass.",
+  "pitfall": "Evicting the front before reading the max, or comparing indices incorrectly (e.g. using <= vs < inconsistently) leaves stale indices in the deque and yields wrong maxima."
+ },
+ "964": {
+  "id": 964,
+  "idea": "Keep a monotonic decreasing stack of (price, span) pairs; when a new price arrives, pop all entries with a smaller-or-equal price and absorb their spans before pushing (price, accumulated span).",
+  "brute": "Scan backwards over all previous prices on every call to count consecutive days with price <= today's, costing O(n) per query and O(n^2) overall.",
+  "pattern": "Stack / monotonic stack",
+  "time": "O(1) amortized per call",
+  "space": "O(n)",
+  "whyComplexity": "Each price is pushed once and popped at most once across all calls, so the total work over n calls is O(n) and each call is amortized O(1).",
+  "pitfall": "Storing only prices instead of (price, span) forces a linear rescan; also, popping on strictly-less rather than <= breaks spans for equal prices."
+ },
+ "965": {
+  "id": 965,
+  "idea": "Water above index i is min(maxLeft, maxRight) - height[i]; maintain running leftMax and rightMax with two pointers and always advance the side with the smaller max, because that side's boundary is already fully determined.",
+  "brute": "For every bar scan left and right to find the taller walls (O(n^2)), or precompute prefix/suffix maxima arrays using O(n) extra space.",
+  "pattern": "Two pointers",
+  "time": "O(n)",
+  "space": "O(1)",
+  "whyComplexity": "Each of the two pointers advances inward until they meet, so every bar is processed once with only O(1) state.",
+  "pitfall": "You must move the pointer on the side with the smaller current max and use that side's max as the limiting wall, otherwise you compute water from an undetermined boundary."
+ },
+ "967": {
+  "id": 967,
+  "idea": "Use a stack of surviving asteroids; while the top moves right and the current asteroid moves left, resolve collisions by size, popping smaller asteroids and destroying the current one if it is smaller or equal.",
+  "brute": "Repeatedly simulating every pair collision is O(n^2) and can mishandle ordering.",
+  "pattern": "Stack / monotonic stack",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "Each asteroid is pushed and popped at most once, so total processing is linear.",
+  "pitfall": "Only collide when the stack top is positive and the current asteroid is negative; equal sizes destroy both, and a surviving current asteroid must be pushed."
+ },
+ "968": {
+  "id": 968,
+  "idea": "Compute the next greater element for every value of nums2 with a monotonic decreasing stack, then answer each nums1 query by a hash lookup from value to its next greater element.",
+  "brute": "For each element of nums1, linearly scan nums2 to find the position and then scan right for a greater value, giving O(n*m).",
+  "pattern": "Stack / monotonic stack",
+  "time": "O(n + m)",
+  "space": "O(m)",
+  "whyComplexity": "Each element of nums2 is pushed and popped at most once from the stack, and each nums1 query is an O(1) hash lookup.",
+  "pitfall": "Assuming both arrays share positions rather than values — the answer must be keyed by value in nums2, and elements with no greater value must map to -1."
+ },
+ "969": {
+  "id": 969,
+  "idea": "Treat the array as circular by iterating over 2n elements and pushing indices modulo n onto a monotonic decreasing stack, so each element sees its next greater element in circular order.",
+  "brute": "For each index scan forward up to n-1 steps (wrapping) to find a greater value, which is O(n^2).",
+  "pattern": "Stack / monotonic stack",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "The doubled pass pushes and pops each index at most once, giving linear time with a stack and result array of size n.",
+  "pitfall": "Iterating only a single pass or failing to wrap indices with i % n means elements whose next greater element lies before them are left as -1."
+ },
+ "970": {
+  "id": 970,
+  "idea": "Greedily build the smallest number with a monotonic increasing stack: while the previous digit is larger than the current one and removals remain, pop it, then push the current digit.",
+  "brute": "Try all C(n,k) ways of deleting k digits and take the minimum, which is exponential and hopeless for large n.",
+  "pattern": "Stack / monotonic stack",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "Each digit is pushed and popped at most once, so the single pass with the stack is linear in the number of digits.",
+  "pitfall": "Forgetting to strip leading zeros and to remove any leftover digits from the end when k exceeds the number of pops — and returning \"0\" if everything is removed."
+ },
+ "971": {
+  "id": 971,
+  "idea": "Use contribution counting: for each element find how many subarrays it is the minimum of, via previous strictly-smaller and next smaller-or-equal boundaries multiplied together, using monotonic stacks.",
+  "brute": "Enumerate all O(n^2) subarrays and compute each minimum, which is O(n^3) or O(n^2) with incremental minimums — too slow for large n.",
+  "pattern": "Stack / monotonic stack",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "Two monotonic stack passes compute left and right boundaries in linear time, and the final contribution sum is another linear pass.",
+  "pitfall": "Duplicates: using strict comparison on both sides double-counts equal minima, so one boundary must be strict and the other non-strict (and all arithmetic done modulo 1e9+7)."
+ },
+ "972": {
+  "id": 972,
+  "idea": "Sum of all subarray ranges equals (sum of subarray maximums) minus (sum of subarray minimums); compute each with the monotonic-stack contribution technique using previous/next greater and previous/next smaller boundaries.",
+  "brute": "Enumerate every subarray and track its min and max, giving O(n^2) time, which is too slow for n up to 1000+ in tight limits.",
+  "pattern": "Stack / monotonic stack",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "Four monotonic stack passes (prev/next smaller, prev/next greater) each run in linear time, plus a linear summation.",
+  "pitfall": "Mixing strict and non-strict comparisons inconsistently between the min and max parts double-counts subarrays containing duplicates, giving wrong sums."
+ },
+ "977": {
+  "id": 977,
+  "idea": "Precompute the LPS array where lps[i] is the length of the longest proper prefix that is also a suffix of pattern[0..i], then use it to skip unnecessary comparisons when a mismatch occurs.",
+  "brute": "Naive substring search compares the pattern against every text position, taking O(n * m) time.",
+  "pattern": "Two pointers",
+  "time": "O(n + m)",
+  "space": "O(m)",
+  "whyComplexity": "The text pointer never backtracks, and the pattern pointer moves forward or falls back via LPS, so total work is linear.",
+  "pitfall": "Off-by-one errors in LPS construction, especially setting j = lps[j - 1] on mismatch and handling an empty pattern."
+ },
+ "979": {
+  "id": 979,
+  "idea": "Use rolling hash to compare the pattern hash with the hash of each text window in O(1) time, and verify character-by-character only when the hashes match.",
+  "brute": "Check every substring of the text against the pattern character-by-character, which takes O(n * m).",
+  "pattern": "Hashing / frequency map",
+  "time": "O(n + m)",
+  "space": "O(1)",
+  "whyComplexity": "Precomputing the pattern hash is O(m), and sliding the window over the text is O(n) with O(1) hash updates.",
+  "pitfall": "Hash collisions can cause false positives; use double hashing or verify actual characters on a hash match."
+ },
+ "980": {
+  "id": 980,
+  "idea": "Find the longest palindromic prefix of s by computing the LPS array on s + '#' + reverse(s); then prepend the reverse of the remaining suffix to make the shortest palindrome.",
+  "brute": "Try each prefix to check if it is a palindrome and reverse the remaining suffix, which takes O(n^2) time.",
+  "pattern": "Two pointers",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "The KMP LPS computation on the combined string of length 2n + 1 is linear, and the final prepend is O(n).",
+  "pitfall": "Using a separator like '#' that does not appear in the string, and correctly handling the empty string case."
+ },
+ "981": {
+  "id": 981,
+  "idea": "Compute Z[i] as the length of the longest substring starting at i that matches the prefix, maintaining the rightmost Z-box [l, r] and reusing previous Z values to avoid redundant comparisons.",
+  "brute": "For each index i, compare the prefix and suffix from scratch, which takes O(n^2).",
+  "pattern": "Two pointers",
+  "time": "O(n)",
+  "space": "O(n)",
+  "whyComplexity": "Each character is compared at most once because the right boundary r only moves forward, giving linear total time.",
+  "pitfall": "When i <= r, initialize Z[i] = min(r - i + 1, Z[i - l]) before expanding, or the algorithm becomes quadratic."
+ },
+ "1023": {
+  "id": 1023,
+  "idea": "Insert all words into a trie marking terminal nodes; DFS only through terminal nodes from the root and keep the longest reachable word, breaking ties lexicographically.",
+  "brute": "For each word check every prefix for membership in a set, which costs quadratic work per word instead of sharing prefixes.",
+  "pattern": "Trie",
+  "time": "O(total characters)",
+  "space": "O(total characters)",
+  "whyComplexity": "Each word is inserted and traversed once character by character, and common prefixes are shared in the trie.",
+  "pitfall": "A candidate is valid only if every prefix is terminal, and equal-length candidates must choose the lexicographically smallest word."
+ },
+ "1024": {
+  "id": 1024,
+  "idea": "Insert all numbers into a binary trie from MSB to LSB; for each number traverse the trie greedily choosing the opposite bit whenever possible to maximize the XOR.",
+  "brute": "Check every pair of numbers for the maximum XOR, which takes O(n^2) time.",
+  "pattern": "Trie",
+  "time": "O(n * B)",
+  "space": "O(n * B)",
+  "whyComplexity": "Each number is inserted and queried over B = 31 bits, so total work is O(n * 31) = O(n).",
+  "pitfall": "Forgetting to pad all numbers with leading zeros up to 31 bits, so the trie depth is uniform and opposite-bit choices are correct."
+ },
+ "1025": {
+  "id": 1025,
+  "idea": "Sort nums and queries by limit; insert nums <= limit into a binary trie, then answer each query by greedily choosing the opposite bit to maximize XOR, returning -1 if no valid number exists.",
+  "brute": "For each query, scan all nums <= limit and compute XOR, which is O(n * q).",
+  "pattern": "Trie",
+  "time": "O((n + q) * B + n log n + q log q)",
+  "space": "O(n * B)",
+  "whyComplexity": "Sorting dominates, and each element/query is processed once over B = 31 bits in the trie.",
+  "pitfall": "For queries whose limit is smaller than the minimum num, the answer must be -1; process queries offline in increasing limit."
+ },
+ "1026": {
+  "id": 1026,
+  "idea": "Insert every suffix of the string into a trie; each non-root trie node corresponds to one distinct substring given by its root-to-node path.",
+  "brute": "Generate all O(n^2) substrings and put them in a hash set, which costs O(n^3) time/space due to copying substrings.",
+  "pattern": "Trie",
+  "time": "O(n^2)",
+  "space": "O(n^2)",
+  "whyComplexity": "There are n suffixes, each insertion can take O(n) steps, and the trie can have O(n^2) nodes.",
+  "pitfall": "Exclude the root node so the empty substring is not counted, and shared prefixes must not be counted multiple times."
+ },
+ "1027": {
+  "id": 1027,
+  "idea": "At each trie node store child links, wordCount for words ending there, and prefixCount for words passing through; insert/erase update both counts along the path.",
+  "brute": "Store all inserted words in a list and scan/compare prefixes for each query, which is too slow.",
+  "pattern": "Trie",
+  "time": "O(L) per operation",
+  "space": "O(total characters inserted)",
+  "whyComplexity": "Each operation walks one trie path of length at most L, and nodes are shared by common prefixes.",
+  "pitfall": "Erase must decrement both the terminal word count and every prefix count, while preserving child links that other words still use."
+ }
+}

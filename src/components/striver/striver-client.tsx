@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useHydrated } from "@/lib/plan-store";
 import { toDateString } from "@/lib/striver-schedule";
@@ -307,7 +308,8 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
         <h1>Striver {allProblems.length} sheet</h1>
         <p className="striver-lead">
           Mark each problem by how it went. A hint schedules reviews at 7, 28 and 56 days, a struggle at 7, 14, 28 and 56.
-          A daily email tells you what to redo.
+          A daily email tells you what to redo.{" "}
+          <Link href="/striver/drill">Revise with the daily drill</Link>.
         </p>
       </header>
 
