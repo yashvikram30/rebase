@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   addDays,
   createScheduleForProblem,
+  effectiveDueDate,
   isQuestionStage,
   parseDateString,
   rescheduleMissedReviews,
@@ -168,5 +169,28 @@ describe("isQuestionStage", () => {
   it("picks the 28-day review for each colour", () => {
     expect([0, 1, 2].map((s) => isQuestionStage("yellow", s))).toEqual([false, true, false]);
     expect([0, 1, 2, 3].map((s) => isQuestionStage("red", s))).toEqual([false, false, true, false]);
+  });
+
+  describe("send days", () => {
+    const review = (dueDate: string): ScheduledReview => ({
+      problemId: 1, status: "yellow", stage: 0, dueDate, scheduledFor: dueDate, completed: false,
+    });
+    const weekdays = [1, 2, 3, 4, 5]; // Mon-Fri
+
+    it("rolls a review due on a skipped day to the next chosen day", () => {
+      expect(effectiveDueDate("2026-11-14", weekdays)).toBe("2026-11-16"); // Sat -> Mon
+      expect(effectiveDueDate("2026-11-16", weekdays)).toBe("2026-11-16");
+      expect(effectiveDueDate("2026-11-14")).toBe("2026-11-14");
+    });
+
+    it("does not treat a review due on a skipped day as overdue before the next chosen day", () => {
+      const { rescheduledCount } = rescheduleMissedReviews([review("2026-11-14")], "2026-11-15", weekdays);
+      expect(rescheduledCount).toBe(0);
+    });
+
+    it("moves a truly missed review only onto a chosen weekday", () => {
+      const { reviews } = rescheduleMissedReviews([review("2026-11-10")], "2026-11-14", weekdays);
+      expect(weekdays).toContain(parseDateString(reviews[0].dueDate).getDay());
+    });
   });
 });

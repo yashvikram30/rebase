@@ -3,7 +3,7 @@ import { sendRevisionEmail } from "@/lib/email";
 import { generateInterviewQuestions } from "@/lib/interview-questions";
 import { syncRows } from "@/lib/mongo";
 import { toEmailItems } from "@/lib/striver-problems";
-import { isQuestionStage, rescheduleMissedReviews, toDateString } from "@/lib/striver-schedule";
+import { effectiveDueDate, isQuestionStage, parseDateString, rescheduleMissedReviews, toDateString } from "@/lib/striver-schedule";
 import { normalizeStriver } from "@/lib/striver-normalize";
 
 /** Each email waits on a model call for its interview questions. */
@@ -44,7 +44,7 @@ export async function GET(req: Request) {
         continue;
       }
 
-      const { reviews, rescheduledCount } = rescheduleMissedReviews(state.reviews, todayStr);
+      const { reviews, rescheduledCount } = rescheduleMissedReviews(state.reviews, todayStr, state.reminderDays);
       totalRescheduled += rescheduledCount;
       if (rescheduledCount > 0) {
         state.reviews = reviews;
@@ -56,8 +56,13 @@ export async function GET(req: Request) {
 
       // Only the address recorded from the user's own session is ever used.
       if (!row.email || !state.reminders) continue;
+      // The user chooses which weekdays get an email; reviews due on a skipped day are sent on the next chosen one.
+      if (!state.reminderDays.includes(parseDateString(todayStr).getDay())) continue;
 
-      const items = toEmailItems(reviews.filter((r) => !r.completed && r.dueDate === todayStr), state.customProblems);
+      const items = toEmailItems(
+        reviews.filter((r) => !r.completed && effectiveDueDate(r.dueDate, state.reminderDays) === todayStr),
+        state.customProblems,
+      );
       if (items.length === 0) continue;
 
       // Questions go only on a problem's 28-day review, and only once: a problem already in `questioned` is skipped.

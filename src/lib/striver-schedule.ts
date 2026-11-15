@@ -1,5 +1,5 @@
 import type { ProblemStatus, ScheduledReview } from "./striver-types";
-import { RED_INTERVALS_DAYS, YELLOW_INTERVALS_DAYS } from "./striver-types";
+import { ALL_WEEKDAYS, RED_INTERVALS_DAYS, YELLOW_INTERVALS_DAYS } from "./striver-types";
 
 export function toDateString(d: Date): string {
   const y = d.getFullYear();
@@ -20,6 +20,20 @@ export function addDays(date: Date, days: number): Date {
   next.setDate(next.getDate() + days);
   next.setHours(0, 0, 0, 0);
   return next;
+}
+
+/**
+ * The date a review is emailed: its due date, or the next date (within a week) whose weekday the user chose.
+ * A review due on a day without email is therefore sent on the next day with one, not dropped.
+ */
+export function effectiveDueDate(dueDate: string, sendDays: readonly number[] = ALL_WEEKDAYS): string {
+  if (sendDays.length === 0) return dueDate;
+  const due = parseDateString(dueDate);
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(due, i);
+    if (sendDays.includes(d.getDay())) return toDateString(d);
+  }
+  return dueDate;
 }
 
 /**
@@ -85,15 +99,19 @@ export function updateReviewsOnStatusChange(
  * - Finds the day with count == 0 closest to today + 1.
  * - If all days have >= 1 problems, picks the day with the minimum problem count closest to today + 1.
  * - Updates the review's dueDate to that target day.
+ *
+ * `sendDays` (weekdays, 0 = Sunday) are the days the user gets email. A review is overdue only once its
+ * effective due date has passed, and it moves only to one of those days.
  */
 export function rescheduleMissedReviews(
   reviews: ScheduledReview[],
   todayStr: string,
+  sendDays: readonly number[] = ALL_WEEKDAYS,
 ): { reviews: ScheduledReview[]; rescheduledCount: number } {
   const today = parseDateString(todayStr);
 
   // Separate overdue active reviews from others
-  const isOverdue = (r: ScheduledReview) => !r.completed && r.dueDate < todayStr;
+  const isOverdue = (r: ScheduledReview) => !r.completed && effectiveDueDate(r.dueDate, sendDays) < todayStr;
   const overdueIndices: number[] = [];
   const updated = reviews.map((r, i) => {
     if (isOverdue(r)) {
@@ -110,16 +128,19 @@ export function rescheduleMissedReviews(
   const next7Days: string[] = [];
   const counts: Record<string, number> = {};
   for (let i = 1; i <= 7; i++) {
-    const dayStr = toDateString(addDays(today, i));
+    const day = addDays(today, i);
+    if (!sendDays.includes(day.getDay())) continue;
+    const dayStr = toDateString(day);
     next7Days.push(dayStr);
     counts[dayStr] = 0;
   }
+  if (next7Days.length === 0) return { reviews: updated, rescheduledCount: 0 };
 
   // Count existing non-overdue active reviews in that 7-day window
   for (const r of updated) {
-    if (!r.completed && counts[r.dueDate] !== undefined) {
-      counts[r.dueDate]++;
-    }
+    if (r.completed) continue;
+    const day = effectiveDueDate(r.dueDate, sendDays);
+    if (counts[day] !== undefined) counts[day]++;
   }
 
   // Reschedule each overdue review one by one, updating counts dynamically

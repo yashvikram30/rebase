@@ -11,6 +11,7 @@ import {
   saveProblemNotes,
   setProblemStatus,
   setReminders,
+  toggleReminderDay,
   useStriver,
 } from "@/lib/striver-store";
 import type { ProblemStatus, StriverProblem } from "@/lib/striver-types";
@@ -22,6 +23,16 @@ import { SelectMenu } from "./select-menu";
 type SubtopicGroup = { subtopic: string; problems: StriverProblem[] };
 type TopicGroup = { topic: string; subtopics: SubtopicGroup[]; totalCount: number };
 type Next = { dueDate: string; stage: number; isOverdue: boolean; isDueToday: boolean };
+
+const WEEKDAYS = [
+  { n: 1, short: "M", name: "Monday" },
+  { n: 2, short: "T", name: "Tuesday" },
+  { n: 3, short: "W", name: "Wednesday" },
+  { n: 4, short: "T", name: "Thursday" },
+  { n: 5, short: "F", name: "Friday" },
+  { n: 6, short: "S", name: "Saturday" },
+  { n: 0, short: "S", name: "Sunday" },
+];
 
 const pct = (n: number, total: number) => (total ? (n / total) * 100 : 0);
 
@@ -352,7 +363,7 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
         </div>
         <div className="striver-reminder">
           <p>
-            <b>Daily email</b>{" "}
+            <b>{store.reminderDays.length === 7 ? "Daily email" : "Email"}</b>{" "}
             <span>
               {store.reminders ? "to " : "paused for "}
               {email}
@@ -372,6 +383,24 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
             >
               <i />
             </button>
+          </div>
+          <div className="striver-days" role="group" aria-label="Days to send the email">
+            {WEEKDAYS.map((d) => {
+              const on = store.reminderDays.includes(d.n);
+              return (
+                <button
+                  key={d.n}
+                  type="button"
+                  aria-pressed={on}
+                  aria-label={d.name}
+                  title={d.name}
+                  className={"striver-day" + (on ? " is-on" : "")}
+                  onClick={() => toggleReminderDay(d.n)}
+                >
+                  {d.short}
+                </button>
+              );
+            })}
           </div>
           <p className="striver-reminder-msg" role="status">
             {testState.msg}

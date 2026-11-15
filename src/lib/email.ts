@@ -175,7 +175,7 @@ export async function sendRevisionEmail({
             </tr>
             <tr>
               <td align="center" style="padding: 18px 12px 0; font-size: 12px; line-height: 1.6; color: ${C.muted};">
-                You get this because daily reminders are on for your Rebase account.<br>
+                You get this because reminders are on for your Rebase account.<br>
                 Turn them off any time with the switch on the <a href="${appUrl}/striver" style="color: ${C.edge};">Striver page</a>.
               </td>
             </tr>
