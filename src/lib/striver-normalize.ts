@@ -1,4 +1,3 @@
-import { ALL_WEEKDAYS } from "./striver-types";
 import type {
   ProblemProgress,
   StriverProblem,
@@ -13,7 +12,6 @@ export function normalizeStriver(raw: unknown): StriverStoreState {
     statuses?: unknown;
     reviews?: unknown;
     reminders?: unknown;
-    reminderDays?: unknown;
     customProblems?: unknown;
   };
 
@@ -59,20 +57,7 @@ export function normalizeStriver(raw: unknown): StriverStoreState {
     }
   }
 
-  return {
-    statuses,
-    reviews,
-    reminders: r.reminders !== false,
-    reminderDays: normalizeWeekdays(r.reminderDays),
-    customProblems: normalizeCustomProblems(r.customProblems),
-  };
-}
-
-/** Valid weekdays only, sorted and unique. Missing or empty means every day. */
-function normalizeWeekdays(raw: unknown): number[] {
-  if (!Array.isArray(raw)) return [...ALL_WEEKDAYS];
-  const days = [...new Set(raw.filter((d): d is number => Number.isInteger(d) && d >= 0 && d <= 6))].sort();
-  return days.length > 0 ? days : [...ALL_WEEKDAYS];
+  return { statuses, reviews, reminders: r.reminders !== false, customProblems: normalizeCustomProblems(r.customProblems) };
 }
 
 const text = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");

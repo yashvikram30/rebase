@@ -377,11 +377,6 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
 - **[built] One scheduler.** Vercel Cron (`vercel.json`, 00:00 UTC = 09:00 JST, sends `Authorization: Bearer $CRON_SECRET`) calls
   `GET /api/cron/reminders`. On Hobby the run lands anywhere in that hour (09:00 to 09:59 JST). The GitHub Actions
   workflow that also fired at 08:00 UTC was removed: it sent every user two emails a day.
-- **[built] The user picks the weekdays that get the email** (`reminderDays` in the store, 0 = Sunday, never empty,
-  default all seven), as seven toggle chips in the reminder panel. The cron still runs once a day and skips users
-  whose weekday (the UTC date, like everything else it does) is not chosen, so the time of day is not configurable
-  on Vercel Hobby. A review due on a skipped day is sent on the next chosen day (`effectiveDueDate`), and a review
-  that is truly missed is moved only to a chosen weekday.
 - **[built] Marking green never deletes the queue silently.** Yellow gives reviews at +7, +28 and +56 days, red at
   +7, +14, +28 and +56. If a problem still has reviews queued when it is marked green, the page asks once: keep the reminders
   (the default, also for the due review, which is completed either way), remove them, or cancel. Only a reset to
@@ -419,9 +414,6 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
 ---
 
 ## Changelog
-
-- **2026-11-15:** Striver: choose which weekdays get the reminder email (`reminderDays`); reviews due on a skipped
-  day go out on the next chosen day.
 
 - **2026-11-13:** Striver: added the daily drill (`/striver/drill`), a static model-drafted card bank, and the
   `csplan.drill` sync key.

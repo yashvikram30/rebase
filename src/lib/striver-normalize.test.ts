@@ -6,7 +6,7 @@ import { compareProblemNumbers } from "./striver-types";
 describe("normalizeStriver", () => {
   it("defaults to reminders on and drops unknown fields such as a stored email", () => {
     const s = normalizeStriver({ email: "someone@else.com" });
-    expect(s).toEqual({ statuses: {}, reviews: [], reminders: true, reminderDays: [0, 1, 2, 3, 4, 5, 6], customProblems: [] });
+    expect(s).toEqual({ statuses: {}, reviews: [], reminders: true, customProblems: [] });
   });
 
   it("keeps an explicit opt-out and discards malformed entries", () => {
@@ -18,17 +18,6 @@ describe("normalizeStriver", () => {
     expect(s.reminders).toBe(false);
     expect(Object.keys(s.statuses)).toEqual(["1"]);
     expect(s.reviews).toHaveLength(1);
-  });
-});
-
-describe("normalizeStriver reminderDays", () => {
-  it("keeps valid weekdays, sorted and unique", () => {
-    expect(normalizeStriver({ reminderDays: [5, 1, 1, 3] }).reminderDays).toEqual([1, 3, 5]);
-  });
-
-  it("drops invalid entries and falls back to every day when none are left", () => {
-    expect(normalizeStriver({ reminderDays: [7, -1, "1", 2.5] }).reminderDays).toEqual([0, 1, 2, 3, 4, 5, 6]);
-    expect(normalizeStriver({ reminderDays: [] }).reminderDays).toHaveLength(7);
   });
 });
 

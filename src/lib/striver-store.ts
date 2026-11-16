@@ -7,10 +7,9 @@ import {
   updateReviewsOnStatusChange,
 } from "./striver-schedule";
 import { STRIVER_PROBLEMS } from "./striver-problems";
-import { ALL_WEEKDAYS } from "./striver-types";
 import type { ProblemStatus, StriverProblem, StriverStoreState } from "./striver-types";
 
-const EMPTY: StriverStoreState = { statuses: {}, reviews: [], reminders: true, reminderDays: [...ALL_WEEKDAYS], customProblems: [] };
+const EMPTY: StriverStoreState = { statuses: {}, reviews: [], reminders: true, customProblems: [] };
 
 const store = createLocalStore<StriverStoreState>("csplan.striver", EMPTY, normalizeStriver);
 export const useStriver = () => useLocalStore(store);
@@ -89,22 +88,13 @@ export function setReminders(reminders: boolean) {
   store.set({ ...store.get(), reminders });
 }
 
-/** Turns one weekday (0 = Sunday) on or off for the email. The last remaining day cannot be turned off. */
-export function toggleReminderDay(day: number) {
-  const cur = store.get();
-  const has = cur.reminderDays.includes(day);
-  if (has && cur.reminderDays.length === 1) return;
-  const reminderDays = has ? cur.reminderDays.filter((d) => d !== day) : [...cur.reminderDays, day].sort();
-  store.set({ ...cur, reminderDays });
-}
-
 /**
  * Checks for any missed overdue reviews and auto-reschedules them according to the 0-problem day rule.
  */
 export function checkAndLevelMissedReviews(): number {
   const cur = store.get();
   const todayStr = toDateString(new Date());
-  const { reviews, rescheduledCount } = rescheduleMissedReviews(cur.reviews, todayStr, cur.reminderDays);
+  const { reviews, rescheduledCount } = rescheduleMissedReviews(cur.reviews, todayStr);
   if (rescheduledCount > 0) {
     store.set({ ...cur, reviews });
   }

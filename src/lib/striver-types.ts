@@ -63,13 +63,9 @@ export type StriverStoreState = {
   reviews: ScheduledReview[];
   /** Daily revision email to the signed-in account's address. On unless the user turns it off. */
   reminders: boolean;
-  /** Weekdays (0 = Sunday .. 6 = Saturday) on which the email is sent. Never empty; all seven by default. */
-  reminderDays: number[];
   /** Problems the user added to the sheet. Stored here so they sync with progress and the daily email can see them. */
   customProblems: StriverProblem[];
 };
-
-export const ALL_WEEKDAYS: readonly number[] = [0, 1, 2, 3, 4, 5, 6];
 
 export const YELLOW_INTERVALS_DAYS = [7, 28, 56] as const;
 export const RED_INTERVALS_DAYS = [7, 14, 28, 56] as const;
