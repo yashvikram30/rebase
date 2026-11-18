@@ -4,7 +4,6 @@ import { MC_LEVELS } from "@/data/machine-coding";
 import {
   bestWeekStreak,
   dueSteps,
-  itemDone,
   itemFraction,
   levelStats,
   nextUp,
@@ -42,6 +41,12 @@ import { toast } from "@/lib/toast";
 
 const pct = (f: number) => Math.round(f * 100);
 const KIND: Record<McResource["kind"], string> = { video: "Video", read: "Read", code: "Code" };
+const KIND_CHIP: Record<McItem["kind"], string | null> = {
+  concept: "Concept",
+  pattern: "Pattern",
+  method: "Method",
+  problem: null,
+};
 
 /** Applies a change, then celebrates if it just finished a phase or a whole level. */
 function withCelebration(change: () => void) {
@@ -61,49 +66,6 @@ function withCelebration(change: () => void) {
 const visible = (resources: McResource[], lang: McState["lang"]) =>
   resources.filter((r) => !r.lang || r.lang === "java" || r.lang === lang);
 
-function Ring({ value, size = 112 }: { value: number; size?: number }) {
-  const r = (size - 12) / 2;
-  const c = 2 * Math.PI * r;
-  return (
-    <svg
-      className="mc-ring"
-      style={{ width: size, height: size }}
-      viewBox={`0 0 ${size} ${size}`}
-      role="img"
-      aria-label={`${pct(value)} percent complete`}
-    >
-      <circle cx={size / 2} cy={size / 2} r={r} className="mc-ring-track" />
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={r}
-        className="mc-ring-fill"
-        strokeDasharray={c}
-        strokeDashoffset={c * (1 - value)}
-        transform={`rotate(-90 ${size / 2} ${size / 2})`}
-      />
-      <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle" className="mc-ring-text">
-        {pct(value)}%
-      </text>
-    </svg>
-  );
-}
-
-function Bar({ value, label }: { value: number; label: string }) {
-  return (
-    <div
-      className="mc-bar"
-      role="progressbar"
-      aria-label={label}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={pct(value)}
-    >
-      <span style={{ width: `${pct(value)}%` }} />
-    </div>
-  );
-}
-
 function Check({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) {
   return (
     <button
@@ -121,137 +83,159 @@ function Check({ checked, onChange, label }: { checked: boolean; onChange: () =>
   );
 }
 
-/** Small link pills. The full label is the tooltip and the accessible name. */
-function Pills({ list, lang }: { list: McResource[]; lang: McState["lang"] }) {
-  const shown = visible(list, lang);
-  if (!shown.length) return null;
+function Links({ list, lang }: { list: McResource[]; lang: McState["lang"] }) {
+  return visible(list, lang).map((r) => (
+    <a
+      key={r.url + r.label}
+      className="problem-link-icon"
+      href={r.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={r.note ? `${r.label}. ${r.note}` : r.label}
+      aria-label={r.label}
+    >
+      {KIND[r.kind]} ↗
+    </a>
+  ));
+}
+
+type Tone = "todo" | "doing" | "done";
+
+/** The status cell: a bordered button with a dot, like the Striver sheet's "How it went" menu. */
+function StatusButton({
+  tone,
+  label,
+  onClick,
+  ...aria
+}: {
+  tone: Tone;
+  label: string;
+  onClick: () => void;
+} & React.AriaAttributes & { role?: string }) {
   return (
-    <span className="mc-pills">
-      {shown.map((r) => (
-        <a
-          key={r.url + r.label}
-          className={`mc-pill mc-pill-${r.kind}`}
-          href={r.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          title={r.note ? `${r.label}. ${r.note}` : r.label}
-          aria-label={r.label}
-        >
-          {KIND[r.kind]}
-        </a>
-      ))}
-    </span>
+    <button type="button" className="mc-status" onClick={onClick} {...aria}>
+      <i className={`mc-dot is-${tone}`} aria-hidden="true" />
+      {label}
+    </button>
   );
 }
 
-function SimpleItem({ item, s, onTouch }: { item: McItem; s: McState; onTouch: () => void }) {
-  const [open, setOpen] = useState(false);
-  const done = itemDone(item, s);
-  return (
-    <li className={"mc-row" + (done ? " is-done" : "")}>
-      <Check
-        checked={done}
-        label={`Mark ${item.title} as done`}
-        onChange={() => {
-          onTouch();
-          withCelebration(() => toggleItem(item.id));
-        }}
-      />
-      <div className="mc-row-main">
-        <div className="mc-row-line">
-          <button type="button" className="mc-title" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-            {item.title}
-          </button>
-          {item.minutes ? <span className="mc-min">{item.minutes}m</span> : null}
-          <Pills list={item.resources} lang={s.lang} />
-        </div>
-        {open ? <p className="mc-sum">{item.summary}</p> : null}
-      </div>
-    </li>
-  );
-}
-
-function ProblemItem({
+function ItemRows({
   item,
+  n,
   s,
   today,
   onTouch,
 }: {
   item: McItem;
+  n: number;
   s: McState;
   today: string;
   onTouch: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const isProblem = item.kind === "problem";
   const done = itemFraction(item, s) === 1;
-  const count = PROBLEM_STEPS.filter((st) => s.steps[item.id]?.[st.id]).length;
+  const steps = PROBLEM_STEPS.filter((st) => s.steps[item.id]?.[st.id]).length;
+  const tone: Tone = done ? "done" : steps > 0 ? "doing" : "todo";
+  const chip = KIND_CHIP[item.kind];
+
   return (
-    <li className={"mc-row mc-problem" + (done ? " is-done" : "")}>
-      <button
-        type="button"
-        className="mc-problem-head"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-      >
-        <span className="mc-dots" aria-hidden="true">
-          {PROBLEM_STEPS.map((st) => (
-            <i key={st.id} className={s.steps[item.id]?.[st.id] ? "on" : ""} />
-          ))}
-        </span>
-        <span className="mc-title">{item.title}</span>
-        {item.patterns?.length ? (
-          <span className="mc-pat">{item.patterns.slice(0, 2).join(" · ")}</span>
-        ) : null}
-        <span className="mc-count">
-          {count}/{PROBLEM_STEPS.length}
-        </span>
-      </button>
-      {open ? (
-        <div className="mc-panel">
-          <p className="mc-sum">{item.summary}</p>
-          <ol className="mc-steps">
-            {PROBLEM_STEPS.map((st) => {
-              const ticked = !!s.steps[item.id]?.[st.id];
-              const due = stepDueDate(item.id, st.id, s);
-              const isDue = !!due && !ticked && due <= today;
-              return (
-                <li key={st.id} className={ticked ? "is-done" : ""} title={st.hint}>
-                  <Check
-                    checked={ticked}
-                    label={`${st.label}, ${item.title}`}
-                    onChange={() => {
-                      onTouch();
-                      withCelebration(() => toggleStep(item.id, st.id));
-                    }}
-                  />
-                  <span>{st.label}</span>
-                  {isDue ? (
-                    <em className="mc-due">due</em>
-                  ) : due && !ticked ? (
-                    <em className="mc-when">{due.slice(5)}</em>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ol>
-          <Pills list={item.resources} lang={s.lang} />
-          <textarea
-            className="mc-notes"
-            aria-label={`Notes for ${item.title}`}
-            defaultValue={s.notes[item.id] ?? ""}
-            rows={2}
-            maxLength={4000}
-            placeholder="Where did it get messy? Which pattern fixed it?"
-            onBlur={(e) => setNote(item.id, e.target.value)}
-          />
-        </div>
+    <>
+      <tr className={done ? "is-done" : ""}>
+        <td className="c-order">{n}</td>
+        <td className="c-topic">
+          <button type="button" className="mc-title" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+            {item.title}
+          </button>
+          <div className="problem-tags">
+            {chip ? (
+              <span className={`problem-diff-pill ${item.kind === "pattern" ? "diff-core" : "diff-plain"}`}>
+                {chip}
+              </span>
+            ) : null}
+            {item.patterns?.map((p) => (
+              <span key={p} className="problem-diff-pill diff-core">
+                {p}
+              </span>
+            ))}
+            <Links list={item.resources} lang={s.lang} />
+          </div>
+          {open && !isProblem ? <p className="mc-sum">{item.summary}</p> : null}
+        </td>
+        <td className="c-status">
+          {isProblem ? (
+            <StatusButton
+              tone={tone}
+              label={done ? "Done" : steps ? `${steps} of ${PROBLEM_STEPS.length}` : "Not started"}
+              aria-expanded={open}
+              onClick={() => setOpen((v) => !v)}
+            />
+          ) : (
+            <StatusButton
+              tone={tone}
+              label={done ? "Done" : "Not started"}
+              role="checkbox"
+              aria-checked={done}
+              aria-label={`${item.title}: ${done ? "done" : "not started"}`}
+              onClick={() => {
+                onTouch();
+                withCelebration(() => toggleItem(item.id));
+              }}
+            />
+          )}
+        </td>
+        <td className="c-time">{item.minutes ? `${item.minutes} min` : ""}</td>
+      </tr>
+      {open && isProblem ? (
+        <tr className="mc-panel-row">
+          <td />
+          <td colSpan={3}>
+            <p className="mc-sum">{item.summary}</p>
+            <ol className="mc-steps">
+              {PROBLEM_STEPS.map((st) => {
+                const ticked = !!s.steps[item.id]?.[st.id];
+                const due = stepDueDate(item.id, st.id, s);
+                const isDue = !!due && !ticked && due <= today;
+                return (
+                  <li key={st.id} className={ticked ? "is-done" : ""} title={st.hint}>
+                    <Check
+                      checked={ticked}
+                      label={`${st.label}, ${item.title}`}
+                      onChange={() => {
+                        onTouch();
+                        withCelebration(() => toggleStep(item.id, st.id));
+                      }}
+                    />
+                    <span>{st.label}</span>
+                    {isDue ? (
+                      <span className="sched-badge is-due">Due now</span>
+                    ) : due && !ticked ? (
+                      <span className="sched-badge">Due {due.slice(5)}</span>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ol>
+            <textarea
+              className="mc-notes"
+              aria-label={`Notes for ${item.title}`}
+              defaultValue={s.notes[item.id] ?? ""}
+              rows={2}
+              maxLength={4000}
+              placeholder="Where did it get messy? Which pattern fixed it?"
+              onBlur={(e) => setNote(item.id, e.target.value)}
+            />
+          </td>
+        </tr>
       ) : null}
-    </li>
+    </>
   );
 }
 
 function Phase({
   phase,
+  index,
   s,
   open,
   onToggle,
@@ -259,6 +243,7 @@ function Phase({
   today,
 }: {
   phase: McPhase;
+  index: number;
   s: McState;
   open: boolean;
   onToggle: () => void;
@@ -267,43 +252,77 @@ function Phase({
 }) {
   const st = phaseStats(phase, s);
   const complete = phaseComplete(phase, s);
+  const pending = !complete && st.done === st.total;
   const gate = !!s.gates[phase.id];
   return (
-    <section className={"mc-phase" + (complete ? " is-complete" : "")} aria-labelledby={`h-${phase.id}`}>
-      <button type="button" className="mc-phase-head" aria-expanded={open} onClick={onToggle}>
-        <h3 id={`h-${phase.id}`}>{phase.title}</h3>
-        {complete ? (
-          <span className="mc-badge">Done</span>
-        ) : st.done === st.total ? (
-          <span className="mc-badge mc-badge-pending">Self-check</span>
-        ) : null}
-        <span className="mc-count">
-          {st.done}/{st.total}
+    <section
+      className={"striver-topic-card" + (open ? " is-expanded" : "")}
+      aria-labelledby={`h-${phase.id}`}
+    >
+      <button type="button" className="striver-topic-head" aria-expanded={open} onClick={onToggle}>
+        <span className="striver-chevron" aria-hidden="true" />
+        <span className="striver-topic-name">
+          <span className="striver-topic-n">{index + 1}</span>
+          <span id={`h-${phase.id}`}>{phase.title}</span>
+          {complete ? (
+            <span className="mc-flag is-done">Done</span>
+          ) : pending ? (
+            <span className="mc-flag">Self-check</span>
+          ) : null}
         </span>
-        <Bar value={st.fraction} label={`${phase.title} progress`} />
+        <span className="striver-topic-meta">
+          <span className="striver-topic-counter">
+            {st.done}/{st.total}
+          </span>
+          <span
+            className="striver-meter striver-meter-sm mc-mini"
+            role="progressbar"
+            aria-label={`${phase.title} progress`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={pct(st.fraction)}
+          >
+            <i style={{ width: `${pct(st.fraction)}%` }} />
+          </span>
+        </span>
       </button>
       {open ? (
-        <div className="mc-phase-body">
-          <ul className="mc-list">
-            {phase.items.map((item) =>
-              item.kind === "problem" ? (
-                <ProblemItem key={item.id} item={item} s={s} today={today} onTouch={onTouch} />
-              ) : (
-                <SimpleItem key={item.id} item={item} s={s} onTouch={onTouch} />
-              ),
-            )}
-          </ul>
-          <div className={"mc-gate" + (gate ? " is-done" : "")}>
-            <Check
-              checked={gate}
-              label={`Self-check for ${phase.title}`}
-              onChange={() => {
-                onTouch();
-                withCelebration(() => toggleGate(phase.id));
-              }}
-            />
-            <span>{phase.gate}</span>
-          </div>
+        <div className="striver-table-wrap">
+          <table className="striver-table mc-table">
+            <thead>
+              <tr>
+                <th className="c-order">#</th>
+                <th>Topic</th>
+                <th className="c-status">Status</th>
+                <th className="c-time">Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {phase.items.map((item, i) => (
+                <ItemRows key={item.id} item={item} n={i + 1} s={s} today={today} onTouch={onTouch} />
+              ))}
+              <tr className="mc-gate-row">
+                <td className="c-order" />
+                <td className="c-topic">
+                  <span className="mc-gate-label">Self-check</span> {phase.gate}
+                </td>
+                <td className="c-status">
+                  <StatusButton
+                    tone={gate ? "done" : "todo"}
+                    label={gate ? "Done" : "Not yet"}
+                    role="checkbox"
+                    aria-checked={gate}
+                    aria-label={`Self-check for ${phase.title}`}
+                    onClick={() => {
+                      onTouch();
+                      withCelebration(() => toggleGate(phase.id));
+                    }}
+                  />
+                </td>
+                <td className="c-time" />
+              </tr>
+            </tbody>
+          </table>
         </div>
       ) : null}
     </section>
@@ -359,109 +378,114 @@ export function MachineCodingClient() {
     allPhases.find((p) => phaseStats(p, s).done < p.items.length) ??
     allPhases.find((p) => !phaseComplete(p, s))
   )?.id;
+  const isOpen = (id: string) => toggled[id] ?? id === currentPhaseId;
+  const allOpen = level.phases.every((p) => isOpen(p.id));
   const goalMet = week >= s.weeklyGoal;
 
+  function goToNext() {
+    if (!next) return;
+    setPicked(next.levelId);
+    setToggled((t) => ({ ...t, [next.phase.id]: true }));
+    requestAnimationFrame(() =>
+      document.getElementById(`h-${next.phase.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }),
+    );
+  }
+
   return (
-    <div className="mc-page">
-      <header className="mc-header">
-        <span className="mc-eyebrow">Machine coding</span>
-        <h1>Build it, then build it faster</h1>
+    <div className="striver-page mc-page">
+      <header className="striver-header">
+        <span className="striver-eyebrow">Machine coding</span>
+        <h1>Machine coding course</h1>
+        <p className="striver-lead">
+          From classes to concurrent systems in three levels. Tick things off as you finish them, and revisits
+          come due on their own.
+        </p>
       </header>
 
-      <section className="mc-hero" aria-label="Your progress">
-        <Ring value={overall.fraction} />
-        <div className="mc-streak">
-          <div className="mc-streak-top">
-            <b>{streak}</b>
-            <span>week streak</span>
-            {best > streak ? <small>best {best}</small> : null}
+      <section className="striver-overview" aria-label="Your progress">
+        <div className="striver-overview-top">
+          <div className="striver-overview-num">
+            <b>{overall.done}</b>
+            <span>of {overall.total} finished</span>
           </div>
-          <WeekChart s={s} today={today} />
-          <div className="mc-goal">
-            <span className={goalMet ? "met" : ""}>
-              This week {week}/{s.weeklyGoal}
-              {goalMet ? " ✓" : ""}
-            </span>
-            <span className="mc-stepper" role="group" aria-label="Weekly goal">
-              <button
-                type="button"
-                aria-label="Lower the weekly goal"
-                disabled={s.weeklyGoal <= 1}
-                onClick={() => setWeeklyGoal(s.weeklyGoal - 1)}
-              >
-                −
-              </button>
-              <button
-                type="button"
-                aria-label="Raise the weekly goal"
-                disabled={s.weeklyGoal >= MAX_WEEKLY_GOAL}
-                onClick={() => setWeeklyGoal(s.weeklyGoal + 1)}
-              >
-                +
-              </button>
-            </span>
+          <div className="striver-legend" role="tablist" aria-label="Level">
+            {MC_LEVELS.map((l) => {
+              const ls = levelStats(l, s);
+              return (
+                <button
+                  key={l.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={l.id === levelId}
+                  className={"striver-legend-item" + (l.id === levelId ? " is-on" : "")}
+                  onClick={() => setPicked(l.id)}
+                >
+                  {l.name} <b>{ls.done}</b>
+                  <span className="mc-of">/{ls.total}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
-        <div className="mc-next">
-          {next ? (
-            <>
-              <span className="mc-next-label">Up next</span>
-              <strong>{next.item.title}</strong>
-              <button
-                type="button"
-                className="mc-btn"
-                onClick={() => {
-                  setPicked(next.levelId);
-                  setToggled((t) => ({ ...t, [next.phase.id]: true }));
-                  requestAnimationFrame(() =>
-                    document
-                      .getElementById(`h-${next.phase.id}`)
-                      ?.scrollIntoView({ behavior: "smooth", block: "start" }),
-                  );
-                }}
-              >
-                Go to it
-              </button>
-            </>
-          ) : (
-            <strong>All done</strong>
-          )}
-          <span className="mc-next-sub">
-            {overall.done}/{overall.total} finished
-          </span>
+        <div
+          className="striver-meter"
+          role="progressbar"
+          aria-label="Overall progress"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={pct(overall.fraction)}
+        >
+          <i className="mc-meter-fill" style={{ width: `${pct(overall.fraction)}%` }} />
+        </div>
+        <div className="mc-streak-row">
+          <div className="mc-streak">
+            <div className="mc-streak-num">
+              <b>{streak}</b>
+              <span>week streak</span>
+              {best > streak ? <small>best {best}</small> : null}
+            </div>
+            <div className="mc-goal">
+              <span className={goalMet ? "met" : ""}>
+                This week {week} of {s.weeklyGoal}
+                {goalMet ? " ✓" : ""}
+              </span>
+              <span className="mc-stepper" role="group" aria-label="Weekly goal">
+                <button
+                  type="button"
+                  aria-label="Lower the weekly goal"
+                  disabled={s.weeklyGoal <= 1}
+                  onClick={() => setWeeklyGoal(s.weeklyGoal - 1)}
+                >
+                  −
+                </button>
+                <button
+                  type="button"
+                  aria-label="Raise the weekly goal"
+                  disabled={s.weeklyGoal >= MAX_WEEKLY_GOAL}
+                  onClick={() => setWeeklyGoal(s.weeklyGoal + 1)}
+                >
+                  +
+                </button>
+              </span>
+            </div>
+          </div>
+          <WeekChart s={s} today={today} />
         </div>
       </section>
 
       {due.length ? (
-        <section className="mc-due-panel" aria-label="Revisits due">
+        <section className="mc-due" aria-label="Revisits due">
           <b>Revisit</b>
-          <ul>
-            {due.map((d) => (
-              <li key={d.itemId + d.stepId}>
-                {d.title} <span>{d.stepId === "day7" ? "day 7" : "day 28"}</span>
-                {d.overdueDays > 0 ? <em>{d.overdueDays}d late</em> : null}
-              </li>
-            ))}
-          </ul>
+          {due.map((d) => (
+            <span key={d.itemId + d.stepId} className="sched-badge is-due">
+              {d.title} · {d.stepId === "day7" ? "day 7" : "day 28"}
+              {d.overdueDays > 0 ? ` · ${d.overdueDays}d late` : ""}
+            </span>
+          ))}
         </section>
       ) : null}
 
-      <div className="mc-toolbar">
-        <div className="mc-tabs" role="tablist" aria-label="Level">
-          {MC_LEVELS.map((l) => (
-            <button
-              key={l.id}
-              type="button"
-              role="tab"
-              aria-selected={l.id === levelId}
-              className={"mc-tab" + (l.id === levelId ? " is-active" : "")}
-              onClick={() => setPicked(l.id)}
-            >
-              {l.name}
-              <small>{pct(levelStats(l, s).fraction)}%</small>
-            </button>
-          ))}
-        </div>
+      <div className="striver-bar mc-toolbar">
         <div
           className="mc-lang"
           role="group"
@@ -473,42 +497,56 @@ export function MachineCodingClient() {
               key={l}
               type="button"
               aria-pressed={s.lang === l}
-              className={s.lang === l ? "is-active" : ""}
+              className={"striver-btn" + (s.lang === l ? " is-set" : "")}
               onClick={() => setLang(l)}
             >
               {l === "python" ? "Python" : "C++"}
             </button>
           ))}
         </div>
+        <span className="mc-toolbar-gap" />
+        {next ? (
+          <button type="button" className="striver-btn striver-btn-primary" onClick={goToNext}>
+            Up next: {next.item.title}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="striver-btn"
+          onClick={() =>
+            setToggled((t) => ({ ...t, ...Object.fromEntries(level.phases.map((p) => [p.id, !allOpen])) }))
+          }
+        >
+          {allOpen ? "Collapse all" : "Expand all"}
+        </button>
       </div>
 
-      <section className="mc-level" aria-label={level.name}>
-        <div className="mc-level-head">
-          <p>{level.tagline}</p>
-          <span className="mc-weeks-est">{level.weeks}</span>
-        </div>
-        <details className="mc-know">
-          <summary>By the end you can</summary>
-          <ul>
-            {level.know.map((k) => (
-              <li key={k}>{k}</li>
-            ))}
-          </ul>
-        </details>
-        {level.phases.map((phase) => (
+      <p className="mc-level-line">
+        {level.tagline} <span>{level.weeks}</span>
+      </p>
+      <details className="mc-know">
+        <summary>By the end of {level.name} you can</summary>
+        <ul>
+          {level.know.map((k) => (
+            <li key={k}>{k}</li>
+          ))}
+        </ul>
+      </details>
+
+      <div className="striver-accordion-list">
+        {level.phases.map((phase, i) => (
           <Phase
             key={phase.id}
             phase={phase}
+            index={i}
             s={s}
             today={today}
-            open={toggled[phase.id] ?? phase.id === currentPhaseId}
-            onToggle={() =>
-              setToggled((t) => ({ ...t, [phase.id]: !(t[phase.id] ?? phase.id === currentPhaseId) }))
-            }
+            open={isOpen(phase.id)}
+            onToggle={() => setToggled((t) => ({ ...t, [phase.id]: !isOpen(phase.id) }))}
             onTouch={() => setToggled((t) => (t[phase.id] ? t : { ...t, [phase.id]: true }))}
           />
         ))}
-      </section>
+      </div>
 
       <footer className="mc-foot">
         {confirmReset ? (

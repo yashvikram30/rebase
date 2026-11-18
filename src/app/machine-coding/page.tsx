@@ -10,7 +10,11 @@ export const metadata: Metadata = {
 
 export default function MachineCodingPage() {
   return (
-    <Suspense fallback={<div className="mc-page mc-loading" role="status" aria-label="Loading the course" />}>
+    <Suspense
+      fallback={
+        <div className="striver-page striver-loading" role="status" aria-label="Loading the course" />
+      }
+    >
       <SignedInCourse />
     </Suspense>
   );

@@ -440,6 +440,12 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
 - **[built] A phase counts as complete only with every item done and its self-check ticked.** The default-open phase is the
   first one not complete, so finishing the last item never collapses the phase and hides its own self-check (found in
   browser testing).
+- **[built] The page is built from the Striver sheet's parts, so the two read as one product.** It reuses `striver-*` classes
+  (overview card, legend pills, toolbar bar, accordion cards, tables, link chips, loading shimmer), and the machine-coding
+  layout imports `striver.css`. The levels are the legend pills, each phase is an accordion card with a number badge, and items
+  are table rows with a status button. Only the status button, the weekly bars and the step panel are new (`machine-coding.css`).
+  A restyle of the Striver sheet will therefore move this page too; extracting the shared pieces into their own file is the fix
+  if the two ever need to diverge. Below 700px the `#` and time columns hide and the toolbar stops being sticky.
 - **[built] Resources are only links that were opened.** Where a video's uploader or language could not be confirmed, the row
   carries a `note`. The playlist videos are in Java; the language picker (Python or C++) filters the reference-solution links,
   and the page says to rewrite each design in the chosen language.
