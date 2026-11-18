@@ -14,10 +14,16 @@ function siteUrl(): string {
 
 export type EmailProblemItem = {
   problem: StriverProblem;
-  status: "yellow" | "red";
+  status: "yellow" | "red" | "green";
   stage: number;
   /** The review gaps this problem follows (its own, or the colour's default). */
   intervals: readonly number[];
+  /** This review's gap in days, shown in the label. */
+  days: number;
+  /** The problem's last pending review, labelled "retention" instead of "check". */
+  isLast: boolean;
+  /** The review that carries the model-written interview questions (once per problem). */
+  isQuestion: boolean;
 };
 
 export async function sendRevisionEmail({
@@ -76,10 +82,7 @@ export async function sendRevisionEmail({
   const font = "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
   const display = "'Bricolage Grotesque', Georgia, 'Times New Roman', serif";
 
-  const stageLabel = (intervals: readonly number[], stage: number) => {
-    const days = intervals[stage] ?? intervals[intervals.length - 1];
-    return `${days}-day ${stage === intervals.length - 1 ? "retention" : "check"}`;
-  };
+  const stageLabel = (days: number, isLast: boolean) => `${days}-day ${isLast ? "retention" : "check"}`;
 
   const listHtml = (title: string, qs: string[]) =>
     qs.length
@@ -96,9 +99,10 @@ export async function sendRevisionEmail({
       : "";
 
   const problemRowsHtml = items
-    .map(({ problem, status, stage, intervals }) => {
-      const dot = status === "red" ? C.red : C.yellow;
-      const how = status === "red" ? "Struggled last time" : "Needed a hint last time";
+    .map(({ problem, status, days, isLast }) => {
+      const dot = status === "red" ? C.red : status === "green" ? C.green : C.yellow;
+      const how =
+        status === "red" ? "Struggled last time" : status === "green" ? "Mastered, keeping it fresh" : "Needed a hint last time";
       const practiceUrl = problem.leetcodeLink || problem.articleLink || `${appUrl}/striver`;
 
       return `
@@ -111,7 +115,7 @@ export async function sendRevisionEmail({
                 <div style="font-size: 16px; font-weight: 700; color: ${C.ink}; line-height: 1.3;">${esc(problem.label)}</div>
                 <div style="margin-top: 3px; font-size: 13px; color: ${C.muted};">${esc(problem.topic)} &rsaquo; ${esc(problem.subtopic)}</div>
                 <div style="margin-top: 8px; font-size: 12px; font-weight: 700; color: ${C.edge};">
-                  ${stageLabel(intervals, stage)} &middot; <span style="color: ${C.muted}; font-weight: 600;">${how}</span>
+                  ${stageLabel(days, isLast)} &middot; <span style="color: ${C.muted}; font-weight: 600;">${how}</span>
                 </div>${questionsHtml(questions[problem.id])}
               </td>
               <td align="right" valign="middle" style="padding: 14px 16px 14px 0; font-family: ${font};">

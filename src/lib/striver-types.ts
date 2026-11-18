@@ -52,12 +52,16 @@ export type ProblemProgress = {
 
 export type ScheduledReview = {
   problemId: number;
-  status: "yellow" | "red";
-  stage: number; // 0 = 7d, 1 = 14d (red only), 2 = 28d
+  /** The colour the problem had when the review was set. Mastered (green) problems can carry reviews too. */
+  status: "yellow" | "red" | "green";
+  /** Unique per problem. Default schedules count 0, 1, 2, then a review added by hand takes the next number. */
+  stage: number;
   dueDate: string; // "YYYY-MM-DD"
   scheduledFor: string; // Original target date
   completed: boolean;
   completedAt?: number;
+  /** The gap in days from when the review was set (7, 28...). Absent on older reviews, which take it from the list. */
+  days?: number;
 };
 
 export type StriverStoreState = {

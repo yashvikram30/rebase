@@ -63,11 +63,12 @@ export function parseIntervals(text: string): { ok: true; intervals: number[] } 
  */
 export function createScheduleForProblem(
   problemId: number,
-  status: "yellow" | "red",
+  status: "yellow" | "red" | "green",
   fromDate: Date = new Date(),
   custom?: readonly number[],
 ): ScheduledReview[] {
-  const intervals = intervalsFor(status, custom);
+  // A mastered problem has no default list: it only gets reviews from gaps the user chose.
+  const intervals = status === "green" ? (custom ?? []) : intervalsFor(status, custom);
   const now = new Date(fromDate.getTime());
   now.setHours(0, 0, 0, 0);
 
@@ -81,8 +82,66 @@ export function createScheduleForProblem(
       dueDate: dateStr,
       scheduledFor: dateStr,
       completed: false,
+      days,
     };
   });
+}
+
+/** At most this many reviews per problem, finished ones included, so a list never grows without end. */
+export const MAX_REVIEWS_PER_PROBLEM = 12;
+
+const MS_DAY = 86_400_000;
+
+/** Whole days from one date string to another (negative when `to` is earlier). */
+export function daysBetween(from: string, to: string): number {
+  return Math.round((parseDateString(to).getTime() - parseDateString(from).getTime()) / MS_DAY);
+}
+
+/**
+ * Adds one review for a problem on a chosen date. Returns the list unchanged if the date is in the past, is not a
+ * date, already has a review for this problem, or the problem is full. `reason` says why, for the dialog to show.
+ */
+export function addReview(
+  reviews: ScheduledReview[],
+  problemId: number,
+  status: "yellow" | "red" | "green",
+  dueDate: string,
+  todayStr: string,
+): { reviews: ScheduledReview[]; added: boolean; reason?: string } {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate) || toDateString(parseDateString(dueDate)) !== dueDate) {
+    return { reviews, added: false, reason: "Pick a date." };
+  }
+  if (dueDate < todayStr) return { reviews, added: false, reason: "Pick today or a later date." };
+  const mine = reviews.filter((r) => r.problemId === problemId);
+  if (mine.some((r) => !r.completed && r.dueDate === dueDate)) {
+    return { reviews, added: false, reason: "There is already a review on that day." };
+  }
+  if (mine.length >= MAX_REVIEWS_PER_PROBLEM) {
+    return { reviews, added: false, reason: `A problem can have at most ${MAX_REVIEWS_PER_PROBLEM} reviews.` };
+  }
+  const stage = mine.reduce((m, r) => Math.max(m, r.stage), -1) + 1;
+  const days = Math.max(1, daysBetween(todayStr, dueDate));
+  const review: ScheduledReview = { problemId, status, stage, dueDate, scheduledFor: dueDate, completed: false, days };
+  return { reviews: [...reviews, review], added: true };
+}
+
+/** Removes one review of a problem, finished or not. */
+export function removeReview(reviews: ScheduledReview[], problemId: number, stage: number): ScheduledReview[] {
+  return reviews.filter((r) => !(r.problemId === problemId && r.stage === stage));
+}
+
+/** A review's gap in days: the one it carries, else the problem's list at its position, else the last gap. */
+export function reviewDays(r: ScheduledReview, intervals: readonly number[]): number {
+  return r.days ?? intervals[r.stage] ?? intervals[intervals.length - 1] ?? 0;
+}
+
+/**
+ * Which of a problem's reviews carries the interview questions: the first (by date) whose gap is 28 days or more,
+ * else the last one. `mine` is every review of that one problem.
+ */
+export function questionReview(mine: readonly ScheduledReview[], intervals: readonly number[]): ScheduledReview | undefined {
+  const sorted = [...mine].sort((a, b) => a.dueDate.localeCompare(b.dueDate) || a.stage - b.stage);
+  return sorted.find((r) => reviewDays(r, intervals) >= QUESTION_INTERVAL_DAYS) ?? sorted[sorted.length - 1];
 }
 
 /**

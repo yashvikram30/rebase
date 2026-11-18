@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  MAX_REVIEWS_PER_PROBLEM,
   addDays,
+  addReview,
   createScheduleForProblem,
+  daysBetween,
+  questionReview,
+  removeReview,
+  reviewDays,
   intervalsFor,
   isQuestionStage,
   parseIntervals,
@@ -217,5 +223,98 @@ describe("custom per-problem intervals", () => {
   it("drops stored interval lists that are not valid", () => {
     expect(sanitizeIntervals([3, 10])).toEqual([3, 10]);
     for (const bad of [undefined, [], [5, 3], [0], ["7"], [1.5], [400], "7"]) expect(sanitizeIntervals(bad)).toBeUndefined();
+  });
+});
+
+describe("reviews set by hand", () => {
+  const today = "2026-11-19";
+  const rev = (over: Partial<ScheduledReview>): ScheduledReview => ({
+    problemId: 1,
+    status: "green",
+    stage: 0,
+    dueDate: "2026-11-26",
+    scheduledFor: "2026-11-26",
+    completed: false,
+    ...over,
+  });
+
+  it("gives a mastered problem reviews only from gaps it is given", () => {
+    expect(createScheduleForProblem(5, "green", new Date(2026, 10, 19))).toEqual([]);
+    const made = createScheduleForProblem(5, "green", new Date(2026, 10, 19), [14, 60]);
+    expect(made.map((r) => [r.status, r.stage, r.dueDate, r.days])).toEqual([
+      ["green", 0, "2026-12-03", 14],
+      ["green", 1, "2027-01-18", 60],
+    ]);
+  });
+
+  it("records each default review's gap", () => {
+    expect(createScheduleForProblem(1, "yellow", new Date(2026, 10, 19)).map((r) => r.days)).toEqual([7, 28, 56]);
+  });
+
+  it("counts whole days between dates", () => {
+    expect(daysBetween("2026-11-19", "2026-11-26")).toBe(7);
+    expect(daysBetween("2026-11-19", "2026-11-19")).toBe(0);
+    expect(daysBetween("2026-11-19", "2026-11-18")).toBe(-1);
+  });
+
+  it("adds a review on a future date with the next stage number and its gap", () => {
+    const res = addReview([rev({ stage: 0 }), rev({ stage: 3, dueDate: "2026-12-30" })], 1, "green", "2026-12-05", today);
+    expect(res.added).toBe(true);
+    const added = res.reviews[res.reviews.length - 1];
+    expect(added).toMatchObject({ problemId: 1, status: "green", stage: 4, dueDate: "2026-12-05", days: 16, completed: false });
+  });
+
+  it("allows today", () => {
+    expect(addReview([], 1, "yellow", today, today).added).toBe(true);
+  });
+
+  it("refuses a past date, a bad date, a repeated day and a full problem, and says why", () => {
+    const base = [rev({})];
+    expect(addReview(base, 1, "green", "2026-11-18", today)).toMatchObject({ added: false, reviews: base });
+    expect(addReview(base, 1, "green", "2026-02-30", today).added).toBe(false);
+    expect(addReview(base, 1, "green", "soon", today).reason).toBeTruthy();
+    expect(addReview(base, 1, "green", "2026-11-26", today).reason).toMatch(/already/);
+    const full = Array.from({ length: MAX_REVIEWS_PER_PROBLEM }, (_, i) =>
+      rev({ stage: i, dueDate: addDays(new Date(2026, 11, 1), i).toISOString().slice(0, 10) }),
+    );
+    expect(addReview(full, 1, "green", "2027-06-01", today).reason).toMatch(/at most/);
+  });
+
+  it("lets a finished review's day be used again, and counts reviews per problem", () => {
+    expect(addReview([rev({ completed: true })], 1, "green", "2026-11-26", today).added).toBe(true);
+    expect(addReview([rev({ problemId: 2 })], 1, "green", "2026-11-26", today).added).toBe(true);
+  });
+
+  it("removes one review of one problem and leaves the rest", () => {
+    const list = [rev({ stage: 0 }), rev({ stage: 1 }), rev({ problemId: 2, stage: 1 })];
+    expect(removeReview(list, 1, 1).map((r) => [r.problemId, r.stage])).toEqual([
+      [1, 0],
+      [2, 1],
+    ]);
+    expect(removeReview(list, 9, 0)).toHaveLength(3);
+  });
+
+  it("reads a review's gap from itself, else from the list", () => {
+    expect(reviewDays(rev({ days: 16 }), [7, 28])).toBe(16);
+    expect(reviewDays(rev({ days: undefined, stage: 1 }), [7, 28, 56])).toBe(28);
+    expect(reviewDays(rev({ days: undefined, stage: 9 }), [7, 28, 56])).toBe(56);
+  });
+
+  it("picks the question review by gap, whatever order they were added in", () => {
+    const mine = [
+      rev({ stage: 2, dueDate: "2026-12-31", days: 42 }),
+      rev({ stage: 0, dueDate: "2026-11-26", days: 7 }),
+      rev({ stage: 1, dueDate: "2026-12-17", days: 28 }),
+    ];
+    expect(questionReview(mine, [])?.stage).toBe(1);
+    expect(questionReview([rev({ stage: 0, days: 3 }), rev({ stage: 1, dueDate: "2026-12-10", days: 10 })], [])?.stage).toBe(1);
+    expect(questionReview([], [])).toBeUndefined();
+  });
+
+  it("matches the old default for yellow and red lists without stored gaps", () => {
+    const yellow = [0, 1, 2].map((stage) => rev({ status: "yellow", stage, dueDate: `2026-12-0${stage + 1}`, days: undefined }));
+    expect(questionReview(yellow, [7, 28, 56])?.stage).toBe(1);
+    const red = [0, 1, 2, 3].map((stage) => rev({ status: "red", stage, dueDate: `2026-12-0${stage + 1}`, days: undefined }));
+    expect(questionReview(red, [7, 14, 28, 56])?.stage).toBe(2);
   });
 });

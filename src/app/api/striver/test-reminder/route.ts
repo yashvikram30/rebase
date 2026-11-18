@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   const pool = due.length > 0 ? due : active.sort((a, b) => a.dueDate.localeCompare(b.dueDate)).slice(0, 5);
   const customList = normalizeStriver({ customProblems: body.customProblems }).customProblems;
   const statuses = normalizeStriver({ statuses: body.statuses }).statuses;
-  const items = toEmailItems(pool, customList, statuses);
+  const items = toEmailItems(pool, customList, statuses, active);
   if (items.length === 0) {
     return Response.json({ ok: true, sent: false, count: 0 }, { headers: noStore });
   }

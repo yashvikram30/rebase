@@ -2,6 +2,9 @@
 import { createLocalStore, useLocalStore } from "./local-store";
 import { normalizeStriver } from "./striver-normalize";
 import {
+  addReview,
+  createScheduleForProblem,
+  removeReview,
   rescheduleMissedReviews,
   toDateString,
   updateReviewsOnStatusChange,
@@ -88,18 +91,39 @@ export function saveProblemNotes(problemId: number, notes: string) {
 
 /**
  * Sets this problem's own review gaps in days (null goes back to the colour's default). A yellow or red problem
- * has its unfinished reviews rebuilt from today; any other status just remembers the choice for next time.
+ * has its unfinished reviews rebuilt from today. A mastered problem has none by default, so a list gives it reviews
+ * at those gaps and null clears the unfinished ones. Any other status just remembers the choice for next time.
  */
 export function setProblemSchedule(problemId: number, intervals: number[] | null) {
   const cur = store.get();
   const now = Date.now();
   const existing = cur.statuses[problemId] ?? { status: "unattempted" as ProblemStatus, updatedAt: now };
   const next = { ...existing, intervals: intervals ?? undefined };
-  const reviews =
-    existing.status === "yellow" || existing.status === "red"
-      ? updateReviewsOnStatusChange(cur.reviews, problemId, existing.status, new Date(now), false, intervals ?? undefined)
-      : cur.reviews;
+  let reviews = cur.reviews;
+  if (existing.status === "yellow" || existing.status === "red") {
+    reviews = updateReviewsOnStatusChange(cur.reviews, problemId, existing.status, new Date(now), false, intervals ?? undefined);
+  } else if (existing.status === "green") {
+    const kept = cur.reviews.filter((r) => r.problemId !== problemId || r.completed);
+    reviews = intervals ? [...kept, ...createScheduleForProblem(problemId, "green", new Date(now), intervals)] : kept;
+  }
   store.set({ ...cur, statuses: { ...cur.statuses, [problemId]: next }, reviews });
+}
+
+/** Adds one review on a date for a problem that has a colour. Returns an error message, or null when it was added. */
+export function addProblemReview(problemId: number, dueDate: string): string | null {
+  const cur = store.get();
+  const status = cur.statuses[problemId]?.status;
+  if (status !== "yellow" && status !== "red" && status !== "green") return "Mark the problem first.";
+  const res = addReview(cur.reviews, problemId, status, dueDate, toDateString(new Date()));
+  if (!res.added) return res.reason ?? "Could not add that review.";
+  store.set({ ...cur, reviews: res.reviews });
+  return null;
+}
+
+/** Removes one review of a problem. */
+export function removeProblemReview(problemId: number, stage: number) {
+  const cur = store.get();
+  store.set({ ...cur, reviews: removeReview(cur.reviews, problemId, stage) });
 }
 
 export function setReminders(reminders: boolean) {
