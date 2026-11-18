@@ -63,3 +63,21 @@ describe("custom problems", () => {
     expect(normalizeStriver({ statuses: {} }).customProblems).toEqual([]);
   });
 });
+
+describe("normalizeStriver reviews set by hand", () => {
+  it("keeps a mastered review with its gap and drops an unknown colour or a bad gap", () => {
+    const s = normalizeStriver({
+      reviews: [
+        { problemId: 1, status: "green", stage: 0, dueDate: "2026-12-01", days: 14 },
+        { problemId: 1, status: "green", stage: 1, dueDate: "2026-12-09", days: 0 },
+        { problemId: 1, status: "green", stage: 2, dueDate: "2026-12-20", days: 2.5 },
+        { problemId: 1, status: "blue", stage: 3, dueDate: "2026-12-30" },
+      ],
+    });
+    expect(s.reviews.map((r) => [r.status, r.stage, r.days])).toEqual([
+      ["green", 0, 14],
+      ["green", 1, undefined],
+      ["green", 2, undefined],
+    ]);
+  });
+});

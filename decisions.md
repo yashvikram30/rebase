@@ -383,6 +383,22 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
   the default, a Fast (3/7/14/30) and a Relaxed (14/45/90) preset plus typed days. Saving rebuilds that problem's
   unfinished reviews from today and keeps completed ones; saving the default list stores nothing. The choice stays
   with the problem when its colour changes (red to yellow keeps it) until it is set back to the default.
+- **[built] A problem's reviews can be seen, added and removed one at a time, mastered problems included.** The schedule dialog
+  lists every review of the problem (finished ones too), with Remove on each, an "Add a review" date field and +3/+7/+14/+30/+60
+  day chips. These change the schedule immediately, with no Save step. "Replace all unfinished reviews" keeps the preset and
+  custom-days form: on a yellow or red problem it rebuilds from today as before; on a mastered problem it creates reviews at
+  those gaps, and empty clears the unfinished ones. A mastered problem has no default gaps, so it starts with none.
+  - **Reviews carry their own gap.** `ScheduledReview` gained `days` (the gap when it was set) and `status` can be `green`.
+    `stage` stays unique per problem, and a review added by hand takes the next number. Older reviews without `days` read
+    the gap from the problem's list at their stage (`reviewDays`).
+  - **Limits:** a review must be today or later and not on a day the problem already has a pending review; at most 12 reviews
+    per problem, finished ones counted (`addReview`).
+  - **Changing the colour still restarts the schedule.** Marking a problem yellow or red rebuilds its unfinished reviews from the
+    default list, so reviews added by hand are dropped then. Marking it green keeps them, as it always kept pending reviews.
+  - **The email follows the review, not its position.** `toEmailItems` works out `days`, `isLast` ("retention" or "check") and
+    `isQuestion` from the problem's whole list, so adding or removing a review cannot mislabel the others. The question
+    review is still the first one at 28 days or more, else the last (`questionReview`). A mastered review's email row is
+    green and says "Mastered, keeping it fresh". `isQuestionStage` is no longer used by the cron.
   - **Which review gets the interview questions:** the 28-day one, or for a custom list the first gap of 28+ days,
     else the last (`questionStageIndex`). Defaults are unchanged. The email's stage label reads the problem's own gaps.
   - The test-reminder route receives only the custom lists from the page, not every status with its notes.
@@ -456,6 +472,9 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
 ---
 
 ## Changelog
+
+- **2026-11-19:** Striver: the schedule dialog lists a problem's reviews and adds or removes them one at a time, for
+  mastered problems too. Reviews now carry their own gap, so the email labels survive edits.
 
 - **2026-11-19:** Added the machine-coding course (`/machine-coding`): three levels, 65 items, per-step progress for
   problems, derived day-7 and day-28 revisits, synced under `csplan.mc`.

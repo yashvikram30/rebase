@@ -42,7 +42,7 @@ export function normalizeStriver(raw: unknown): StriverStoreState {
       if (
         item &&
         typeof item.problemId === "number" &&
-        ["yellow", "red"].includes(item.status) &&
+        ["yellow", "red", "green"].includes(item.status) &&
         typeof item.dueDate === "string" &&
         typeof item.stage === "number"
       ) {
@@ -54,6 +54,7 @@ export function normalizeStriver(raw: unknown): StriverStoreState {
           scheduledFor: item.scheduledFor || item.dueDate,
           completed: item.completed === true,
           completedAt: typeof item.completedAt === "number" ? item.completedAt : undefined,
+          days: Number.isInteger(item.days) && item.days >= 1 && item.days <= 3650 ? item.days : undefined,
         });
       }
     }
