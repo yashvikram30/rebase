@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { BareShell } from "@/components/bare-shell";
-import "../striver/striver.css";
 import "./machine-coding.css";
 
 export const metadata: Metadata = {

@@ -87,7 +87,7 @@ function Links({ list, lang }: { list: McResource[]; lang: McState["lang"] }) {
   return visible(list, lang).map((r) => (
     <a
       key={r.url + r.label}
-      className="problem-link-icon"
+      className="mc-link"
       href={r.url}
       target="_blank"
       rel="noopener noreferrer"
@@ -148,14 +148,14 @@ function ItemRows({
           <button type="button" className="mc-title" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
             {item.title}
           </button>
-          <div className="problem-tags">
+          <div className="mc-tags">
             {chip ? (
-              <span className={`problem-diff-pill ${item.kind === "pattern" ? "diff-core" : "diff-plain"}`}>
+              <span className={`mc-pill ${item.kind === "pattern" ? "mc-pill-accent" : "mc-pill-plain"}`}>
                 {chip}
               </span>
             ) : null}
             {item.patterns?.map((p) => (
-              <span key={p} className="problem-diff-pill diff-core">
+              <span key={p} className="mc-pill mc-pill-accent">
                 {p}
               </span>
             ))}
@@ -209,9 +209,9 @@ function ItemRows({
                     />
                     <span>{st.label}</span>
                     {isDue ? (
-                      <span className="sched-badge is-due">Due now</span>
+                      <span className="mc-badge is-due">Due now</span>
                     ) : due && !ticked ? (
-                      <span className="sched-badge">Due {due.slice(5)}</span>
+                      <span className="mc-badge">Due {due.slice(5)}</span>
                     ) : null}
                   </li>
                 );
@@ -255,14 +255,11 @@ function Phase({
   const pending = !complete && st.done === st.total;
   const gate = !!s.gates[phase.id];
   return (
-    <section
-      className={"striver-topic-card" + (open ? " is-expanded" : "")}
-      aria-labelledby={`h-${phase.id}`}
-    >
-      <button type="button" className="striver-topic-head" aria-expanded={open} onClick={onToggle}>
-        <span className="striver-chevron" aria-hidden="true" />
-        <span className="striver-topic-name">
-          <span className="striver-topic-n">{index + 1}</span>
+    <section className={"mc-card" + (open ? " is-expanded" : "")} aria-labelledby={`h-${phase.id}`}>
+      <button type="button" className="mc-card-head" aria-expanded={open} onClick={onToggle}>
+        <span className="mc-chevron" aria-hidden="true" />
+        <span className="mc-card-name">
+          <span className="mc-card-n">{index + 1}</span>
           <span id={`h-${phase.id}`}>{phase.title}</span>
           {complete ? (
             <span className="mc-flag is-done">Done</span>
@@ -270,12 +267,12 @@ function Phase({
             <span className="mc-flag">Self-check</span>
           ) : null}
         </span>
-        <span className="striver-topic-meta">
-          <span className="striver-topic-counter">
+        <span className="mc-card-meta">
+          <span className="mc-card-counter">
             {st.done}/{st.total}
           </span>
           <span
-            className="striver-meter striver-meter-sm mc-mini"
+            className="mc-meter mc-meter-sm"
             role="progressbar"
             aria-label={`${phase.title} progress`}
             aria-valuemin={0}
@@ -287,8 +284,8 @@ function Phase({
         </span>
       </button>
       {open ? (
-        <div className="striver-table-wrap">
-          <table className="striver-table mc-table">
+        <div className="mc-table-wrap">
+          <table className="mc-table">
             <thead>
               <tr>
                 <th className="c-order">#</th>
@@ -392,23 +389,23 @@ export function MachineCodingClient() {
   }
 
   return (
-    <div className="striver-page mc-page">
-      <header className="striver-header">
-        <span className="striver-eyebrow">Machine coding</span>
+    <div className="mc-page">
+      <header className="mc-header">
+        <span className="mc-eyebrow">Machine coding</span>
         <h1>Machine coding course</h1>
-        <p className="striver-lead">
+        <p className="mc-lead">
           From classes to concurrent systems in three levels. Tick things off as you finish them, and revisits
           come due on their own.
         </p>
       </header>
 
-      <section className="striver-overview" aria-label="Your progress">
-        <div className="striver-overview-top">
-          <div className="striver-overview-num">
+      <section className="mc-overview" aria-label="Your progress">
+        <div className="mc-overview-top">
+          <div className="mc-overview-num">
             <b>{overall.done}</b>
             <span>of {overall.total} finished</span>
           </div>
-          <div className="striver-legend" role="tablist" aria-label="Level">
+          <div className="mc-legend" role="tablist" aria-label="Level">
             {MC_LEVELS.map((l) => {
               const ls = levelStats(l, s);
               return (
@@ -417,7 +414,7 @@ export function MachineCodingClient() {
                   type="button"
                   role="tab"
                   aria-selected={l.id === levelId}
-                  className={"striver-legend-item" + (l.id === levelId ? " is-on" : "")}
+                  className={"mc-legend-item" + (l.id === levelId ? " is-on" : "")}
                   onClick={() => setPicked(l.id)}
                 >
                   {l.name} <b>{ls.done}</b>
@@ -428,7 +425,7 @@ export function MachineCodingClient() {
           </div>
         </div>
         <div
-          className="striver-meter"
+          className="mc-meter"
           role="progressbar"
           aria-label="Overall progress"
           aria-valuemin={0}
@@ -477,7 +474,7 @@ export function MachineCodingClient() {
         <section className="mc-due" aria-label="Revisits due">
           <b>Revisit</b>
           {due.map((d) => (
-            <span key={d.itemId + d.stepId} className="sched-badge is-due">
+            <span key={d.itemId + d.stepId} className="mc-badge is-due">
               {d.title} · {d.stepId === "day7" ? "day 7" : "day 28"}
               {d.overdueDays > 0 ? ` · ${d.overdueDays}d late` : ""}
             </span>
@@ -485,7 +482,7 @@ export function MachineCodingClient() {
         </section>
       ) : null}
 
-      <div className="striver-bar mc-toolbar">
+      <div className="mc-toolbar">
         <div
           className="mc-lang"
           role="group"
@@ -497,7 +494,7 @@ export function MachineCodingClient() {
               key={l}
               type="button"
               aria-pressed={s.lang === l}
-              className={"striver-btn" + (s.lang === l ? " is-set" : "")}
+              className={"mc-btn" + (s.lang === l ? " is-set" : "")}
               onClick={() => setLang(l)}
             >
               {l === "python" ? "Python" : "C++"}
@@ -506,13 +503,13 @@ export function MachineCodingClient() {
         </div>
         <span className="mc-toolbar-gap" />
         {next ? (
-          <button type="button" className="striver-btn striver-btn-primary" onClick={goToNext}>
+          <button type="button" className="mc-btn mc-btn-primary" onClick={goToNext}>
             Up next: {next.item.title}
           </button>
         ) : null}
         <button
           type="button"
-          className="striver-btn"
+          className="mc-btn"
           onClick={() =>
             setToggled((t) => ({ ...t, ...Object.fromEntries(level.phases.map((p) => [p.id, !allOpen])) }))
           }
@@ -533,7 +530,7 @@ export function MachineCodingClient() {
         </ul>
       </details>
 
-      <div className="striver-accordion-list">
+      <div className="mc-accordion">
         {level.phases.map((phase, i) => (
           <Phase
             key={phase.id}
