@@ -420,9 +420,39 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
 - **[open] The cron uses the UTC date, the browser uses its local date,** so a due review can show a few hours
   earlier or later than the email. Storing the user's timezone on the row would fix it.
 
+## 14. Machine coding course
+
+- **[built] A curriculum as static data, progress as a synced local store.** `src/data/machine-coding.ts` holds three levels
+  (SDE-1, SDE-2, Beyond SDE-2), each a list of phases of items (concept, pattern, method, problem). Progress is
+  `csplan.mc` (in `SYNC_KEYS`), built on `createLocalStore`, so it is stored per user in the same sync collection as the
+  Striver sheet. The page requires sign-in, like Striver, so progress always lands on the account.
+- **[built] Ids are stable strings and the store drops unknown ones on load** (`normalizeMc`), so rewording or removing an
+  item never corrupts saved progress. Concept, pattern and method items are a tick. A problem has five steps (cold attempt,
+  compare, refactor, day 7, day 28), and counts as done only when all five are ticked.
+- **[built] The streak is weekly, not daily.** Weeks run Monday to Sunday. A week counts when it has at least `weeklyGoal`
+  ticks (default 3, 1 to 14, stored in `csplan.mc`). Concept ticks, problem steps and phase self-checks all count, and
+  unticking removes the tick. The streak is consecutive counted weeks; the current week stays open, so a week still short of
+  the goal does not break a streak that ran up to last week. The hero shows the last ten weeks as bars with the goal line.
+- **[built] SDE-1 ends with a wildcard problem.** The list is not exhaustive, so one slot is an unseen problem done cold.
+- **[built] Revisits are derived, not scheduled.** The day-7 and day-28 steps come due relative to when the cold attempt was
+  ticked (`dueSteps`). There is no email and no review queue; the page shows a "Revisit today" panel. Reusing Striver's
+  review engine was considered and left out: it models colours, not steps.
+- **[built] A phase counts as complete only with every item done and its self-check ticked.** The default-open phase is the
+  first one not complete, so finishing the last item never collapses the phase and hides its own self-check (found in
+  browser testing).
+- **[built] Resources are only links that were opened.** Where a video's uploader or language could not be confirmed, the row
+  carries a `note`. The playlist videos are in Java; the language picker (Python or C++) filters the reference-solution links,
+  and the page says to rewrite each design in the chosen language.
+- **[open] Reference-solution folders are linked per language, not per problem.** Whether every problem has a Python and a C++
+  solution in awesome-low-level-design was not checked.
+- **[open] The algomaster.io lessons that awesome-low-level-design links to were not checked for free access.**
+
 ---
 
 ## Changelog
+
+- **2026-11-19:** Added the machine-coding course (`/machine-coding`): three levels, 65 items, per-step progress for
+  problems, derived day-7 and day-28 revisits, synced under `csplan.mc`.
 
 - **2026-11-16:** Striver: per-problem custom review gaps (`intervals`), edited from the schedule cell. The weekday
   picker for the email was built by mistake and reverted the same day.

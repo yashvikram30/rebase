@@ -34,6 +34,7 @@ const SECTIONS: { name: string; links: SideLink[] }[] = [
     links: [
       { href: "/striver", label: "Striver 180" },
       { href: "/striver/drill", label: "Daily drill" },
+      { href: "/machine-coding", label: "Machine coding" },
     ],
   },
 ];

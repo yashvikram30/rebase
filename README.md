@@ -6,6 +6,7 @@ Practice for AI-enabled engineering interviews, and a free 16-week course on how
 - **Debug.** 42 broken programs with failing tests (16 easy, 21 medium, 5 hard). Seven of them break in three separate ways at once, so several tests fail for different reasons, as in a real round. Fix them in an in-browser editor that runs Python, or read an agent's session and decide whether you would approve its patch. An assistant gives hints (never the fix), and a mentor report reviews how you worked at the end.
 
 - **Striver.** A tracker for the Striver 180 DSA sheet, for signed-in users. Mark each problem green, yellow or red; yellow and red queue spaced reviews (yellow at 7, 28 and 56 days, red at 7, 14, 28 and 56) that move to quieter days when you miss them. Click the gaps under a problem's date to give it its own schedule (a preset or your own days, e.g. 3, 10, 30). You can add your own problems to any section, and they sync with your progress. A daily email lists what is due.
+- **Machine coding.** A three-level course (SDE-1, SDE-2, Beyond) with 65 items: OOP, SOLID, the patterns that matter, concurrency, persistence and 31 timed problems. Each problem is a five-step loop (cold attempt, compare, refactor, rewrite in your other language at day 7, timed re-attempt at day 28). Tick things to move the progress ring, phase bars, streak and the "Up next" card; revisits show up when they come due. Open to everyone, and synced to your account when you sign in.
 
 Progress, revision cards and notes live in your browser first, and sync to your account if you sign in.
 
@@ -92,6 +93,7 @@ The app deploys to Vercel from `main`. Only the first two weeks of lesson pages 
 - `data/debug/`: the Debug cases. The answer key never leaves the server.
 - `src/data/revision/`: revision questions and cards.
 - `src/app/(learn)`, `(debug)`, `(workbench)`, `(account)`, `(platform)`: one route group per area, so each brings its own shell.
+- `src/app/machine-coding`, `src/components/machine-coding`, `src/data/machine-coding.ts`, `src/lib/mc-*.ts`: the machine-coding course, its curriculum data, store and progress maths.
 - `src/app/striver`, `src/components/striver`, `src/lib/striver-*.ts`: the Striver sheet, store and review schedule. `src/lib/email.ts` and `src/lib/interview-questions.ts` build the daily email.
 - `src/lib/debug-agent.ts`: the assistant's prompt and hint ladder. `src/lib/agent-reply.ts` strips fixes from replies.
 - `decisions.md`: why things are the way they are, with a changelog. Update it when a decision changes.

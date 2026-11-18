@@ -10,6 +10,7 @@ export const SYNC_KEYS = [
   "csplan.debug.drafts",
   "csplan.striver",
   "csplan.drill",
+  "csplan.mc",
 ] as const;
 export type SyncKey = (typeof SYNC_KEYS)[number];
 
