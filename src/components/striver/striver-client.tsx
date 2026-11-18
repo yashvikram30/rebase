@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useHydrated } from "@/lib/plan-store";
-import { toDateString } from "@/lib/striver-schedule";
+import { intervalsFor, toDateString } from "@/lib/striver-schedule";
 import {
   addCustomProblem,
   checkAndLevelMissedReviews,
@@ -10,11 +10,13 @@ import {
   migrateLegacyCustomProblems,
   saveProblemNotes,
   setProblemStatus,
+  setProblemSchedule,
   setReminders,
   useStriver,
 } from "@/lib/striver-store";
 import type { ProblemStatus, StriverProblem } from "@/lib/striver-types";
 import { compareProblemNumbers } from "@/lib/striver-types";
+import { ScheduleDialog } from "./schedule-dialog";
 import { StatusMenu } from "./status-menu";
 import { TopicMenu } from "./topic-menu";
 import { SelectMenu } from "./select-menu";
@@ -47,6 +49,9 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
   const [testState, setTestState] = useState<{ busy: boolean; msg: string | null }>({ busy: false, msg: null });
   // Set when marking green would leave reviews queued: the user is asked once whether to keep them.
   const [greenAsk, setGreenAsk] = useState<{ problem: StriverProblem; queued: number } | null>(null);
+
+  // The problem whose review gaps are being edited.
+  const [scheduleFor, setScheduleFor] = useState<StriverProblem | null>(null);
 
   // Add Problem modal state
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -275,6 +280,11 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
           reviews: store.reviews,
           today: toDateString(new Date()),
           customProblems: userProblems,
+          statuses: Object.fromEntries(
+            Object.entries(store.statuses)
+              .filter(([, v]) => v.intervals)
+              .map(([id, v]) => [id, { status: v.status, updatedAt: v.updatedAt, intervals: v.intervals }]),
+          ),
         }),
       });
       const data = await res.json();
@@ -573,6 +583,8 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
                                     status={store.statuses[p.id]?.status ?? "unattempted"}
                                     notes={store.statuses[p.id]?.notes}
                                     next={nextReviewByProblem.get(p.id)}
+                                    customIntervals={store.statuses[p.id]?.intervals}
+                                    onEditSchedule={() => setScheduleFor(p)}
                                     onSelect={(status) => chooseStatus(p, status)}
                                     notesOpen={Boolean(openNotes[p.id])}
                                     onToggleNotes={() => setOpenNotes((prev) => ({ ...prev, [p.id]: !prev[p.id] }))}
@@ -625,6 +637,16 @@ export function StriverClient({ problems, email }: { problems: StriverProblem[];
             </div>
           </div>
         </div>
+      )}
+
+      {scheduleFor && (store.statuses[scheduleFor.id]?.status === "yellow" || store.statuses[scheduleFor.id]?.status === "red") && (
+        <ScheduleDialog
+          label={scheduleFor.label}
+          status={store.statuses[scheduleFor.id].status as "yellow" | "red"}
+          custom={store.statuses[scheduleFor.id]?.intervals}
+          onSave={(intervals) => setProblemSchedule(scheduleFor.id, intervals)}
+          onClose={() => setScheduleFor(null)}
+        />
       )}
 
       {addModalOpen && (
@@ -868,6 +890,8 @@ function ProblemRow({
   notes,
   next,
   onSelect,
+  customIntervals,
+  onEditSchedule,
   notesOpen,
   onToggleNotes,
   onDeleteCustom,
@@ -876,6 +900,8 @@ function ProblemRow({
   status: ProblemStatus;
   notes?: string;
   next?: Next;
+  customIntervals?: number[];
+  onEditSchedule: () => void;
   onSelect: (status: ProblemStatus) => void;
   notesOpen: boolean;
   onToggleNotes: () => void;
@@ -942,12 +968,27 @@ function ProblemRow({
       <td className="c-schedule">
         {status === "green" ? (
           <span className="sched-badge is-mastered">Mastered</span>
-        ) : status === "unattempted" || !next ? (
+        ) : status === "unattempted" ? (
           <span className="sched-none">—</span>
         ) : (
-          <span className={"sched-badge" + (next.isDueToday ? " is-due" : next.isOverdue ? " is-overdue" : "")}>
-            {next.isDueToday ? "Today" : next.isOverdue ? `Overdue · ${next.dueDate}` : next.dueDate}
-          </span>
+          <div className="sched-stack">
+            {next ? (
+              <span className={"sched-badge" + (next.isDueToday ? " is-due" : next.isOverdue ? " is-overdue" : "")}>
+                {next.isDueToday ? "Today" : next.isOverdue ? `Overdue · ${next.dueDate}` : next.dueDate}
+              </span>
+            ) : (
+              <span className="sched-none">Done</span>
+            )}
+            <button
+              type="button"
+              className={"sched-edit" + (customIntervals ? " is-custom" : "")}
+              title={`Change the review schedule for ${p.label}`}
+              aria-label={`Review schedule for ${p.label}: ${intervalsFor(status, customIntervals).join(", ")} days. Change`}
+              onClick={onEditSchedule}
+            >
+              {intervalsFor(status, customIntervals).join(" · ")}d{customIntervals ? " ✎" : ""}
+            </button>
+          </div>
         )}
       </td>
       <td className="c-notes">

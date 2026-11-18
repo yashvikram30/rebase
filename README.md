@@ -5,7 +5,7 @@ Practice for AI-enabled engineering interviews, and a free 16-week course on how
 - **Learn.** A 64-day course: each day has a short lesson, curated links, a small build, an engineering step and a check, plus revision cards, linked notes and a schedule that adapts when you fall behind.
 - **Debug.** 42 broken programs with failing tests (16 easy, 21 medium, 5 hard). Seven of them break in three separate ways at once, so several tests fail for different reasons, as in a real round. Fix them in an in-browser editor that runs Python, or read an agent's session and decide whether you would approve its patch. An assistant gives hints (never the fix), and a mentor report reviews how you worked at the end.
 
-- **Striver.** A tracker for the Striver 180 DSA sheet, for signed-in users. Mark each problem green, yellow or red; yellow and red queue spaced reviews (yellow at 7, 28 and 56 days, red at 7, 14, 28 and 56) that move to quieter days when you miss them. You can add your own problems to any section, and they sync with your progress. A daily email lists what is due.
+- **Striver.** A tracker for the Striver 180 DSA sheet, for signed-in users. Mark each problem green, yellow or red; yellow and red queue spaced reviews (yellow at 7, 28 and 56 days, red at 7, 14, 28 and 56) that move to quieter days when you miss them. Click the gaps under a problem's date to give it its own schedule (a preset or your own days, e.g. 3, 10, 30). You can add your own problems to any section, and they sync with your progress. A daily email lists what is due.
 
 Progress, revision cards and notes live in your browser first, and sync to your account if you sign in.
 

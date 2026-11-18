@@ -21,6 +21,19 @@ describe("normalizeStriver", () => {
   });
 });
 
+describe("normalizeStriver intervals", () => {
+  it("keeps a valid custom schedule and discards an invalid one", () => {
+    const s = normalizeStriver({
+      statuses: {
+        1: { status: "red", updatedAt: 5, intervals: [3, 10, 30] },
+        2: { status: "yellow", updatedAt: 5, intervals: [30, 10] },
+      },
+    });
+    expect(s.statuses[1].intervals).toEqual([3, 10, 30]);
+    expect(s.statuses[2].intervals).toBeUndefined();
+  });
+});
+
 describe("createScheduleForProblem", () => {
   it("does not change the date it was given", () => {
     const from = new Date(2026, 9, 28, 15, 30);

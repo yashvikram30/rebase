@@ -46,6 +46,8 @@ export type ProblemProgress = {
   status: ProblemStatus;
   updatedAt: number;
   notes?: string;
+  /** This problem's own review gaps in days from marking it (e.g. [3, 10, 30]). Absent means the status default. */
+  intervals?: number[];
 };
 
 export type ScheduledReview = {

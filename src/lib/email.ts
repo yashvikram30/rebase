@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 import type { InterviewExtras } from "./interview-questions";
-import { RED_INTERVALS_DAYS, YELLOW_INTERVALS_DAYS, type StriverProblem } from "./striver-types";
+import type { StriverProblem } from "./striver-types";
 
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -16,6 +16,8 @@ export type EmailProblemItem = {
   problem: StriverProblem;
   status: "yellow" | "red";
   stage: number;
+  /** The review gaps this problem follows (its own, or the colour's default). */
+  intervals: readonly number[];
 };
 
 export async function sendRevisionEmail({
@@ -74,8 +76,7 @@ export async function sendRevisionEmail({
   const font = "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
   const display = "'Bricolage Grotesque', Georgia, 'Times New Roman', serif";
 
-  const stageLabel = (status: "yellow" | "red", stage: number) => {
-    const intervals = status === "red" ? RED_INTERVALS_DAYS : YELLOW_INTERVALS_DAYS;
+  const stageLabel = (intervals: readonly number[], stage: number) => {
     const days = intervals[stage] ?? intervals[intervals.length - 1];
     return `${days}-day ${stage === intervals.length - 1 ? "retention" : "check"}`;
   };
@@ -95,7 +96,7 @@ export async function sendRevisionEmail({
       : "";
 
   const problemRowsHtml = items
-    .map(({ problem, status, stage }) => {
+    .map(({ problem, status, stage, intervals }) => {
       const dot = status === "red" ? C.red : C.yellow;
       const how = status === "red" ? "Struggled last time" : "Needed a hint last time";
       const practiceUrl = problem.leetcodeLink || problem.articleLink || `${appUrl}/striver`;
@@ -110,7 +111,7 @@ export async function sendRevisionEmail({
                 <div style="font-size: 16px; font-weight: 700; color: ${C.ink}; line-height: 1.3;">${esc(problem.label)}</div>
                 <div style="margin-top: 3px; font-size: 13px; color: ${C.muted};">${esc(problem.topic)} &rsaquo; ${esc(problem.subtopic)}</div>
                 <div style="margin-top: 8px; font-size: 12px; font-weight: 700; color: ${C.edge};">
-                  ${stageLabel(status, stage)} &middot; <span style="color: ${C.muted}; font-weight: 600;">${how}</span>
+                  ${stageLabel(intervals, stage)} &middot; <span style="color: ${C.muted}; font-weight: 600;">${how}</span>
                 </div>${questionsHtml(questions[problem.id])}
               </td>
               <td align="right" valign="middle" style="padding: 14px 16px 14px 0; font-family: ${font};">

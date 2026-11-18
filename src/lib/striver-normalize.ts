@@ -1,3 +1,4 @@
+import { sanitizeIntervals } from "./striver-schedule";
 import type {
   ProblemProgress,
   StriverProblem,
@@ -29,6 +30,7 @@ export function normalizeStriver(raw: unknown): StriverStoreState {
           status: v.status as ProblemStatus,
           updatedAt: typeof v.updatedAt === "number" ? v.updatedAt : Date.now(),
           notes: typeof v.notes === "string" ? v.notes.slice(0, 4000) : undefined,
+          intervals: sanitizeIntervals(v.intervals),
         };
       }
     }

@@ -39,6 +39,7 @@ export function setProblemStatus(
       status,
       updatedAt: now,
       notes: notes !== undefined ? notes : cur.statuses[problemId]?.notes,
+      intervals: cur.statuses[problemId]?.intervals,
     },
   };
 
@@ -49,6 +50,7 @@ export function setProblemStatus(
     status,
     new Date(now),
     clearPending,
+    cur.statuses[problemId]?.intervals,
   );
 
   // If there was an active review due today or overdue for this problem, mark it as completed
@@ -82,6 +84,22 @@ export function saveProblemNotes(problemId: number, notes: string) {
       },
     });
   }
+}
+
+/**
+ * Sets this problem's own review gaps in days (null goes back to the colour's default). A yellow or red problem
+ * has its unfinished reviews rebuilt from today; any other status just remembers the choice for next time.
+ */
+export function setProblemSchedule(problemId: number, intervals: number[] | null) {
+  const cur = store.get();
+  const now = Date.now();
+  const existing = cur.statuses[problemId] ?? { status: "unattempted" as ProblemStatus, updatedAt: now };
+  const next = { ...existing, intervals: intervals ?? undefined };
+  const reviews =
+    existing.status === "yellow" || existing.status === "red"
+      ? updateReviewsOnStatusChange(cur.reviews, problemId, existing.status, new Date(now), false, intervals ?? undefined)
+      : cur.reviews;
+  store.set({ ...cur, statuses: { ...cur.statuses, [problemId]: next }, reviews });
 }
 
 export function setReminders(reminders: boolean) {

@@ -651,6 +651,61 @@
 .sched-none {
   color: var(--muted);
 }
+.sched-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.sched-edit {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: 600 11.5px var(--sans);
+  cursor: pointer;
+}
+.sched-edit:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+.sched-edit.is-custom { color: var(--accent-text, var(--accent)); }
+.sched-edit:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- per-problem review schedule dialog ---------- */
+.striver-sched { width: min(460px, 100%); }
+.striver-sched-presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.striver-sched-preset {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font: 400 12.5px var(--sans);
+  cursor: pointer;
+}
+.striver-sched-preset b { font-weight: 650; font-size: 13px; }
+.striver-sched-preset span { color: var(--muted); }
+.striver-sched-preset.is-on {
+  border-color: var(--hot, var(--accent));
+  background: var(--accent-soft, var(--bg-hover));
+}
+.striver-sched-preset:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.striver-sched-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+.striver-sched-field span { font: 650 13px var(--sans); }
+.striver-sched-field input {
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: 500 14px var(--mono, monospace);
+}
+.striver-sched-field input[aria-invalid="true"] { border-color: var(--st-red); }
+.striver-sched-field small { color: var(--muted); font: 400 12px var(--sans); }
+.striver-ask p.striver-sched-error { min-height: 18px; margin: 0 0 10px; color: var(--st-red-text); font-weight: 600; font-size: 13px; }
 
 .notes-btn {
   padding: 3px 9px;

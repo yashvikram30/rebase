@@ -57,12 +57,12 @@ export async function GET(req: Request) {
       // Only the address recorded from the user's own session is ever used.
       if (!row.email || !state.reminders) continue;
 
-      const items = toEmailItems(reviews.filter((r) => !r.completed && r.dueDate === todayStr), state.customProblems);
+      const items = toEmailItems(reviews.filter((r) => !r.completed && r.dueDate === todayStr), state.customProblems, state.statuses);
       if (items.length === 0) continue;
 
       // Questions go only on a problem's 28-day review, and only once: a problem already in `questioned` is skipped.
       const already = new Set(row.questioned ?? []);
-      const askFor = items.filter((i) => isQuestionStage(i.status, i.stage) && !already.has(i.problem.id));
+      const askFor = items.filter((i) => isQuestionStage(i.status, i.stage, i.intervals) && !already.has(i.problem.id));
       const questions = askFor.length > 0 ? await generateInterviewQuestions(askFor) : {};
       const missing = askFor.filter((i) => !questions[i.problem.id]).map((i) => i.problem.id);
       if (missing.length > 0) {

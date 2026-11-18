@@ -377,6 +377,15 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
 - **[built] One scheduler.** Vercel Cron (`vercel.json`, 00:00 UTC = 09:00 JST, sends `Authorization: Bearer $CRON_SECRET`) calls
   `GET /api/cron/reminders`. On Hobby the run lands anywhere in that hour (09:00 to 09:59 JST). The GitHub Actions
   workflow that also fired at 08:00 UTC was removed: it sent every user two emails a day.
+- **[built] Each problem can have its own review gaps.** `intervals` on the problem's status record (days from today,
+  1-6 whole numbers, strictly increasing, at most 365; `sanitizeIntervals` drops anything else on load) replaces the
+  colour's default for that problem. The schedule cell of a yellow or red row shows the gaps and opens a dialog with
+  the default, a Fast (3/7/14/30) and a Relaxed (14/45/90) preset plus typed days. Saving rebuilds that problem's
+  unfinished reviews from today and keeps completed ones; saving the default list stores nothing. The choice stays
+  with the problem when its colour changes (red to yellow keeps it) until it is set back to the default.
+  - **Which review gets the interview questions:** the 28-day one, or for a custom list the first gap of 28+ days,
+    else the last (`questionStageIndex`). Defaults are unchanged. The email's stage label reads the problem's own gaps.
+  - The test-reminder route receives only the custom lists from the page, not every status with its notes.
 - **[built] Marking green never deletes the queue silently.** Yellow gives reviews at +7, +28 and +56 days, red at
   +7, +14, +28 and +56. If a problem still has reviews queued when it is marked green, the page asks once: keep the reminders
   (the default, also for the due review, which is completed either way), remove them, or cancel. Only a reset to
@@ -414,6 +423,9 @@ base64url(HMAC-SHA256(payload, AUTH_SECRET))`, verified with `timingSafeEqual` a
 ---
 
 ## Changelog
+
+- **2026-11-16:** Striver: per-problem custom review gaps (`intervals`), edited from the schedule cell. The weekday
+  picker for the email was built by mistake and reverted the same day.
 
 - **2026-11-13:** Striver: added the daily drill (`/striver/drill`), a static model-drafted card bank, and the
   `csplan.drill` sync key.

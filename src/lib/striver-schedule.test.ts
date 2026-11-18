@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   addDays,
   createScheduleForProblem,
+  intervalsFor,
   isQuestionStage,
+  parseIntervals,
+  questionStageIndex,
+  sanitizeIntervals,
   parseDateString,
   rescheduleMissedReviews,
   toDateString,
@@ -168,5 +172,50 @@ describe("isQuestionStage", () => {
   it("picks the 28-day review for each colour", () => {
     expect([0, 1, 2].map((s) => isQuestionStage("yellow", s))).toEqual([false, true, false]);
     expect([0, 1, 2, 3].map((s) => isQuestionStage("red", s))).toEqual([false, false, true, false]);
+  });
+});
+
+describe("custom per-problem intervals", () => {
+  const from = new Date(2026, 10, 16);
+
+  it("builds the schedule from the problem's own gaps", () => {
+    const r = createScheduleForProblem(5, "red", from, [3, 10, 30]);
+    expect(r.map((x) => x.dueDate)).toEqual(["2026-11-19", "2026-11-26", "2026-12-16"]);
+    expect(r.map((x) => x.stage)).toEqual([0, 1, 2]);
+  });
+
+  it("falls back to the colour's default without custom gaps", () => {
+    expect(intervalsFor("yellow")).toEqual([7, 28, 56]);
+    expect(intervalsFor("red", [])).toEqual([7, 14, 28, 56]);
+    expect(createScheduleForProblem(5, "yellow", from)).toHaveLength(3);
+  });
+
+  it("rebuilds only unfinished reviews with the new gaps, keeping completed ones", () => {
+    const done = { ...createScheduleForProblem(5, "yellow", from)[0], completed: true };
+    const pending = createScheduleForProblem(5, "yellow", from).slice(1);
+    const other = createScheduleForProblem(6, "red", from);
+    const out = updateReviewsOnStatusChange([done, ...pending, ...other], 5, "yellow", from, false, [2, 5]);
+    expect(out.filter((r) => r.problemId === 5 && !r.completed).map((r) => r.dueDate)).toEqual(["2026-11-18", "2026-11-21"]);
+    expect(out.filter((r) => r.problemId === 5 && r.completed)).toHaveLength(1);
+    expect(out.filter((r) => r.problemId === 6)).toHaveLength(4);
+  });
+
+  it("puts the interview questions on the 28-day review, or the first gap of 28+ days, else the last", () => {
+    expect(questionStageIndex([7, 28, 56])).toBe(1);
+    expect(questionStageIndex([3, 10, 30, 90])).toBe(2);
+    expect(questionStageIndex([2, 5, 9])).toBe(2);
+    expect([0, 1, 2].map((s) => isQuestionStage("yellow", s, [3, 10, 30]))).toEqual([false, false, true]);
+  });
+
+  it("parses and validates typed gaps", () => {
+    expect(parseIntervals("3, 10 30")).toEqual({ ok: true, intervals: [3, 10, 30] });
+    for (const bad of ["", "abc", "0, 5", "5, 5", "10, 3", "1.5", "400", "1,2,3,4,5,6,7"]) {
+      expect(parseIntervals(bad).ok).toBe(false);
+    }
+  });
+
+  it("drops stored interval lists that are not valid", () => {
+    expect(sanitizeIntervals([3, 10])).toEqual([3, 10]);
+    for (const bad of [undefined, [], [5, 3], [0], ["7"], [1.5], [400], "7"]) expect(sanitizeIntervals(bad)).toBeUndefined();
   });
 });

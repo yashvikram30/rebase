@@ -22,17 +22,52 @@ export function addDays(date: Date, days: number): Date {
   return next;
 }
 
+export const MAX_INTERVALS = 6;
+export const MAX_INTERVAL_DAYS = 365;
+
+/** The review gaps for a status: the problem's own list when it has one, else the default for that colour. */
+export function intervalsFor(status: "yellow" | "red", custom?: readonly number[]): readonly number[] {
+  if (custom && custom.length > 0) return custom;
+  return status === "yellow" ? YELLOW_INTERVALS_DAYS : RED_INTERVALS_DAYS;
+}
+
+/** Keeps a stored interval list only if it is 1-6 whole days, each 1-365 and strictly increasing; else undefined. */
+export function sanitizeIntervals(raw: unknown): number[] | undefined {
+  if (!Array.isArray(raw) || raw.length === 0 || raw.length > MAX_INTERVALS) return undefined;
+  let prev = 0;
+  for (const d of raw) {
+    if (!Number.isInteger(d) || d <= prev || d > MAX_INTERVAL_DAYS) return undefined;
+    prev = d;
+  }
+  return [...raw];
+}
+
+/** Reads "3, 10, 30" (commas or spaces) into an interval list, or says what is wrong with it. */
+export function parseIntervals(text: string): { ok: true; intervals: number[] } | { ok: false; error: string } {
+  const parts = text.split(/[\s,]+/).filter(Boolean);
+  if (parts.length === 0) return { ok: false, error: "Enter at least one number of days." };
+  if (parts.length > MAX_INTERVALS) return { ok: false, error: `Use at most ${MAX_INTERVALS} reviews.` };
+  const nums = parts.map((x) => (/^\d+$/.test(x) ? Number(x) : NaN));
+  if (nums.some((n) => !Number.isInteger(n) || n < 1 || n > MAX_INTERVAL_DAYS)) {
+    return { ok: false, error: `Each gap must be a whole number from 1 to ${MAX_INTERVAL_DAYS} days.` };
+  }
+  for (let i = 1; i < nums.length; i++) {
+    if (nums[i] <= nums[i - 1]) return { ok: false, error: "Gaps must get longer, e.g. 3, 10, 30." };
+  }
+  return { ok: true, intervals: nums };
+}
+
 /**
  * Creates scheduled reviews for a newly classified problem.
- * Yellow: +7d, +28d
- * Red: +7d, +14d, +28d
+ * Default yellow: +7d, +28d, +56d. Default red: +7d, +14d, +28d, +56d. `custom` replaces those gaps.
  */
 export function createScheduleForProblem(
   problemId: number,
   status: "yellow" | "red",
   fromDate: Date = new Date(),
+  custom?: readonly number[],
 ): ScheduledReview[] {
-  const intervals = status === "yellow" ? YELLOW_INTERVALS_DAYS : RED_INTERVALS_DAYS;
+  const intervals = intervalsFor(status, custom);
   const now = new Date(fromDate.getTime());
   now.setHours(0, 0, 0, 0);
 
@@ -54,7 +89,8 @@ export function createScheduleForProblem(
  * Updates an existing review list when a problem's status changes.
  * - Unattempted (reset): clears all active uncompleted reviews for this problem.
  * - Green: keeps the pending reviews unless `clearPending` is set (the user chose to drop them).
- * - Yellow / red: clears uncompleted reviews for this problem and creates the new schedule.
+ * - Yellow / red: clears uncompleted reviews for this problem and creates the new schedule
+ *   (from the problem's own gaps when `custom` is given).
  */
 export function updateReviewsOnStatusChange(
   currentReviews: ScheduledReview[],
@@ -62,6 +98,7 @@ export function updateReviewsOnStatusChange(
   newStatus: ProblemStatus,
   fromDate: Date = new Date(),
   clearPending = false,
+  custom?: readonly number[],
 ): ScheduledReview[] {
   if (newStatus === "green" && !clearPending) return currentReviews;
 
@@ -72,7 +109,7 @@ export function updateReviewsOnStatusChange(
     return filtered;
   }
 
-  const newReviews = createScheduleForProblem(problemId, newStatus, fromDate);
+  const newReviews = createScheduleForProblem(problemId, newStatus, fromDate, custom);
   return [...filtered, ...newReviews];
 }
 
@@ -162,8 +199,13 @@ export function getDueReviews(
 /** The review whose interval is this many days gets the model-written interview questions (once per problem). */
 export const QUESTION_INTERVAL_DAYS = 28;
 
-/** True for the 28-day review: stage 1 for yellow (7/28/56), stage 2 for red (7/14/28/56). */
-export function isQuestionStage(status: "yellow" | "red", stage: number): boolean {
-  const intervals = status === "yellow" ? YELLOW_INTERVALS_DAYS : RED_INTERVALS_DAYS;
-  return intervals[stage] === QUESTION_INTERVAL_DAYS;
+/** The review that carries the questions: the 28-day one, or for a custom list the first gap of 28+ days, else the last. */
+export function questionStageIndex(intervals: readonly number[]): number {
+  const i = intervals.findIndex((d) => d >= QUESTION_INTERVAL_DAYS);
+  return i === -1 ? intervals.length - 1 : i;
+}
+
+/** True for the question review: stage 1 for default yellow (7/28/56), stage 2 for default red (7/14/28/56). */
+export function isQuestionStage(status: "yellow" | "red", stage: number, custom?: readonly number[]): boolean {
+  return stage === questionStageIndex(intervalsFor(status, custom));
 }
