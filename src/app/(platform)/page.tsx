@@ -225,6 +225,48 @@ export default async function PlatformHome() {
         </div>
       </section>
 
+      <section className="plt-row plt-row-flip">
+        <div className="plt-wrap plt-row-grid">
+          <div className="plt-mock" aria-hidden="true">
+            <div className="plt-mock-bar">
+              <b>Week streak</b>
+              <span>3 weeks</span>
+            </div>
+            {[
+              ["Strategy pattern", "Pattern, 45 min", "Done", true],
+              ["Parking Lot", "Day 7 rewrite due", "2 of 5", false],
+              ["Splitwise", "Strategy, Factory", "0 of 5", false],
+            ].map(([name, text, count, done]) => (
+              <div key={name as string} className="plt-day-row">
+                <span className={"plt-dot" + (done ? " is-done" : "")} />
+                <span>
+                  <b>{name}</b>
+                  <small>{text}</small>
+                </span>
+                <span className="plt-count">{count}</span>
+              </div>
+            ))}
+          </div>
+          <div className="plt-copy">
+            <h2>Build the system, not just describe it.</h2>
+            <p>
+              A machine coding course in three levels, from OOP and SOLID to concurrency, with timed problems like
+              Parking Lot, Splitwise and Elevator.
+            </p>
+            <ul>
+              <li>Each problem is a loop: a cold attempt, a refactor, then a rewrite at day 7 and a retry at day 28.</li>
+              <li>Set a weekly goal and keep a week streak going.</li>
+              <li>Pick Python or C++. Your progress saves to your account.</li>
+            </ul>
+            <p>
+              <Link className="plt-link" href="/machine-coding">
+                Open the course
+              </Link>
+            </p>
+          </div>
+        </div>
+      </section>
+
       <section className="plt-map">
         <div className="plt-wrap">
           <h2>Seven layers, each built on the one below.</h2>
@@ -279,6 +321,7 @@ export default async function PlatformHome() {
           <nav aria-label="Practice">
             <h2>Practice</h2>
             <Link href="/striver">Striver 180 sheet</Link>
+            <Link href="/machine-coding">Machine coding</Link>
           </nav>
           <nav aria-label="Account and project">
             <h2>Rebase</h2>

@@ -12,6 +12,7 @@ export function SiteHeader() {
         <Link href="/plan">Course</Link>
         <Link href="/debug">Debug cases</Link>
         <Link href="/striver">Striver 180</Link>
+        <Link href="/machine-coding">Machine coding</Link>
       </nav>
       <span className="grow" />
       <ThemeToggle />
